@@ -5,6 +5,13 @@ import os, subprocess, sys, re
 
 BLOCK_NAME = re.compile(r"(private|nvta|vdot|inrix|cbi|tmc|p4p|ritis|screenline)", re.I)
 BLOCK_PATH = ["06_nvta", "data_private", "dashboard_layers"]
+# High-signal markers of EMBEDDED restricted data / private-path coupling — screens CONTENT, not just the
+# filename (i17_dashboard.html slipped the name check but embeds I-17 CBI data). Deliberately specific so
+# UI labels ("INRIX observed"), design credits ("PeMS/RITIS"), supported schema columns ("speed_inrix"),
+# and base64 tile noise do NOT trip it.
+CONTENT_BLOCK = re.compile(r"(CBI Dashboard|I-17 CBI|06_nvta|nvta_am_PRIVATE)", re.I)
+BINARY_EXT = (".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".pptx", ".xlsx",
+              ".zip", ".whl", ".gz", ".tar", ".woff", ".woff2", ".ttf")
 SIZE_WARN_MB = 5.0   # roadmap B4 size gate: flag any tracked file larger than this
 
 def tracked():
@@ -14,12 +21,29 @@ def tracked():
         print("not a git repo yet (nothing tracked):", e); return []
     return [l for l in out.splitlines() if l.strip()]
 
-SELF_OK = {"validate_no_private_data.py"}   # the validator names the patterns it screens for
+SELF_OK = {"validate_no_private_data.py", ".gitignore"}   # both legitimately name the private paths they screen/exclude
+
+def content_hits(files):
+    """Files whose CONTENT embeds restricted data / private-path coupling (not just a private filename)."""
+    out = []
+    for f in files:
+        if f in SELF_OK or f.lower().endswith(BINARY_EXT) or not os.path.exists(f):
+            continue
+        try:
+            with open(f, encoding="utf-8", errors="ignore") as fh:
+                if CONTENT_BLOCK.search(fh.read()):
+                    out.append(f)
+        except OSError:
+            pass
+    return out
 
 def main():
     files = tracked()
     bad = [f for f in files
            if f not in SELF_OK and (BLOCK_NAME.search(f) or any(b in f for b in BLOCK_PATH))]
+    for f in content_hits(files):
+        if f not in bad:
+            bad.append(f)
     big = [(f, os.path.getsize(f) / 1e6) for f in files
            if os.path.exists(f) and os.path.getsize(f) > SIZE_WARN_MB * 1e6]
     print(f"tracked files: {len(files)}")

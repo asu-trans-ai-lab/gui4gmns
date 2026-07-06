@@ -63,8 +63,10 @@ def corridor_groups(names):
 
 def datasets():
     dd = os.path.join(ROOT, "datasets")
+    def public(n):  # never list private/agency datasets in the gallery
+        return not any(t in n.lower() for t in ("private", "nvta", "vdot", "inrix", "cbi", "tmc"))
     return [n for n in (sorted(os.listdir(dd)) if os.path.isdir(dd) else [])
-            if os.path.exists(os.path.join(dd, n, "link.csv")) and "toy" not in n.lower()]
+            if os.path.exists(os.path.join(dd, n, "link.csv")) and "toy" not in n.lower() and public(n)]
 
 def build_thumbs(base_names):
     """Render a real network thumbnail per base dashboard; return {name: stats}."""
