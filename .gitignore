@@ -37,7 +37,11 @@ __pycache__/
 *.pyc
 .idea/
 .vscode/
+.claude/
 .DS_Store
+
+# ---- dev-workspace only (names private data; must never reach the public release) ----
+DEV_README.md
 
 # ---- ITS I-95: raw source (2.3 GB) AND the extracted sample are LOCAL-ONLY ----
 # The extracted sample derives from INRIX TMC (tmc_speed_15min.csv) + VDOT sensors (sensor_15min.csv) +
