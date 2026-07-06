@@ -1,0 +1,50 @@
+name: Publish to PyPI
+
+# Publishes gui4gmns to PyPI using PyPI Trusted Publishing (OpenID Connect) — no API token stored.
+# Fires when you publish a GitHub Release; also runnable manually from the Actions tab.
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: Build wheel + sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Validate metadata
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # The GitHub Actions environment named in the Trusted Publisher config (create it under
+    # repo Settings -> Environments). Gate publishes behind required reviewers here if you want.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/gui4gmns
+    permissions:
+      id-token: write   # REQUIRED: lets the job mint the short-lived OIDC token PyPI trusts
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # no `password:` — the action uses OIDC automatically when id-token: write is granted
