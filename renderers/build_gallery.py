@@ -136,7 +136,10 @@ def corridor_section(corr, prefix=""):
             f'<p class="desc">Per corridor: <b>calendar</b> (whole year by day/year) &middot; <b>network</b> '
             f'(corridor map by mean speed) &middot; <b>space-time</b> (milepost&times;time speed heatmap). '
             f'NeXTA-AI-Gen <code>&lt;view&gt;_&lt;corridor&gt;_&lt;date&gt;</code> convention.</p>'
-            f'<div class="grid">{blocks}</div></section>')
+            f'<div class="grid">{blocks}</div>'
+            f'<p class="legend" style="margin-top:8px">Corridor samples: <b>NeXTA-AI-Gen</b> / '
+            f'<b>TrafficFlowBench-CA</b> benchmark; corridor speeds derived from <b>Caltrans PeMS</b> '
+            f'(public agency data). Released for public use.</p></section>')
 
 def write_folder_index(out, thumbs):
     base, corr = classify(dashboards())

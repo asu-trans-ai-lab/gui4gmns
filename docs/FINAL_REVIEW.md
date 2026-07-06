@@ -17,13 +17,13 @@ public `github_release` is a clone with zero private data.
 | **Real networks** | ✅ GO | ARC 145k links (~5 s), Tucson I-10, Chicago, ITS I-95 hub, global 15-city montage |
 | **Reviews attached** | ✅ GO | Fable-5, TRB-viz (AED30), stakeholder (7-audience), viz-landscape |
 | **License / provenance** | ✅ GO | MIT; sample data attributed (TransportationNetworks, OSM, Esri); ARC = converted research copy w/ disclaimer |
-| **Corridor sample provenance** | ⚠️ CONFIRM | `docs/dashboards/I210E_*.html` (calendar/network/space-time) are NeXTA-AI-Gen samples from the *TrafficFlowBench-CA* panel (I-210E, Caltrans/PeMS corridor). Footer says "release parquet". **Confirm these are release-safe (not embargoed competition test data) before the public push**, or keep them local-only. |
+| **Corridor sample provenance** | ✅ GO | `docs/dashboards/I210E_*.html` (calendar/network/space-time) — **approved for public release** (user decision, 2026-07-06). NeXTA-AI-Gen samples from the *TrafficFlowBench-CA* benchmark; corridor speeds derive from **Caltrans PeMS** (public agency data). Attributed in the gallery corridor section + `DATASETS_COVERAGE.md` + page footers. |
 | **Tests / CI** | ⚠️ NOT YET | roadmap B1 — no automated tests; verification is manual. Recommend before a v1.0 tag. |
 | **Size** | ⚠️ WATCH | a few tracked figures/templates > 5 MB (size gate warns); trim before heavy public traffic |
 
-**Verdict: GO for an initial public v0.1.0** (clearly labeled pre-1.0). Two things to confirm at push
-time: (1) automated tests/CI (B1) is the one real gap — fine for a research/preview release, needed before
-1.0; (2) **decide whether the I-210E corridor samples ship publicly or stay local** (provenance row above).
+**Verdict: GO for an initial public v0.1.0** (clearly labeled pre-1.0). The one remaining gap is automated
+tests/CI (B1) — fine for a research/preview release, needed before a 1.0 tag. The I-210E corridor samples
+are cleared to ship (attributed to Caltrans PeMS / TrafficFlowBench-CA).
 
 ## Dashboard gallery — one folder, HTML is the base
 `docs/dashboards/` is the single browsable folder (open `index.html` or any card):

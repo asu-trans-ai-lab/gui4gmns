@@ -22,3 +22,11 @@ the "connect-from-the-DataHub" data hub (`adapters/its_datahub.py`, `its_datahub
 **NVTA I-395** uses the **TMC-converted GMNS corridor network** (`cases/05_nvta_nb_am/network/`) — small,
 corridor-only — for the real congested space-time speed contour (green free-flow -> red AM breakdown).
 Kept local (INRIX-derived speeds are restricted); rendered for review, not committed.
+
+**I-210E corridor state-views** (`docs/dashboards/I210E_*.html`) are NeXTA-AI-Gen samples that demonstrate
+the corridor time-series capability: **calendar** (whole year by day/year), **network** (corridor map by
+mean speed), **space-time** (milepost×time speed heatmap). Corridor speeds derive from **Caltrans PeMS**
+(public agency data), packaged in the released **TrafficFlowBench-CA** benchmark. **Cleared for public
+release** — attributed in each page footer and the gallery corridor section. They are the template for the
+"ask the AI for more" capability: the same three views can be generated for other corridors (e.g. ITS I-95)
+or other years from a GMNS network + a link speed / `link_performance` table (or an AI solver's output).
