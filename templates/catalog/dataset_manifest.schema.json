@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "gui4gmns dataset manifest",
+  "description": "One entry per dataset. Dataset-first: a query picks a manifest entry, which binds a QA-gated data adapter to a dashboard template.",
+  "type": "object",
+  "required": ["dataset_id", "display_name", "category", "template_file", "required_files", "qa_contract"],
+  "properties": {
+    "dataset_id":     { "type": "string", "description": "stable slug" },
+    "display_name":   { "type": "string" },
+    "category":       { "type": "string", "enum": [
+      "regional_inventory", "signal_intersection_ops", "corridor_simulation",
+      "multimodal_digital_twin", "odme_calibration", "mpo_corridor_performance",
+      "highway_sensor_timeseries", "highway_vehicle_trajectory",
+      "its_open_data_geofence_query", "rail_freight_network", "teaching_problem" ] },
+    "template_file":  { "type": "string", "description": "HTML template or generator that renders this dataset" },
+    "spatial_scope":  { "type": "string", "enum": ["point", "intersection", "corridor", "subarea", "regional", "national"] },
+    "time_scope":     { "type": "string", "enum": ["static", "scenario_period", "day", "multi_day", "archive"] },
+    "data_sources":   { "type": "array", "items": { "type": "string" } },
+    "primary_entities": { "type": "array", "items": { "type": "string" } },
+    "query_facets":   { "type": "array", "items": { "type": "string" } },
+    "capabilities":   { "type": "array", "items": { "type": "string" } },
+    "required_files": { "type": "array", "items": { "type": "string" } },
+    "qa_contract":    { "type": "array", "items": { "type": "string" },
+      "description": "gates that must pass before the dataset is shown (topology, units, timestamps, physics)" },
+    "adapter":        { "type": "string", "description": "adapters/*.py that converts source -> GMNS-compatible tables" },
+    "source_size":    { "type": "string" },
+    "sample_size":    { "type": "string" },
+    "attribution":    { "type": "string" }
+  }
+}

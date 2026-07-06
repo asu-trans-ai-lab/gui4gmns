@@ -270,7 +270,15 @@ input[type=range]{width:260px;accent-color:#4db8ff}
 <label id="demLab" style="color:#8a94a3;display:none"><input type="checkbox" id="demand" onchange="draw()"> demand OD</label>
 <button id="distBtn" style="display:none" onclick="toggleDist()">▦ distributions</button>
 <button id="corBtn" style="display:none" onclick="toggleCor()">▤ corridor speed</button>
+<button id="sciBtn" onclick="toggleSci()">✓ physics</button>
 <button onclick="fit()">Fit</button></div>
+<div id="scipanel" style="display:none;position:absolute;right:10px;top:10px;width:360px;background:rgba(20,26,32,.97);border:1px solid #2c3540;border-radius:6px;padding:8px 10px;max-height:80%;overflow:auto;z-index:6">
+  <div style="display:flex;align-items:center;gap:8px"><b style="color:#4db8ff">Physics-informed checks (SCI)</b>
+    <span style="margin-left:auto"><button onclick="toggleSci()" style="padding:1px 7px">✕</button></span></div>
+  <div id="scisum" style="text-align:center;font-weight:700;border-radius:4px;padding:4px;margin:6px 0"></div>
+  <div id="scibody"></div>
+  <div style="font-size:10px;color:#6e7681;margin-top:6px">Conservation & bound gates computed from this dashboard's own data — the reusable version of the Apache SCI panel.</div>
+</div>
 <div id="wrap"><canvas id="cv"></canvas><div id="hud"><span id="clock">--:--</span></div>
 <div id="corpanel" style="display:none;position:absolute;left:0;right:0;bottom:0;background:rgba(20,26,32,.96);border-top:1px solid #2c3540;padding:8px 12px;max-height:56%;overflow:auto">
   <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
@@ -429,6 +437,62 @@ function toggleDist(){const p=document.getElementById('distpanel');
  document.getElementById('distbody').innerHTML=h;}
 (function(){if(DEM.lines&&DEM.lines.length){document.getElementById('demLab').style.display='';}
  if((DIST&&DIST.volume)||DEM.total){document.getElementById('distBtn').style.display='';}})();
+// ---- 7-check SCI physics panel (ported from the Apache simulator; data-driven for any dashboard) ----
+function computeSCI(){
+ const R=[]; const td=M.td||{}, bins=M.bins||[];
+ const tdcells=()=>{const o=[];for(const l in td)for(const b in td[l]){const d=td[l][b];o.push([l,b,d]);}return o;};
+ // 1) speed bounds: 0 <= v <= free_flow*1.15 (TD speed cells)
+ {let n=0,bad=0,mx=0,ex='';tdcells().forEach(([l,b,d])=>{if(d.length<3)return;n++;const v=d[2],ff=d[3]||70;mx=Math.max(mx,v);
+   if(v<0||v>ff*1.15){bad++;if(!ex)ex=`link ${l} @${bins[b]||b}: ${v} mph > ${(ff*1.15).toFixed(0)}`;}});
+  R.push({id:'S',desc:'0 ≤ speed ≤ free-flow (TD speed cells)',pass:bad===0,na:n===0,
+   stat:n?`${n-bad}/${n} ok, max ${mx.toFixed(0)} mph`:'no TD speed',fail:ex});}
+ // 2) flow conservation: completed == agents (run), else volumes present & finite
+ {let pass=true,stat='n/a',fail='';if(M.run){const a=M.run.agents||0,c=M.run.completed||0;pass=(c>=a);
+   stat=`${c.toLocaleString()}/${a.toLocaleString()} completed`;if(!pass)fail=`${(a-c).toLocaleString()} agents unaccounted (CA<CD)`;}
+  else{const tot=M.links.reduce((s,L)=>s+(L[2]||0),0);stat=`Σvol ${Math.round(tot).toLocaleString()}`;pass=isFinite(tot);}
+  R.push({id:'C',desc:'Flow conservation — completed ≥ loaded (CA ≥ CD)',pass,na:false,stat,fail});}
+ // 3) non-negativity: volume, queue, inflow >= 0
+ {let bad=0,ex='';M.links.forEach(L=>{if((L[2]||0)<0||(L[3]||0)<0){bad++;if(!ex)ex=`link ${L[0]}: vol ${L[2]} q ${L[3]}`;}});
+  tdcells().forEach(([l,b,d])=>{if(d[0]<0||d[1]<0){bad++;if(!ex)ex=`link ${l} @${bins[b]||b}: inflow ${d[0]} q ${d[1]}`;}});
+  R.push({id:'N',desc:'Non-negativity — volume, queue, inflow ≥ 0',pass:bad===0,na:false,
+   stat:bad?`${bad} negative`:'all ≥ 0',fail:ex});}
+ // 4) capacity feasibility: volume <= capacity*hours*(1+slack)  (V/C physics)
+ {let n=0,bad=0,mx=0,ex='';const H=8,SLK=1.25;M.links.forEach(L=>{const cap=L[4]||0,v=L[2]||0;if(cap<=0||cap>=40000||v<=0)return;n++;
+   const vc=v/(cap*H);mx=Math.max(mx,vc);if(vc>SLK){bad++;if(!ex)ex=`link ${L[0]}: V/C ≈ ${vc.toFixed(2)}`;}});
+  R.push({id:'Q',desc:'Capacity feasibility — volume ≤ capacity·h (V/C bound)',pass:bad===0,na:n===0,
+   stat:n?`max V/C ${mx.toFixed(2)}, ${bad} over`:'no capacity data',fail:ex});}
+ // 5) congestion consistency: queue>0 ⇒ speed < free-flow (fundamental-relation sanity)
+ {let n=0,bad=0,ex='';tdcells().forEach(([l,b,d])=>{if(d.length<3||!d[3])return;const q=d[1],v=d[2],ff=d[3];if(q>0){n++;
+   if(v>=ff*0.98){bad++;if(!ex)ex=`link ${l} @${bins[b]||b}: queued but ${v}≈free-flow`;}}});
+  R.push({id:'K',desc:'Congestion consistency — queued ⇒ speed < free-flow',pass:bad===0,na:n===0,
+   stat:n?`${n-bad}/${n} queued cells ok`:'no queued speed cells',fail:ex});}
+ // 6) topology valid: each link ≥2 finite geometry points
+ {let bad=0,ex='';M.links.forEach(L=>{const g=L[1];if(!g||g.length<2||g.some(p=>!isFinite(p[0])||!isFinite(p[1]))){bad++;if(!ex)ex=`link ${L[0]}: degenerate geometry`;}});
+  R.push({id:'T',desc:'Topology — every link has ≥2 finite geometry points',pass:bad===0,na:false,
+   stat:bad?`${bad} degenerate`:`${M.links.length} links ok`,fail:ex});}
+ // 7) temporal ordering: per-agent trajectory times non-decreasing; bins sorted
+ {let bad=0,ex='',n=0;for(const a in M.trajs){const ev=M.trajs[a];n++;for(let i=1;i<ev.length;i++)if(ev[i][0]<ev[i-1][0]-1e-6){bad++;if(!ex)ex=`agent ${a}: time goes backward`;break;}}
+  for(let i=1;i<bins.length;i++){const p=+bins[i].slice(0,2)*60+ +bins[i].slice(3,5),q=+bins[i-1].slice(0,2)*60+ +bins[i-1].slice(3,5);if(p<q){bad++;if(!ex)ex='time bins not ordered';break;}}
+  R.push({id:'O',desc:'Temporal ordering — trajectory times & bins monotonic',pass:bad===0,na:(n===0&&bins.length<2),
+   stat:bad?`${bad} out of order`:(n?`${n} agents ok`:'bins ok'),fail:ex});}
+ return R;}
+function renderSci(){const R=computeSCI();const active=R.filter(r=>!r.na);const nf=active.filter(r=>!r.pass).length;
+ const sum=document.getElementById('scisum');
+ sum.textContent=nf?`${nf} of ${active.length} PHYSICS CHECKS FAILED`:`ALL ${active.length} PHYSICS CHECKS PASS`;
+ sum.style.background=nf?'rgba(248,81,73,.2)':'rgba(46,160,67,.18)';sum.style.color=nf?'#f85149':'#56d364';
+ sum.style.border='1px solid '+(nf?'#f85149':'#2ea043');
+ document.getElementById('scibody').innerHTML=R.map(r=>{
+  const st=r.na?'na':(r.pass?'pass':'fail');const ic=r.na?'–':(r.pass?'✓':'✗');
+  const col=r.na?'#6e7681':(r.pass?'#56d364':'#f85149');const bg=r.na?'transparent':(r.pass?'rgba(46,160,67,.08)':'rgba(248,81,73,.16)');
+  return `<div style="padding:4px 6px;border-radius:3px;margin-bottom:3px;background:${bg};border-left:2px solid ${col};font-size:11px">
+   <span style="color:${col};font-weight:700">${ic}</span> ${r.desc}
+   <div style="font-size:9px;color:#8a94a3;font-family:monospace;margin-top:1px">${r.stat}${r.fail?' — <span style=color:#f85149>'+r.fail+'</span>':''}</div></div>`;}).join('');
+ // badge on the button
+ const b=document.getElementById('sciBtn');b.textContent=(nf?'✗ '+nf+' physics':'✓ physics');
+ b.style.background=nf?'#5a2020':'';b.style.color=nf?'#f85149':'';}
+function toggleSci(){const p=document.getElementById('scipanel');const show=p.style.display==='none';
+ p.style.display=show?'block':'none';if(show)renderSci();}
+try{renderSci();}catch(e){}   // run once on load so the button badges immediately
 // KPIs + checks
 (function(){const k=document.getElementById('kpis');const vmt=M.links.reduce((s,L)=>s+L[2]*L[5],0);
  const add=(v,l)=>k.insertAdjacentHTML('beforeend',`<span class="kpi"><div class="v">${v}</div><div class="l">${l}</div></span>`);

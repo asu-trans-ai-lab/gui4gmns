@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ODME Calibration Demo — Assignment → Counts → Calibrated OD</title>
+<style>
+  :root{
+    --navy:#1E3A8A; --blue:#3B82F6; --blueL:#DBEAFE;
+    --amber:#D97706; --amberL:#FEF3C7;
+    --green:#059669; --greenL:#D1FAE5;
+    --red:#DC2626; --redL:#FEE2E2;
+    --tx:#1A1D24; --tx2:#4B5563; --tx3:#9CA3AF;
+    --brd:#E5E7EB; --bg:#F8F9FB; --card:#FFFFFF; --dark:#0F2456;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Calibri','Segoe UI',sans-serif;background:var(--bg);color:var(--tx);line-height:1.45}
+  .hdr{background:var(--navy);color:#fff;padding:14px 24px;display:flex;align-items:baseline;gap:18px;border-bottom:3px solid var(--amber)}
+  .hdr h1{font-family:'Cambria',serif;font-size:20px;font-weight:700}
+  .hdr .sub{color:var(--blueL);font-size:13px;font-style:italic}
+  .hdr .stage{margin-left:auto;font-size:11px;background:var(--amber);padding:4px 10px;border-radius:3px;font-weight:700}
+  .app{display:flex;gap:14px;padding:14px;height:calc(100vh - 60px);align-items:stretch}
+  .pane{background:var(--card);border:1px solid var(--brd);border-radius:6px;padding:14px;overflow:auto;flex:1 1 0}
+  .pane.l{flex:0 0 360px}
+  .pane.r{flex:0 0 380px}
+  .pane h2{font-family:'Cambria',serif;font-size:15px;color:var(--navy);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--amber)}
+  .pane h3{font-size:12px;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px 0;font-weight:700}
+  .lab{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px dotted var(--brd);font-size:13px}
+  .row:last-child{border-bottom:none}
+  .row b{color:var(--navy);font-family:'Consolas',monospace}
+  .kpi{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}
+  .kpi .k{background:var(--blueL);border:1px solid var(--blue);border-radius:5px;padding:8px;text-align:center}
+  .kpi .k.amber{background:var(--amberL);border-color:var(--amber)}
+  .kpi .k.green{background:var(--greenL);border-color:var(--green)}
+  .kpi .k.red{background:var(--redL);border-color:var(--red)}
+  .kpi .v{font-family:'Cambria',serif;font-size:20px;font-weight:700;color:var(--navy)}
+  .kpi .k.amber .v{color:var(--amber)}
+  .kpi .k.green .v{color:var(--green)}
+  .kpi .k.red .v{color:var(--red)}
+  .kpi .l{font-size:10px;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  svg{display:block;width:100%;height:auto}
+  .net-wrap{background:#F1F5F9;border:1px solid var(--brd);border-radius:6px;padding:10px;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  table th{background:var(--navy);color:#fff;text-align:left;padding:6px 8px;font-size:11px}
+  table td{padding:5px 8px;border-bottom:1px solid var(--brd)}
+  table td.num{font-family:'Consolas',monospace;text-align:right}
+  table td.delta-up{color:var(--red);font-weight:700}
+  table td.delta-dn{color:var(--green);font-weight:700}
+  .slider-row{display:flex;flex-direction:column;gap:6px;margin:10px 0;padding:10px;background:var(--bg);border-radius:5px;border:1px solid var(--brd)}
+  .slider-row label{font-size:12px;color:var(--tx2);font-weight:700;display:flex;justify-content:space-between}
+  .slider-row label .v{font-family:'Consolas',monospace;color:var(--navy);background:var(--blueL);padding:2px 8px;border-radius:3px;font-size:13px}
+  input[type=range]{width:100%;accent-color:var(--amber)}
+  button{background:var(--amber);color:#fff;border:none;padding:9px 18px;border-radius:5px;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit;width:100%;margin-top:6px;letter-spacing:.03em}
+  button:hover{background:#B45309}
+  button.sec{background:var(--card);color:var(--navy);border:1px solid var(--navy);margin-top:4px}
+  .math{font-family:'Cambria',serif;font-style:italic;background:var(--dark);color:#fff;padding:10px 14px;border-radius:5px;font-size:14px;margin:8px 0;text-align:center}
+  .math .op{font-style:normal}
+  .math .hl{color:var(--amber);font-weight:700}
+  .legend{display:flex;gap:14px;font-size:11px;margin-top:6px;flex-wrap:wrap;color:var(--tx2)}
+  .legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:5px;vertical-align:middle}
+  .note{background:var(--blueL);border-left:3px solid var(--blue);padding:8px 10px;font-size:11px;color:var(--tx);margin-top:10px;border-radius:0 4px 4px 0;font-style:italic}
+  .fit-bar{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px}
+  .fit-bar .bar{flex:1;height:10px;background:var(--bg);border:1px solid var(--brd);border-radius:5px;overflow:hidden;position:relative}
+  .fit-bar .bar .fg{height:100%;transition:width .35s;border-radius:4px}
+  .pipe{display:flex;flex-direction:column;align-items:center;gap:3px;margin:6px 0 10px 0}
+  .pipe .step{background:var(--navy);color:#fff;padding:5px 10px;border-radius:4px;font-family:'Consolas',monospace;font-size:11px;width:160px;text-align:center}
+  .pipe .step.cur{background:var(--amber)}
+  .pipe .arrow{color:var(--amber);font-weight:700;font-size:14px;line-height:1}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>ODME Calibration Demo</h1>
+  <span class="sub">Assignment result + observed counts → calibrated OD matrix</span>
+  <span class="stage">STAGE 5 · FTT BACKWARD PASS · TOY NETWORK</span>
+</div>
+
+<div class="app">
+
+  <!-- LEFT: Inputs & math -->
+  <div class="pane l">
+    <h2>1. The setup</h2>
+
+    <h3>Network</h3>
+    <div class="net-wrap">
+      <svg viewBox="0 0 340 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- nodes -->
+        <g font-family="Cambria, serif" font-size="16" font-weight="bold">
+          <circle cx="50"  cy="100" r="22" fill="#1E3A8A"/>
+          <text x="50"  y="106" fill="#fff" text-anchor="middle">A</text>
+          <circle cx="170" cy="50" r="22" fill="#1E3A8A"/>
+          <text x="170" y="56"  fill="#fff" text-anchor="middle">B</text>
+          <circle cx="290" cy="100" r="22" fill="#1E3A8A"/>
+          <text x="290" y="106" fill="#fff" text-anchor="middle">C</text>
+        </g>
+        <!-- links -->
+        <g stroke="#D97706" stroke-width="3" fill="none">
+          <path d="M70 90 L150 60"/>            <!-- link1 A→B -->
+          <path d="M190 60 L270 90"/>           <!-- link2 B→C -->
+          <path d="M70 110 Q170 170 270 110"/>  <!-- link3 A→C express -->
+        </g>
+        <!-- arrowheads -->
+        <g fill="#D97706">
+          <polygon points="148,52 156,62 144,64"/>
+          <polygon points="272,82 264,92 276,94"/>
+          <polygon points="268,106 260,116 274,118"/>
+        </g>
+        <!-- link labels -->
+        <g font-family="Consolas, monospace" font-size="11" fill="#1A1D24">
+          <text x="100" y="68" font-weight="700">link 1</text>
+          <text x="225" y="68" font-weight="700">link 2</text>
+          <text x="155" y="160" font-weight="700">link 3 (express)</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><span class="sw" style="background:#1E3A8A"></span>nodes</span>
+        <span><span class="sw" style="background:#D97706"></span>links (with sensors)</span>
+      </div>
+    </div>
+
+    <h3>OD pairs & paths</h3>
+    <div class="row"><span>A → B</span><b>1 path · uses link 1</b></div>
+    <div class="row"><span>A → C (via B)</span><b>uses link 1 + link 2</b></div>
+    <div class="row"><span>A → C (express)</span><b>uses link 3</b></div>
+    <div class="row"><span>B → C</span><b>1 path · uses link 2</b></div>
+
+    <h3>Path-link matrix <i>A</i> (from assignment)</h3>
+    <table>
+      <tr><th>link</th><th>p1: A→B</th><th>p2: A→C·B</th><th>p3: A→C·exp</th><th>p4: B→C</th></tr>
+      <tr><td><b>link 1</b></td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">0</td></tr>
+      <tr><td><b>link 2</b></td><td class="num">0</td><td class="num">1</td><td class="num">0</td><td class="num">1</td></tr>
+      <tr><td><b>link 3</b></td><td class="num">0</td><td class="num">0</td><td class="num">1</td><td class="num">0</td></tr>
+    </table>
+
+    <h3>Initial OD prior <i>T₀</i></h3>
+    <table>
+      <tr><th>OD</th><th>T<sub>0</sub></th></tr>
+      <tr><td><b>A → B</b></td><td class="num">100</td></tr>
+      <tr><td><b>A → C</b></td><td class="num">80</td></tr>
+      <tr><td><b>B → C</b></td><td class="num">50</td></tr>
+    </table>
+    <p class="note">A → C splits 60% via-B / 40% express (a route-choice proportion from a prior assignment).</p>
+  </div>
+
+  <!-- MIDDLE: ODME computation -->
+  <div class="pane">
+    <h2>2. The ODME problem</h2>
+
+    <div class="pipe">
+      <div class="step">T (OD)</div>
+      <span class="arrow">↓</span>
+      <div class="step">B (OD → path)</div>
+      <span class="arrow">↓</span>
+      <div class="step">path flow f</div>
+      <span class="arrow">↓</span>
+      <div class="step">A (path → link)</div>
+      <span class="arrow">↓</span>
+      <div class="step cur">link flow v = ABT</div>
+      <span class="arrow">↑</span>
+      <div class="step" style="background:#D97706">backward: minimise ‖v − ŷ‖²</div>
+    </div>
+
+    <div class="math">
+      min<sub class="op">T</sub> &nbsp; ‖<span class="hl">ABT</span> − <span class="hl">ŷ</span>‖² &nbsp;
+      <span class="op">+</span> &nbsp; λ ‖<span class="hl">T</span> − <span class="hl">T<sub>0</sub></span>‖²
+    </div>
+
+    <h3>Observed counts <i>ŷ</i></h3>
+    <table>
+      <tr><th>link</th><th>observed <i>ŷ</i></th><th>initial <i>v</i><sub>0</sub> = ABT<sub>0</sub></th><th>gap</th></tr>
+      <tr><td><b>link 1</b></td><td class="num">150</td><td class="num">148</td><td class="num">+2</td></tr>
+      <tr><td><b>link 2</b></td><td class="num">120</td><td class="num">98</td><td class="num delta-up">+22</td></tr>
+      <tr><td><b>link 3</b></td><td class="num">40</td><td class="num">32</td><td class="num delta-up">+8</td></tr>
+    </table>
+    <p class="note">Counts say more traffic is moving than the prior OD predicts — especially on link 2. ODME will find a <i>T</i> that fits the counts without straying too far from <i>T<sub>0</sub></i>.</p>
+
+    <h3>Tuning</h3>
+    <div class="slider-row">
+      <label>Regularisation λ <span class="v" id="lamVal">1.0</span></label>
+      <input type="range" id="lam" min="-2" max="3" value="0" step="0.05">
+      <div style="font-size:10px;color:var(--tx3)">small λ → trust counts &nbsp;·&nbsp; large λ → trust prior</div>
+    </div>
+    <button onclick="solve()">▶  Run ODME calibration</button>
+    <button class="sec" onclick="reset()">Reset to T₀</button>
+
+    <h3>Residual fit</h3>
+    <div class="fit-bar"><span>counts</span><div class="bar"><div class="fg" id="fitCounts" style="width:60%;background:#3B82F6"></div></div><span id="rmseFitTxt">—</span></div>
+    <div class="fit-bar"><span>prior &nbsp;</span><div class="bar"><div class="fg" id="fitPrior" style="width:90%;background:#D97706"></div></div><span id="rmsePriorTxt">—</span></div>
+  </div>
+
+  <!-- RIGHT: Results -->
+  <div class="pane r">
+    <h2>3. Calibrated OD <i>T*</i></h2>
+
+    <div class="kpi">
+      <div class="k"><div class="v" id="kT_AB">100</div><div class="l">A→B</div></div>
+      <div class="k amber"><div class="v" id="kT_AC">80</div><div class="l">A→C</div></div>
+      <div class="k"><div class="v" id="kT_BC">50</div><div class="l">B→C</div></div>
+    </div>
+
+    <h3>Calibrated link flows <i>v*</i> vs observations</h3>
+    <table id="linkTbl">
+      <tr><th>link</th><th><i>v*</i></th><th><i>ŷ</i></th><th>gap</th></tr>
+    </table>
+
+    <h3>OD change from prior</h3>
+    <table id="odTbl">
+      <tr><th>OD</th><th><i>T<sub>0</sub></i></th><th><i>T*</i></th><th>Δ</th></tr>
+    </table>
+
+    <h3>Verification</h3>
+    <div class="kpi">
+      <div class="k green"><div class="v" id="kRMSE">—</div><div class="l">RMSE counts</div></div>
+      <div class="k amber"><div class="v" id="kDrift">—</div><div class="l">‖T*−T₀‖</div></div>
+    </div>
+
+    <p class="note">
+      <b>FTT tie-in:</b> this is exactly the <b>backward pass</b> of the Flow-Through-Tensor. The same A matrix used here to assign T → v is also used (transposed) to push the count residual back into corrections on T. On a real network, this is the same loop, just with bigger tensors and more paths.
+    </p>
+  </div>
+
+</div>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────
+// A = path-link incidence (3 links × 4 paths)
+const A = [
+  [1,1,0,0],
+  [0,1,0,1],
+  [0,0,1,0],
+];
+// B = OD-to-path proportions (4 paths × 3 ODs: A→B, A→C, B→C)
+const B = [
+  [1, 0,   0],
+  [0, 0.6, 0],
+  [0, 0.4, 0],
+  [0, 0,   1],
+];
+const T0 = [100, 80, 50];
+const yObs = [150, 120, 40];
+
+// M = A · B  (3×3)
+function matmul(X, Y){
+  const r=X.length, c=Y[0].length, k=Y.length;
+  const out=[];
+  for(let i=0;i<r;i++){
+    out.push([]);
+    for(let j=0;j<c;j++){
+      let s=0;
+      for(let l=0;l<k;l++) s += X[i][l]*Y[l][j];
+      out[i].push(s);
+    }
+  }
+  return out;
+}
+function matvec(X, v){
+  return X.map(row => row.reduce((s,x,i)=>s+x*v[i],0));
+}
+function transpose(X){
+  const r=X.length, c=X[0].length;
+  const out=[];
+  for(let j=0;j<c;j++){
+    out.push([]);
+    for(let i=0;i<r;i++) out[j].push(X[i][j]);
+  }
+  return out;
+}
+function eye(n){
+  const out = [];
+  for(let i=0;i<n;i++){
+    out.push([]);
+    for(let j=0;j<n;j++) out[i].push(i===j?1:0);
+  }
+  return out;
+}
+function addMat(X,Y){ return X.map((r,i)=>r.map((x,j)=>x+Y[i][j])); }
+function scaleMat(X,s){ return X.map(r=>r.map(x=>x*s)); }
+function addVec(a,b){ return a.map((x,i)=>x+b[i]); }
+function scaleVec(a,s){ return a.map(x=>x*s); }
+function norm(v){ return Math.sqrt(v.reduce((s,x)=>s+x*x,0)); }
+
+// 3×3 inverse (Cramer)
+function inv3(M){
+  const [a,b,c]=M[0],[d,e,f]=M[1],[g,h,i]=M[2];
+  const det = a*(e*i-f*h)-b*(d*i-f*g)+c*(d*h-e*g);
+  if(Math.abs(det)<1e-12) return null;
+  const inv = [
+    [ (e*i-f*h)/det, -(b*i-c*h)/det,  (b*f-c*e)/det],
+    [-(d*i-f*g)/det,  (a*i-c*g)/det, -(a*f-c*d)/det],
+    [ (d*h-e*g)/det, -(a*h-b*g)/det,  (a*e-b*d)/det],
+  ];
+  return inv;
+}
+
+const M = matmul(A, B);                  // 3×3
+const Mt = transpose(M);                 // 3×3
+
+// Solve  T = (MᵀM + λI)⁻¹ (Mᵀ ŷ + λ T₀)
+function solveT(lambda){
+  const MtM = matmul(Mt, M);
+  const reg = scaleMat(eye(3), lambda);
+  const lhs = addMat(MtM, reg);
+  const rhsCounts = matvec(Mt, yObs);
+  const rhsPrior = scaleVec(T0, lambda);
+  const rhs = addVec(rhsCounts, rhsPrior);
+  const inv = inv3(lhs);
+  if(!inv) return T0.slice();
+  return matvec(inv, rhs);
+}
+
+// ── UI ───────────────────────────────────────────────────────────────
+const linkNames = ['link 1','link 2','link 3'];
+const odNames = ['A → B','A → C','B → C'];
+
+function fmt(x, p=1){ return (Math.round(x*Math.pow(10,p))/Math.pow(10,p)).toString(); }
+
+function render(T){
+  document.getElementById('kT_AB').textContent = fmt(T[0],0);
+  document.getElementById('kT_AC').textContent = fmt(T[1],0);
+  document.getElementById('kT_BC').textContent = fmt(T[2],0);
+
+  const v = matvec(M, T);
+
+  // link flows table
+  let html = '<tr><th>link</th><th><i>v*</i></th><th><i>ŷ</i></th><th>gap</th></tr>';
+  let sumSq = 0;
+  v.forEach((vi,i)=>{
+    const gap = vi - yObs[i];
+    sumSq += gap*gap;
+    const cls = Math.abs(gap)<2 ? '' : (gap>0 ? 'delta-up' : 'delta-dn');
+    html += `<tr><td><b>${linkNames[i]}</b></td><td class="num">${fmt(vi,1)}</td><td class="num">${yObs[i]}</td><td class="num ${cls}">${gap>=0?'+':''}${fmt(gap,1)}</td></tr>`;
+  });
+  document.getElementById('linkTbl').innerHTML = html;
+
+  // OD change table
+  let html2 = '<tr><th>OD</th><th><i>T<sub>0</sub></i></th><th><i>T*</i></th><th>Δ</th></tr>';
+  T.forEach((ti,i)=>{
+    const d = ti - T0[i];
+    const cls = Math.abs(d)<0.5 ? '' : (d>0 ? 'delta-up' : 'delta-dn');
+    html2 += `<tr><td><b>${odNames[i]}</b></td><td class="num">${T0[i]}</td><td class="num">${fmt(ti,1)}</td><td class="num ${cls}">${d>=0?'+':''}${fmt(d,1)}</td></tr>`;
+  });
+  document.getElementById('odTbl').innerHTML = html2;
+
+  // KPIs
+  const rmse = Math.sqrt(sumSq/v.length);
+  const drift = norm(T.map((x,i)=>x-T0[i]));
+  document.getElementById('kRMSE').textContent = fmt(rmse, 1);
+  document.getElementById('kDrift').textContent = fmt(drift, 1);
+
+  // Fit bars
+  const rmseMax = 20, driftMax = 50;
+  const fitPctCounts = Math.max(0, Math.min(100, 100 - rmse/rmseMax*100));
+  const fitPctPrior  = Math.max(0, Math.min(100, 100 - drift/driftMax*100));
+  document.getElementById('fitCounts').style.width = fitPctCounts + '%';
+  document.getElementById('fitPrior').style.width  = fitPctPrior + '%';
+  document.getElementById('rmseFitTxt').textContent  = fmt(rmse,1);
+  document.getElementById('rmsePriorTxt').textContent = fmt(drift,1);
+}
+
+function solve(){
+  const lamRaw = parseFloat(document.getElementById('lam').value);
+  const lam = Math.pow(10, lamRaw);
+  const T = solveT(lam);
+  render(T);
+}
+
+function reset(){
+  document.getElementById('lam').value = 0;
+  document.getElementById('lamVal').textContent = '1.0';
+  render(T0);
+}
+
+document.getElementById('lam').addEventListener('input', (e)=>{
+  const lam = Math.pow(10, parseFloat(e.target.value));
+  document.getElementById('lamVal').textContent = fmt(lam, lam<1?2:1);
+  solve();
+});
+
+// Run once on load with lambda = 1
+solve();
+</script>
+
+</body>
+</html>

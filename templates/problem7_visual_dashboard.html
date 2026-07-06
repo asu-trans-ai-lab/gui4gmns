@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CEE 372 Problem 7 — Visual Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+:root {
+  --asu:#8C1D40; --asu-dk:#4b0f25; --gold:#FFC627;
+  --bg:#f7f8fb; --panel:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+  --blue:#1d4ed8; --green:#059669; --amber:#d97706; --violet:#7c3aed;
+  --red:#b91c1c; --yellow:#facc15;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; padding:0; }
+body {
+  font-family:'Libre Franklin', system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.4;
+}
+.mono { font-family:'IBM Plex Mono', ui-monospace, Menlo, monospace; }
+
+.top {
+  background:linear-gradient(90deg, var(--asu), var(--asu-dk));
+  color:#fff; padding:18px 26px; border-bottom:5px solid var(--gold);
+}
+.top h1 { margin:0; font-size:24px; letter-spacing:.2px; }
+.top p { margin:6px 0 0; opacity:.9; font-size:13px; }
+
+.qtabs {
+  display:flex; flex-wrap:wrap; gap:6px; padding:12px 20px;
+  background:#fff; border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:100;
+}
+.qtab {
+  border:1px solid var(--line); border-radius:999px; background:#fff;
+  padding:6px 12px; font-size:13px; cursor:pointer;
+  font-family:inherit; color:var(--ink); transition:all .12s;
+}
+.qtab:hover { border-color:var(--asu); background:#fff7fb; }
+.qtab.active { border-color:var(--asu); background:var(--asu); color:#fff; font-weight:700; }
+.qtab .qid { font-weight:800; margin-right:6px; }
+
+.wrap { padding:18px 22px 32px; max-width:1500px; margin:0 auto; }
+
+.qcard {
+  background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  padding:18px 20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.qcard h2 { margin:0 0 6px; font-size:22px; }
+.qcard .qsub { color:var(--muted); font-size:13px; margin:0 0 12px; }
+.qcard p { margin:6px 0; }
+.qcard h3 {
+  font-size:12px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--asu); margin:14px 0 6px;
+}
+.badges { display:flex; flex-wrap:wrap; gap:6px; }
+.badge {
+  border:1px solid var(--line); border-radius:999px;
+  padding:4px 10px; background:#f9fafb; font-size:12px; color:#374151;
+}
+.task {
+  border-left:4px solid var(--gold); background:#fff8e1;
+  padding:10px 14px; border-radius:8px; font-size:14px;
+}
+
+.grid {
+  display:grid; gap:14px;
+  grid-template-columns:repeat(auto-fit, minmax(420px, 1fr));
+}
+.icard {
+  background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.05);
+  display:flex; flex-direction:column;
+}
+.icard h3.iname { margin:0; padding:12px 14px 6px; font-size:15px; color:var(--ink); }
+.icard .pills { padding:0 14px 10px; display:flex; flex-wrap:wrap; gap:6px; }
+.pill {
+  font-size:11px; padding:3px 9px; border-radius:999px;
+  background:#eef2ff; color:#3730a3; font-weight:600; letter-spacing:.02em;
+}
+.pill.corridor { background:#fef3c7; color:#92400e; }
+.pill.ctrl { background:#dcfce7; color:#166534; }
+
+.satwrap { position:relative; height:240px; background:#0a1729; }
+.satmap { position:absolute; inset:0; }
+.satwrap::after {
+  content:""; position:absolute; inset:0; pointer-events:none;
+  box-shadow:inset 0 -32px 50px -20px rgba(0,0,0,.45);
+}
+.satlabel {
+  position:absolute; left:10px; bottom:10px; z-index:500; pointer-events:none;
+  background:rgba(255,255,255,.94); border-radius:8px; padding:6px 10px;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px; font-weight:600; color:var(--ink);
+  box-shadow:0 1px 2px rgba(0,0,0,.2);
+}
+
+.metrics {
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;
+  padding:12px 14px 8px;
+}
+.metric {
+  background:#f9fafb; border:1px solid var(--line); border-radius:10px;
+  padding:8px 6px; text-align:center;
+}
+.metric .v { font-weight:800; font-size:18px; color:var(--blue); line-height:1.1; }
+.metric .l {
+  color:var(--muted); font-size:10px; text-transform:uppercase;
+  letter-spacing:.05em; margin-top:2px;
+}
+
+.tband { padding:6px 14px 4px; }
+.tband .tlabel {
+  font-size:11px; color:var(--muted); text-transform:uppercase;
+  letter-spacing:.06em; font-weight:600; margin-bottom:4px;
+}
+.tbar {
+  display:flex; height:30px; border-radius:6px; overflow:hidden;
+  border:1px solid var(--line); background:#f3f4f6;
+}
+.tseg {
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  color:#fff; font-size:11px; font-weight:700; min-width:0; overflow:hidden;
+  border-right:1px solid rgba(255,255,255,.4); padding:0 4px;
+}
+.tseg:last-child { border-right:0; }
+.tseg .ph { font-size:11px; line-height:1.05; }
+.tseg .sp { font-size:10px; opacity:.95; line-height:1; font-family:'IBM Plex Mono', monospace; }
+
+.tbar.thin { height:14px; margin-top:3px; }
+.tbar.thin .tseg { font-size:9px; padding:0 2px; font-family:'IBM Plex Mono', monospace; }
+
+.tband .tlegend { display:flex; gap:14px; font-size:10px; color:var(--muted); margin-top:5px; }
+.tband .tlegend i {
+  display:inline-block; width:8px; height:8px; border-radius:2px;
+  margin-right:4px; vertical-align:middle;
+}
+
+.movements { padding:8px 14px 6px; }
+.movements .mtitle {
+  font-size:11px; color:var(--muted); text-transform:uppercase;
+  letter-spacing:.06em; font-weight:600; margin-bottom:6px;
+}
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#fff; border:1px solid var(--line); border-radius:999px;
+  padding:3px 10px 3px 3px; font-size:12px;
+}
+.chip .dot {
+  width:24px; height:24px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  color:#fff; font-size:10px; font-weight:800; letter-spacing:-.02em;
+}
+.chip .mvc { font-weight:700; font-size:12px; }
+.chip .mvd { color:var(--muted); font-size:11px; font-family:'IBM Plex Mono', monospace; }
+
+.callout {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  padding:6px 14px 14px;
+}
+.cobox {
+  background:#f9fafb; border:1px solid var(--line); border-radius:10px;
+  padding:8px 10px;
+}
+.cobox .lab {
+  font-size:10px; color:var(--muted); text-transform:uppercase;
+  letter-spacing:.05em; font-weight:600;
+}
+.cobox .val { font-size:13px; font-weight:600; margin-top:3px; }
+.cobox .val .mv { color:var(--asu); font-family:'IBM Plex Mono', monospace; }
+
+.empty {
+  padding:20px; text-align:center; color:var(--muted); font-style:italic;
+  background:#f9fafb; border-radius:10px; margin:8px 14px;
+}
+
+@media (max-width:880px) {
+  .grid { grid-template-columns:1fr; }
+  .metrics { grid-template-columns:repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>CEE 372 Problem 7 — Tempe Signal Timing in Context</h1>
+  <p>Click any question. Each card pairs the live satellite view of an example intersection with its actual cycle, splits, and movement evidence.</p>
+</div>
+<div class="qtabs" id="qtabs"></div>
+<div class="wrap">
+  <div id="answer"></div>
+  <div class="grid" id="grid"></div>
+</div>
+<script>const PAYLOAD = {"questions": [{"id": "Q1", "title": "Traffic engineering vs. transportation engineering", "question": "How does traffic engineering differ from transportation engineering more broadly, and what are two example specialties mentioned in the slide deck?", "draft_answer": "Transportation engineering is the broader field concerned with planning, land use, travel models, facility needs, and system-level movement of people and goods. Traffic engineering is the more operational, intersection- and street-level part of the field. It focuses on safety, intersection control, signal timing, signing and striping, temporary traffic control, user behavior, and how traffic actually moves through facilities. Two example specialties are signal design/signal operations and operational analysis/ITS.", "dashboard_panels": ["intersection_timing", "movement_summary", "phase_view"], "student_task": "Compare a complex arterial-campus signal with a simpler two-phase signal. Write one sentence about system-level transportation planning and one sentence about field-level traffic engineering decisions.", "example_intersections": ["E UNIVERSITY DR & S RURAL RD", "E LEMON ST & S RURAL RD"]}, {"id": "Q2", "title": "Yellow and all-red clearance intervals", "question": "Why were yellow and all-red clearance intervals added to traffic signals, and what safety problem is the yellow interval intended to reduce?", "draft_answer": "Yellow and all-red intervals were added to make phase transitions safer. The yellow interval warns drivers that green is ending and helps reduce the dilemma-zone problem, where a driver may be too close to stop comfortably but may not clear safely before red. The all-red interval gives vehicles already in the intersection a short clearance time before conflicting traffic receives green.", "dashboard_panels": ["phase_yellow_red_table", "intersection_image", "approach_context"], "student_task": "List the phase with the longest yellow value and explain whether approach speed, crossing width, or turning geometry could justify the difference.", "example_intersections": ["E RIO SALADO PKY & S RURAL RD", "E UNIVERSITY DR & S MILL AVE"]}, {"id": "Q3", "title": "Pedestrian clearance and walk distance", "question": "The slide deck says pedestrian clearance time depends on walk distance. Why can different definitions of walk distance change the shortest possible cycle length at an intersection?", "draft_answer": "Pedestrian clearance time is calculated from crossing distance and assumed walking speed. If the measured walk distance changes, the required clearance time also changes. A longer crossing distance requires a longer walk-plus-clearance interval, which can increase the minimum feasible cycle length and reduce flexibility for vehicle green splits.", "dashboard_panels": ["satellite_view", "phase_splits", "special_phase_check"], "student_task": "Use satellite view to identify the likely longest crossing. Explain how longer pedestrian clearance can constrain green splits.", "example_intersections": ["METRO LIGHT RAIL & UNIVERSITY & RURAL STATION", "E UNIVERSITY DR & S RURAL RD"]}, {"id": "Q4", "title": "Preemption vs. priority", "question": "Compare preemption and priority. Who typically receives preemption, and what are two strategies that can be used under priority control?", "draft_answer": "Preemption is a stronger intervention that interrupts or overrides normal signal operation for a high-priority user. Preemption is typically given to emergency vehicles and freight trains. Priority is softer and modifies the signal plan to serve selected vehicles faster while preserving normal coordination as much as possible. Two strategies are early green and extended green.", "dashboard_panels": ["transit_priority_panel", "phase_splits", "conflicting_movement_delay"], "student_task": "Identify the likely transit movement and explain what happens to cross-street or left-turn phases if the transit phase receives green extension.", "example_intersections": ["E APACHE BLVD & S RURAL RD", "METRO LIGHT RAIL & S MILL AVE"]}, {"id": "Q5", "title": "Bike detection", "question": "Why is bike detection treated as a special issue rather than just a normal vehicle detection problem? What operational question does the presenter raise about bike-only detection?", "draft_answer": "Bike detection is special because bikes may not activate standard vehicle detectors reliably, and bike movements may need different operational treatment than cars. The presenter asks whether bikes alone should trigger a standard vehicle phase or something different. This affects delay, safety, and whether a full vehicle phase is appropriate for bike-only demand.", "dashboard_panels": ["satellite_view", "bike_facility_notes", "movement_delay"], "student_task": "Choose one approach where bike traffic is plausible and state whether bike detection should trigger the full vehicle phase, a shorter phase, or a special bike treatment.", "example_intersections": ["E UNIVERSITY DR & S MILL AVE", "E APACHE BLVD & S COLLEGE AVE"]}, {"id": "Q6", "title": "Offset and corridor progression", "question": "What is an offset in corridor progression, and how does it help improve traffic flow in the peak direction?", "draft_answer": "An offset is the time shift between an intersection signal cycle and a common corridor reference time. Offsets help a platoon released at one signal arrive at downstream signals during green. In the peak direction, good offsets reduce stops, improve progression, reduce delay, and support smoother corridor flow.", "dashboard_panels": ["corridor_offset_comparison", "cycle_offset_table", "map_sequence"], "student_task": "Compare the offsets along the Rio Salado corridor and explain why coordinated intersections should not all start green at the same clock time.", "example_intersections": ["S PACKARD DR & E RIO SALADO PKY", "HAYDEN FERRY LAKESIDE & E RIO SALADO PKY", "E RIO SALADO PKY & S RURAL RD"]}, {"id": "Q7", "title": "Adaptive signal technology", "question": "According to the deck, what does adaptive signal technology monitor, and which three signal settings can it adjust from cycle to cycle?", "draft_answer": "Adaptive signal technology monitors phase utilization and percent arrival on green. It can adjust cycle length, offset, and green split time from cycle to cycle. The operational goal is to respond to changing demand instead of relying only on fixed time-of-day timing plans.", "dashboard_panels": ["busiest_vs_highest_delay", "phase_splits", "adaptive_decision_prompt"], "student_task": "Compare the busiest movement and the highest-delay movement. Decide whether adaptive control should prioritize volume, delay, arrivals on green, or a combination.", "example_intersections": ["E RIO SALADO PKY & S RURAL RD", "E UNIVERSITY DR & S RURAL RD"]}, {"id": "Q8", "title": "What makes Tempe special?", "question": "Tempe is described as special because of several local conditions. Name three of them, and explain how one of them could make signal operations more difficult.", "draft_answer": "Three local conditions are light rail/streetcar, bike facilities, and high pedestrian volume. Other examples include adaptive signals and special events. High pedestrian volume can make signal operations more difficult because pedestrian walk and clearance times may require longer phases, reducing flexibility for vehicle green time. Light rail or streetcar activity can also require priority, special phases, or green extension.", "dashboard_panels": ["multimodal_context", "special_phases", "movement_summary"], "student_task": "Classify the selected intersection as vehicle-dominant, pedestrian-sensitive, bike-sensitive, transit-sensitive, or special-event-sensitive. Justify the label using at least one dashboard field.", "example_intersections": ["METRO LIGHT RAIL & UNIVERSITY & RURAL STATION", "E APACHE BLVD & S RURAL RD", "E UNIVERSITY DR & S MILL AVE"]}, {"id": "Q9", "title": "Transit signal priority parameters", "question": "For transit signal priority, what is the role of each of these parameters: parent phase, advance call, advance green, and extend?", "draft_answer": "Parent phase identifies the signal phase associated with the transit or streetcar movement. Advance call is the estimated time between when the controller receives the transit call and when the transit vehicle is expected to arrive. Advance green is the amount of time the controller may start green early. Extend is the amount of extra green time allowed so the transit vehicle can clear the intersection before the phase ends.", "dashboard_panels": ["transit_priority_timeline", "phase_splits", "special_phase_check"], "student_task": "Draw a timeline: call received -> advance-call travel time -> possible advance green -> possible green extension -> streetcar clears intersection.", "example_intersections": ["E APACHE BLVD & S RURAL RD", "METRO LIGHT RAIL & S MILL AVE"]}, {"id": "Q10", "title": "Why Tempe timing needs flexibility", "question": "Suppose a corridor has light rail or streetcar activity, heavy pedestrian demand, and special events. Based on the slide deck, why would signal timing in Tempe need to be more flexible than in a standard suburban corridor?", "draft_answer": "A standard suburban corridor often focuses mainly on vehicle progression and recurring peak demand. Tempe needs flexible timing because the same corridor must serve light rail or streetcar priority, high pedestrian crossing demand, bikes, special-event closures, and adaptive signal operation. These conditions create competing constraints, so timing must be multimodal, context-sensitive, and capable of time-of-day or cycle-by-cycle adjustment.", "dashboard_panels": ["multimodal_context", "busiest_vs_highest_delay", "special_event_prompt"], "student_task": "Choose one intersection and write which timing feature is most important: split adjustment, offset adjustment, special phase, detection, or priority.", "example_intersections": ["METRO LIGHT RAIL & UNIVERSITY & RURAL STATION", "E UNIVERSITY DR & S MILL AVE", "N MILL AVE & W 1ST ST"]}], "intersections": [{"name": "E APACHE BLVD & S COLLEGE AVE", "timing": {"nid": "50238", "name": "E APACHE BLVD & S COLLEGE AVE", "lat": 33.414688, "lon": -111.934932, "corridor": "Apache", "cycle": 110.0, "offset": 85.0, "ctrl": "Traffic Actuated", "phases": [2, 4, 6, 7, 8], "split": ["65.0", "45.0", "65.0", "12.0", "33.0"], "yellow": ["4.0", "4.0", "4.0", "3.0", "4.0"], "red_clear": ["2.0", "2.0", "2.0", "1.0", "2.0"], "min_green": ["28.0", "5.0", "28.0", "5.0", "5.0"], "max_green": ["59.0", "39.0", "59.0", "8.0", "27.0"]}, "movement_summary": {"total_journeys": 192, "weighted_mean_delay_s": 3.178, "busiest_movement": {"mv": "EBT", "type": "thru", "lanes": 1, "ib": 228, "ob": 429, "pattern": "228 -> 429", "journeys": 73, "delay_n": 73, "mean_delay_s": 1.91, "median_delay_s": 1.4, "p95_delay_s": 3.05, "min_delay_s": 0.33, "max_delay_s": 14.22, "mean_tt_s": 3.56, "mean_dist_m": 41.4, "free_flow_speed_mph": 56.0, "mean_speed_mph": 28.09}, "highest_delay_movement": {"mv": "WBU", "type": "uturn", "lanes": 1, "ib": 223, "ob": 429, "pattern": "223 -> 429", "journeys": 2, "delay_n": 2, "mean_delay_s": 31.87, "median_delay_s": 31.87, "p95_delay_s": 49.23, "min_delay_s": 14.5, "max_delay_s": 49.23, "mean_tt_s": 33.5, "mean_dist_m": 40.9, "free_flow_speed_mph": 56.0, "mean_speed_mph": 7.0}, "movements": [{"mv": "WBT", "type": "thru", "lanes": 1, "ib": 223, "ob": 207, "pattern": "223 -> 207", "journeys": 66, "delay_n": 66, "mean_delay_s": 3.03, "median_delay_s": 1.49, "p95_delay_s": 3.35, "min_delay_s": 0.07, "max_delay_s": 38.09, "mean_tt_s": 4.55, "mean_dist_m": 38.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 26.21}, {"mv": "WBU", "type": "uturn", "lanes": 1, "ib": 223, "ob": 429, "pattern": "223 -> 429", "journeys": 2, "delay_n": 2, "mean_delay_s": 31.87, "median_delay_s": 31.87, "p95_delay_s": 49.23, "min_delay_s": 14.5, "max_delay_s": 49.23, "mean_tt_s": 33.5, "mean_dist_m": 40.9, "free_flow_speed_mph": 56.0, "mean_speed_mph": 7.0}, {"mv": "WBL", "type": "left", "lanes": 1, "ib": 223, "ob": 435, "pattern": "223 -> 435", "journeys": 5, "delay_n": 5, "mean_delay_s": 7.56, "median_delay_s": 2.19, "p95_delay_s": 29.19, "min_delay_s": 2.05, "max_delay_s": 29.19, "mean_tt_s": 8.4, "mean_dist_m": 19.2, "free_flow_speed_mph": 50.8, "mean_speed_mph": 12.3}, {"mv": "EBU", "type": "uturn", "lanes": 1, "ib": 228, "ob": 207, "pattern": "228 -> 207", "journeys": 2, "delay_n": 0, "mean_delay_s": 0.0, "median_delay_s": 0.0, "p95_delay_s": 0.0, "min_delay_s": 0.0, "max_delay_s": 0.0, "mean_tt_s": 0.0, "mean_dist_m": 0.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 0.0}, {"mv": "EBT", "type": "thru", "lanes": 1, "ib": 228, "ob": 429, "pattern": "228 -> 429", "journeys": 73, "delay_n": 73, "mean_delay_s": 1.91, "median_delay_s": 1.4, "p95_delay_s": 3.05, "min_delay_s": 0.33, "max_delay_s": 14.22, "mean_tt_s": 3.56, "mean_dist_m": 41.4, "free_flow_speed_mph": 56.0, "mean_speed_mph": 28.09}, {"mv": "EBR", "type": "right", "lanes": 1, "ib": 228, "ob": 435, "pattern": "228 -> 435", "journeys": 14, "delay_n": 10, "mean_delay_s": 3.73, "median_delay_s": 2.04, "p95_delay_s": 19.0, "min_delay_s": 1.81, "max_delay_s": 19.0, "mean_tt_s": 5.1, "mean_dist_m": 32.5, "free_flow_speed_mph": 53.2, "mean_speed_mph": 10.25}, {"mv": "SBR", "type": "right", "lanes": 1, "ib": 428, "ob": 207, "pattern": "428 -> 207", "journeys": 5, "delay_n": 5, "mean_delay_s": 2.12, "median_delay_s": 1.69, "p95_delay_s": 3.94, "min_delay_s": 1.51, "max_delay_s": 3.94, "mean_tt_s": 3.6, "mean_dist_m": 34.5, "free_flow_speed_mph": 52.1, "mean_speed_mph": 13.0}, {"mv": "SBL", "type": "left", "lanes": 1, "ib": 428, "ob": 429, "pattern": "428 -> 429", "journeys": 8, "delay_n": 8, "mean_delay_s": 2.1, "median_delay_s": 2.1, "p95_delay_s": 2.26, "min_delay_s": 1.92, "max_delay_s": 2.26, "mean_tt_s": 3.0, "mean_dist_m": 20.9, "free_flow_speed_mph": 52.2, "mean_speed_mph": 14.62}, {"mv": "NBL", "type": "left", "lanes": 1, "ib": 436, "ob": 207, "pattern": "436 -> 207", "journeys": 12, "delay_n": 11, "mean_delay_s": 4.55, "median_delay_s": 2.67, "p95_delay_s": 21.22, "min_delay_s": 2.42, "max_delay_s": 21.22, "mean_tt_s": 5.0, "mean_dist_m": 10.6, "free_flow_speed_mph": 52.3, "mean_speed_mph": 11.27}, {"mv": "NBR", "type": "right", "lanes": 1, "ib": 436, "ob": 429, "pattern": "436 -> 429", "journeys": 5, "delay_n": 4, "mean_delay_s": 7.02, "median_delay_s": 7.92, "p95_delay_s": 10.77, "min_delay_s": 1.45, "max_delay_s": 10.77, "mean_tt_s": 8.25, "mean_dist_m": 28.8, "free_flow_speed_mph": 52.4, "mean_speed_mph": 11.75}]}}, {"name": "E APACHE BLVD & S RURAL RD", "timing": {"nid": "50315", "name": "E APACHE BLVD & S RURAL RD", "lat": 33.414771, "lon": -111.926281, "corridor": "Apache", "cycle": 110.0, "offset": 40.0, "ctrl": "Traffic Actuated", "phases": [1, 2, 3, 4, 5, 6, 7, 8], "split": ["12.0", "35.0", "23.0", "40.0", "12.0", "35.0", "12.0", "51.0"], "yellow": ["3.0", "4.5", "3.0", "4.5", "3.0", "4.5", "3.0", "4.5"], "red_clear": ["1.0", "1.5", "1.0", "1.5", "1.0", "1.5", "2.0", "1.5"], "min_green": ["5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0"], "max_green": ["8.0", "29.0", "19.0", "34.0", "8.0", "29.0", "7.0", "45.0"]}, "movement_summary": {"total_journeys": 641, "weighted_mean_delay_s": 3.641, "busiest_movement": {"mv": "NBT", "type": "thru", "lanes": 3, "ib": 340, "ob": 351, "pattern": "340 -> 351", "journeys": 193, "delay_n": 191, "mean_delay_s": 3.19, "median_delay_s": 2.45, "p95_delay_s": 3.13, "min_delay_s": 1.09, "max_delay_s": 68.02, "mean_tt_s": 3.86, "mean_dist_m": 20.4, "free_flow_speed_mph": 68.5, "mean_speed_mph": 23.41}, "highest_delay_movement": {"mv": "SBR", "type": "right", "lanes": 1, "ib": 352, "ob": 231, "pattern": "352 -> 231", "journeys": 37, "delay_n": 33, "mean_delay_s": 10.76, "median_delay_s": 1.6, "p95_delay_s": 76.18, "min_delay_s": 0.73, "max_delay_s": 81.69, "mean_tt_s": 12.27, "mean_dist_m": 44.7, "free_flow_speed_mph": 66.1, "mean_speed_mph": 13.47}, "movements": [{"mv": "EBT", "type": "thru", "lanes": 1, "ib": 225, "ob": 107, "pattern": "225 -> 107", "journeys": 44, "delay_n": 42, "mean_delay_s": 1.81, "median_delay_s": 1.64, "p95_delay_s": 3.53, "min_delay_s": 0.51, "max_delay_s": 4.62, "mean_tt_s": 3.45, "mean_dist_m": 41.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 24.83}, {"mv": "EBR", "type": "right", "lanes": 1, "ib": 225, "ob": 341, "pattern": "225 -> 341", "journeys": 29, "delay_n": 23, "mean_delay_s": 3.82, "median_delay_s": 1.56, "p95_delay_s": 16.79, "min_delay_s": 0.37, "max_delay_s": 22.34, "mean_tt_s": 5.35, "mean_dist_m": 38.3, "free_flow_speed_mph": 56.0, "mean_speed_mph": 13.39}, {"mv": "EBL", "type": "left", "lanes": 1, "ib": 225, "ob": 351, "pattern": "225 -> 351", "journeys": 23, "delay_n": 23, "mean_delay_s": 2.51, "median_delay_s": 2.27, "p95_delay_s": 4.3, "min_delay_s": 1.83, "max_delay_s": 6.71, "mean_tt_s": 3.48, "mean_dist_m": 30.8, "free_flow_speed_mph": 71.2, "mean_speed_mph": 17.67}, {"mv": "WBU", "type": "uturn", "lanes": 1, "ib": 226, "ob": 107, "pattern": "226 -> 107", "journeys": 1, "delay_n": 1, "mean_delay_s": 1.85, "median_delay_s": 1.85, "p95_delay_s": 1.85, "min_delay_s": 1.85, "max_delay_s": 1.85, "mean_tt_s": 3.0, "mean_dist_m": 28.8, "free_flow_speed_mph": 56.0, "mean_speed_mph": 8.0}, {"mv": "WBT", "type": "thru", "lanes": 1, "ib": 226, "ob": 231, "pattern": "226 -> 231", "journeys": 35, "delay_n": 35, "mean_delay_s": 3.79, "median_delay_s": 1.78, "p95_delay_s": 2.7, "min_delay_s": 1.08, "max_delay_s": 73.89, "mean_tt_s": 5.17, "mean_dist_m": 34.7, "free_flow_speed_mph": 56.0, "mean_speed_mph": 23.23}, {"mv": "WBL", "type": "left", "lanes": 1, "ib": 226, "ob": 341, "pattern": "226 -> 341", "journeys": 16, "delay_n": 16, "mean_delay_s": 2.04, "median_delay_s": 2.05, "p95_delay_s": 2.44, "min_delay_s": 1.29, "max_delay_s": 3.13, "mean_tt_s": 3.06, "mean_dist_m": 25.6, "free_flow_speed_mph": 56.0, "mean_speed_mph": 18.97}, {"mv": "WBR", "type": "right", "lanes": 1, "ib": 226, "ob": 351, "pattern": "226 -> 351", "journeys": 26, "delay_n": 22, "mean_delay_s": 5.35, "median_delay_s": 1.92, "p95_delay_s": 22.57, "min_delay_s": 0.99, "max_delay_s": 37.92, "mean_tt_s": 6.55, "mean_dist_m": 38.3, "free_flow_speed_mph": 71.7, "mean_speed_mph": 11.84}, {"mv": "NBR", "type": "right", "lanes": 1, "ib": 340, "ob": 107, "pattern": "340 -> 107", "journeys": 23, "delay_n": 23, "mean_delay_s": 3.26, "median_delay_s": 1.69, "p95_delay_s": 10.65, "min_delay_s": 0.74, "max_delay_s": 28.44, "mean_tt_s": 4.74, "mean_dist_m": 37.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 12.57}, {"mv": "NBL", "type": "left", "lanes": 1, "ib": 340, "ob": 231, "pattern": "340 -> 231", "journeys": 28, "delay_n": 27, "mean_delay_s": 2.42, "median_delay_s": 2.29, "p95_delay_s": 3.61, "min_delay_s": 1.71, "max_delay_s": 4.53, "mean_tt_s": 3.19, "mean_dist_m": 19.1, "free_flow_speed_mph": 56.0, "mean_speed_mph": 16.17}, {"mv": "NBT", "type": "thru", "lanes": 3, "ib": 340, "ob": 351, "pattern": "340 -> 351", "journeys": 193, "delay_n": 191, "mean_delay_s": 3.19, "median_delay_s": 2.45, "p95_delay_s": 3.13, "min_delay_s": 1.09, "max_delay_s": 68.02, "mean_tt_s": 3.86, "mean_dist_m": 20.4, "free_flow_speed_mph": 68.5, "mean_speed_mph": 23.41}, {"mv": "SBL", "type": "left", "lanes": 1, "ib": 352, "ob": 107, "pattern": "352 -> 107", "journeys": 20, "delay_n": 17, "mean_delay_s": 8.66, "median_delay_s": 2.27, "p95_delay_s": 4.62, "min_delay_s": 1.01, "max_delay_s": 109.82, "mean_tt_s": 9.53, "mean_dist_m": 23.4, "free_flow_speed_mph": 60.1, "mean_speed_mph": 13.65}, {"mv": "SBR", "type": "right", "lanes": 1, "ib": 352, "ob": 231, "pattern": "352 -> 231", "journeys": 37, "delay_n": 33, "mean_delay_s": 10.76, "median_delay_s": 1.6, "p95_delay_s": 76.18, "min_delay_s": 0.73, "max_delay_s": 81.69, "mean_tt_s": 12.27, "mean_dist_m": 44.7, "free_flow_speed_mph": 66.1, "mean_speed_mph": 13.47}, {"mv": "SBT", "type": "thru", "lanes": 3, "ib": 352, "ob": 341, "pattern": "352 -> 341", "journeys": 166, "delay_n": 164, "mean_delay_s": 2.71, "median_delay_s": 2.33, "p95_delay_s": 2.93, "min_delay_s": 1.07, "max_delay_s": 68.27, "mean_tt_s": 3.47, "mean_dist_m": 23.3, "free_flow_speed_mph": 68.5, "mean_speed_mph": 25.69}]}}, {"name": "E LEMON ST & S RURAL RD", "timing": {"nid": "6507", "name": "E LEMON ST & S RURAL RD", "lat": 33.416837, "lon": -111.92628, "corridor": "Rural", "cycle": 110.0, "offset": 74.0, "ctrl": "Traffic Actuated", "phases": [1, 2], "split": ["78.0", "32.0"], "yellow": ["4.0", "4.0"], "red_clear": ["2.0", "2.0"], "min_green": ["28.0", "5.0"], "max_green": ["72.0", "26.0"]}, "movement_summary": {"total_journeys": 528, "weighted_mean_delay_s": 3.312, "busiest_movement": {"mv": "NBT", "type": "thru", "lanes": 2, "ib": 353, "ob": 332, "pattern": "353 -> 332", "journeys": 208, "delay_n": 198, "mean_delay_s": 2.03, "median_delay_s": 1.57, "p95_delay_s": 2.59, "min_delay_s": 0.02, "max_delay_s": 23.39, "mean_tt_s": 3.37, "mean_dist_m": 40.1, "free_flow_speed_mph": 67.1, "mean_speed_mph": 29.12}, "highest_delay_movement": {"mv": "SBL", "type": "left", "lanes": 1, "ib": 333, "ob": 555, "pattern": "333 -> 555", "journeys": 9, "delay_n": 8, "mean_delay_s": 20.12, "median_delay_s": 2.13, "p95_delay_s": 117.41, "min_delay_s": 1.3, "max_delay_s": 117.41, "mean_tt_s": 21.75, "mean_dist_m": 29.8, "free_flow_speed_mph": 40.9, "mean_speed_mph": 8.62}, "movements": [{"mv": "SBT", "type": "thru", "lanes": 2, "ib": 333, "ob": 354, "pattern": "333 -> 354", "journeys": 194, "delay_n": 188, "mean_delay_s": 1.93, "median_delay_s": 1.85, "p95_delay_s": 2.66, "min_delay_s": 0.21, "max_delay_s": 16.12, "mean_tt_s": 3.18, "mean_dist_m": 37.4, "free_flow_speed_mph": 67.1, "mean_speed_mph": 25.74}, {"mv": "SBR", "type": "right", "lanes": 1, "ib": 333, "ob": 554, "pattern": "333 -> 554", "journeys": 14, "delay_n": 14, "mean_delay_s": 6.06, "median_delay_s": 0.76, "p95_delay_s": 6.79, "min_delay_s": 0.0, "max_delay_s": 66.5, "mean_tt_s": 8.29, "mean_dist_m": 34.8, "free_flow_speed_mph": 34.4, "mean_speed_mph": 9.86}, {"mv": "SBL", "type": "left", "lanes": 1, "ib": 333, "ob": 555, "pattern": "333 -> 555", "journeys": 9, "delay_n": 8, "mean_delay_s": 20.12, "median_delay_s": 2.13, "p95_delay_s": 117.41, "min_delay_s": 1.3, "max_delay_s": 117.41, "mean_tt_s": 21.75, "mean_dist_m": 29.8, "free_flow_speed_mph": 40.9, "mean_speed_mph": 8.62}, {"mv": "NBT", "type": "thru", "lanes": 2, "ib": 353, "ob": 332, "pattern": "353 -> 332", "journeys": 208, "delay_n": 198, "mean_delay_s": 2.03, "median_delay_s": 1.57, "p95_delay_s": 2.59, "min_delay_s": 0.02, "max_delay_s": 23.39, "mean_tt_s": 3.37, "mean_dist_m": 40.1, "free_flow_speed_mph": 67.1, "mean_speed_mph": 29.12}, {"mv": "NBL", "type": "left", "lanes": 1, "ib": 353, "ob": 554, "pattern": "353 -> 554", "journeys": 18, "delay_n": 18, "mean_delay_s": 1.68, "median_delay_s": 1.52, "p95_delay_s": 2.35, "min_delay_s": 1.2, "max_delay_s": 2.62, "mean_tt_s": 3.0, "mean_dist_m": 22.2, "free_flow_speed_mph": 37.5, "mean_speed_mph": 11.36}, {"mv": "NBR", "type": "right", "lanes": 1, "ib": 353, "ob": 555, "pattern": "353 -> 555", "journeys": 17, "delay_n": 17, "mean_delay_s": 3.82, "median_delay_s": 1.53, "p95_delay_s": 1.98, "min_delay_s": 1.32, "max_delay_s": 39.42, "mean_tt_s": 5.29, "mean_dist_m": 32.4, "free_flow_speed_mph": 49.1, "mean_speed_mph": 10.53}, {"mv": "EBL", "type": "left", "lanes": 1, "ib": 553, "ob": 332, "pattern": "553 -> 332", "journeys": 16, "delay_n": 16, "mean_delay_s": 7.88, "median_delay_s": 1.58, "p95_delay_s": 16.67, "min_delay_s": 0.92, "max_delay_s": 78.85, "mean_tt_s": 9.5, "mean_dist_m": 25.0, "free_flow_speed_mph": 34.4, "mean_speed_mph": 10.94}, {"mv": "EBR", "type": "right", "lanes": 1, "ib": 553, "ob": 354, "pattern": "553 -> 354", "journeys": 19, "delay_n": 19, "mean_delay_s": 4.9, "median_delay_s": 1.3, "p95_delay_s": 12.74, "min_delay_s": 0.4, "max_delay_s": 45.76, "mean_tt_s": 7.0, "mean_dist_m": 35.1, "free_flow_speed_mph": 37.5, "mean_speed_mph": 9.34}, {"mv": "EBT", "type": "thru", "lanes": 1, "ib": 553, "ob": 555, "pattern": "553 -> 555", "journeys": 4, "delay_n": 4, "mean_delay_s": 1.66, "median_delay_s": 1.75, "p95_delay_s": 1.84, "min_delay_s": 1.31, "max_delay_s": 1.84, "mean_tt_s": 3.0, "mean_dist_m": 17.9, "free_flow_speed_mph": 30.0, "mean_speed_mph": 11.88}, {"mv": "WBR", "type": "right", "lanes": 1, "ib": 556, "ob": 332, "pattern": "556 -> 332", "journeys": 15, "delay_n": 9, "mean_delay_s": 18.68, "median_delay_s": 1.43, "p95_delay_s": 139.92, "min_delay_s": 0.15, "max_delay_s": 139.92, "mean_tt_s": 20.56, "mean_dist_m": 34.3, "free_flow_speed_mph": 40.9, "mean_speed_mph": 8.0}, {"mv": "WBL", "type": "left", "lanes": 1, "ib": 556, "ob": 354, "pattern": "556 -> 354", "journeys": 10, "delay_n": 6, "mean_delay_s": 7.84, "median_delay_s": 1.92, "p95_delay_s": 37.84, "min_delay_s": 1.55, "max_delay_s": 37.84, "mean_tt_s": 9.0, "mean_dist_m": 25.5, "free_flow_speed_mph": 49.1, "mean_speed_mph": 12.67}, {"mv": "WBT", "type": "thru", "lanes": 1, "ib": 556, "ob": 554, "pattern": "556 -> 554", "journeys": 4, "delay_n": 4, "mean_delay_s": 1.58, "median_delay_s": 1.67, "p95_delay_s": 1.77, "min_delay_s": 1.19, "max_delay_s": 1.77, "mean_tt_s": 3.0, "mean_dist_m": 19.1, "free_flow_speed_mph": 30.0, "mean_speed_mph": 14.88}]}}, {"name": "E RIO SALADO PKY & S RURAL RD", "timing": {"nid": "6385", "name": "E RIO SALADO PKY & S RURAL RD", "lat": 33.428838, "lon": -111.926268, "corridor": "Rural", "cycle": 110.0, "offset": 85.0, "ctrl": "Traffic Actuated", "phases": [1, 2, 3, 4, 5, 6, 7, 8], "split": ["14.0", "32.0", "16.0", "48.0", "14.0", "32.0", "16.0", "48.0"], "yellow": ["3.0", "4.0", "3.0", "4.5", "4.0", "4.0", "3.0", "4.5"], "red_clear": ["1.0", "2.0", "1.0", "1.5", "2.0", "2.0", "1.0", "1.5"], "min_green": ["5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0"], "max_green": ["10.0", "26.0", "12.0", "42.0", "8.0", "26.0", "12.0", "42.0"]}, "movement_summary": {"total_journeys": 1258, "weighted_mean_delay_s": 2.146, "busiest_movement": {"mv": "NBT", "type": "thru", "lanes": 2, "ib": 342, "ob": 593, "pattern": "342 -> 593", "journeys": 293, "delay_n": 79, "mean_delay_s": 2.07, "median_delay_s": 2.12, "p95_delay_s": 2.53, "min_delay_s": 0.83, "max_delay_s": 2.86, "mean_tt_s": 2.99, "mean_dist_m": 23.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 23.47}, "highest_delay_movement": {"mv": "WBR", "type": "right", "lanes": 1, "ib": 300, "ob": 593, "pattern": "300 -> 593", "journeys": 27, "delay_n": 9, "mean_delay_s": 10.14, "median_delay_s": 1.63, "p95_delay_s": 43.56, "min_delay_s": 0.91, "max_delay_s": 43.56, "mean_tt_s": 11.56, "mean_dist_m": 35.5, "free_flow_speed_mph": 56.0, "mean_speed_mph": 13.5}, "movements": [{"mv": "WBT", "type": "thru", "lanes": 2, "ib": 300, "ob": 303, "pattern": "300 -> 303", "journeys": 81, "delay_n": 81, "mean_delay_s": 2.82, "median_delay_s": 1.55, "p95_delay_s": 2.6, "min_delay_s": 0.0, "max_delay_s": 58.97, "mean_tt_s": 4.47, "mean_dist_m": 41.4, "free_flow_speed_mph": 56.0, "mean_speed_mph": 28.72}, {"mv": "WBU", "type": "uturn", "lanes": 1, "ib": 300, "ob": 320, "pattern": "300 -> 320", "journeys": 3, "delay_n": 0, "mean_delay_s": 0.0, "median_delay_s": 0.0, "p95_delay_s": 0.0, "min_delay_s": 0.0, "max_delay_s": 0.0, "mean_tt_s": 0.0, "mean_dist_m": 0.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 0.0}, {"mv": "WBL", "type": "left", "lanes": 1, "ib": 300, "ob": 343, "pattern": "300 -> 343", "journeys": 22, "delay_n": 21, "mean_delay_s": 2.1, "median_delay_s": 2.14, "p95_delay_s": 2.56, "min_delay_s": 1.3, "max_delay_s": 3.24, "mean_tt_s": 3.0, "mean_dist_m": 22.5, "free_flow_speed_mph": 56.0, "mean_speed_mph": 16.64}, {"mv": "WBR", "type": "right", "lanes": 1, "ib": 300, "ob": 593, "pattern": "300 -> 593", "journeys": 27, "delay_n": 9, "mean_delay_s": 10.14, "median_delay_s": 1.63, "p95_delay_s": 43.56, "min_delay_s": 0.91, "max_delay_s": 43.56, "mean_tt_s": 11.56, "mean_dist_m": 35.5, "free_flow_speed_mph": 56.0, "mean_speed_mph": 13.5}, {"mv": "EBU", "type": "uturn", "lanes": 1, "ib": 302, "ob": 303, "pattern": "302 -> 303", "journeys": 40, "delay_n": 1, "mean_delay_s": 0.66, "median_delay_s": 0.66, "p95_delay_s": 0.66, "min_delay_s": 0.66, "max_delay_s": 0.66, "mean_tt_s": 3.0, "mean_dist_m": 58.5, "free_flow_speed_mph": 56.0, "mean_speed_mph": 21.5}, {"mv": "EBT", "type": "thru", "lanes": 1, "ib": 302, "ob": 320, "pattern": "302 -> 320", "journeys": 87, "delay_n": 87, "mean_delay_s": 1.41, "median_delay_s": 1.5, "p95_delay_s": 2.19, "min_delay_s": 0.0, "max_delay_s": 3.7, "mean_tt_s": 3.07, "mean_dist_m": 41.6, "free_flow_speed_mph": 56.0, "mean_speed_mph": 28.49}, {"mv": "EBR", "type": "right", "lanes": 1, "ib": 302, "ob": 343, "pattern": "302 -> 343", "journeys": 51, "delay_n": 31, "mean_delay_s": 2.03, "median_delay_s": 1.35, "p95_delay_s": 3.04, "min_delay_s": 0.36, "max_delay_s": 18.32, "mean_tt_s": 3.84, "mean_dist_m": 45.2, "free_flow_speed_mph": 56.0, "mean_speed_mph": 15.35}, {"mv": "EBL", "type": "left", "lanes": 2, "ib": 302, "ob": 593, "pattern": "302 -> 593", "journeys": 114, "delay_n": 77, "mean_delay_s": 3.08, "median_delay_s": 1.87, "p95_delay_s": 2.74, "min_delay_s": 0.64, "max_delay_s": 95.57, "mean_tt_s": 4.21, "mean_dist_m": 28.1, "free_flow_speed_mph": 56.0, "mean_speed_mph": 16.85}, {"mv": "NBL", "type": "left", "lanes": 1, "ib": 342, "ob": 303, "pattern": "342 -> 303", "journeys": 69, "delay_n": 41, "mean_delay_s": 4.08, "median_delay_s": 2.04, "p95_delay_s": 3.63, "min_delay_s": 1.11, "max_delay_s": 85.58, "mean_tt_s": 5.17, "mean_dist_m": 27.3, "free_flow_speed_mph": 56.0, "mean_speed_mph": 18.0}, {"mv": "NBR", "type": "right", "lanes": 1, "ib": 342, "ob": 320, "pattern": "342 -> 320", "journeys": 26, "delay_n": 26, "mean_delay_s": 2.59, "median_delay_s": 1.42, "p95_delay_s": 4.72, "min_delay_s": 0.2, "max_delay_s": 29.78, "mean_tt_s": 4.19, "mean_dist_m": 40.2, "free_flow_speed_mph": 56.0, "mean_speed_mph": 13.6}, {"mv": "NBT", "type": "thru", "lanes": 2, "ib": 342, "ob": 593, "pattern": "342 -> 593", "journeys": 293, "delay_n": 79, "mean_delay_s": 2.07, "median_delay_s": 2.12, "p95_delay_s": 2.53, "min_delay_s": 0.83, "max_delay_s": 2.86, "mean_tt_s": 2.99, "mean_dist_m": 23.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 23.47}, {"mv": "SBR", "type": "right", "lanes": 1, "ib": 594, "ob": 303, "pattern": "594 -> 303", "journeys": 135, "delay_n": 0, "mean_delay_s": 0.0, "median_delay_s": 0.0, "p95_delay_s": 0.0, "min_delay_s": 0.0, "max_delay_s": 0.0, "mean_tt_s": 0.0, "mean_dist_m": 0.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 0.0}, {"mv": "SBL", "type": "left", "lanes": 1, "ib": 594, "ob": 320, "pattern": "594 -> 320", "journeys": 29, "delay_n": 14, "mean_delay_s": 2.09, "median_delay_s": 2.03, "p95_delay_s": 2.46, "min_delay_s": 1.81, "max_delay_s": 2.59, "mean_tt_s": 3.07, "mean_dist_m": 24.5, "free_flow_speed_mph": 56.0, "mean_speed_mph": 17.32}, {"mv": "SBT", "type": "thru", "lanes": 2, "ib": 594, "ob": 343, "pattern": "594 -> 343", "journeys": 281, "delay_n": 76, "mean_delay_s": 1.89, "median_delay_s": 1.87, "p95_delay_s": 2.37, "min_delay_s": 0.23, "max_delay_s": 2.97, "mean_tt_s": 2.96, "mean_dist_m": 26.8, "free_flow_speed_mph": 56.0, "mean_speed_mph": 26.84}]}}, {"name": "E UNIVERSITY DR & S MILL AVE", "timing": {"nid": "6446", "name": "E UNIVERSITY DR & S MILL AVE", "lat": 33.421928, "lon": -111.939997, "corridor": "University", "cycle": 110.0, "offset": 1.0, "ctrl": "Traffic Actuated", "phases": [1, 2, 3, 4, 5, 6, 7, 8], "split": ["16.0", "45.0", "19.0", "30.0", "16.0", "45.0", "17.0", "32.0"], "yellow": ["3.0", "4.0", "3.0", "4.0", "3.0", "4.0", "3.0", "4.0"], "red_clear": ["1.0", "2.0", "1.0", "2.0", "1.0", "2.0", "1.0", "2.0"], "min_green": ["5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0"], "max_green": ["12.0", "39.0", "15.0", "24.0", "12.0", "39.0", "13.0", "26.0"]}, "movement_summary": {"total_journeys": 852, "weighted_mean_delay_s": 4.485, "busiest_movement": {"mv": "NBR", "type": "right", "lanes": 1, "ib": 235, "ob": 416, "pattern": "235 -> 416", "journeys": 122, "delay_n": 39, "mean_delay_s": 5.17, "median_delay_s": 1.93, "p95_delay_s": 16.6, "min_delay_s": 0.63, "max_delay_s": 49.11, "mean_tt_s": 6.46, "mean_dist_m": 32.5, "free_flow_speed_mph": 56.4, "mean_speed_mph": 10.82}, "highest_delay_movement": {"mv": "SBR", "type": "right", "lanes": 1, "ib": 255, "ob": 297, "pattern": "255 -> 297", "journeys": 19, "delay_n": 18, "mean_delay_s": 18.41, "median_delay_s": 1.97, "p95_delay_s": 25.28, "min_delay_s": 1.46, "max_delay_s": 220.35, "mean_tt_s": 19.83, "mean_dist_m": 33.1, "free_flow_speed_mph": 51.9, "mean_speed_mph": 9.94}, "movements": [{"mv": "NBU", "type": "uturn", "lanes": 1, "ib": 235, "ob": 21, "pattern": "235 -> 21", "journeys": 15, "delay_n": 0, "mean_delay_s": 0.0, "median_delay_s": 0.0, "p95_delay_s": 0.0, "min_delay_s": 0.0, "max_delay_s": 0.0, "mean_tt_s": 0.0, "mean_dist_m": 0.0, "free_flow_speed_mph": 48.0, "mean_speed_mph": 0.0}, {"mv": "NBT", "type": "thru", "lanes": 1, "ib": 235, "ob": 144, "pattern": "235 -> 144", "journeys": 105, "delay_n": 48, "mean_delay_s": 2.94, "median_delay_s": 1.69, "p95_delay_s": 2.23, "min_delay_s": 0.0, "max_delay_s": 64.51, "mean_tt_s": 4.35, "mean_dist_m": 30.5, "free_flow_speed_mph": 48.0, "mean_speed_mph": 20.04}, {"mv": "NBL", "type": "left", "lanes": 1, "ib": 235, "ob": 297, "pattern": "235 -> 297", "journeys": 50, "delay_n": 36, "mean_delay_s": 9.35, "median_delay_s": 2.19, "p95_delay_s": 82.89, "min_delay_s": 1.5, "max_delay_s": 92.11, "mean_tt_s": 10.28, "mean_dist_m": 21.5, "free_flow_speed_mph": 51.7, "mean_speed_mph": 15.19}, {"mv": "NBR", "type": "right", "lanes": 1, "ib": 235, "ob": 416, "pattern": "235 -> 416", "journeys": 122, "delay_n": 39, "mean_delay_s": 5.17, "median_delay_s": 1.93, "p95_delay_s": 16.6, "min_delay_s": 0.63, "max_delay_s": 49.11, "mean_tt_s": 6.46, "mean_dist_m": 32.5, "free_flow_speed_mph": 56.4, "mean_speed_mph": 10.82}, {"mv": "SBT", "type": "thru", "lanes": 2, "ib": 255, "ob": 21, "pattern": "255 -> 21", "journeys": 117, "delay_n": 61, "mean_delay_s": 2.16, "median_delay_s": 1.63, "p95_delay_s": 2.22, "min_delay_s": 0.09, "max_delay_s": 37.68, "mean_tt_s": 3.59, "mean_dist_m": 30.7, "free_flow_speed_mph": 48.0, "mean_speed_mph": 21.11}, {"mv": "SBU", "type": "uturn", "lanes": 1, "ib": 255, "ob": 144, "pattern": "255 -> 144", "journeys": 2, "delay_n": 1, "mean_delay_s": 0.0, "median_delay_s": 0.0, "p95_delay_s": 0.0, "min_delay_s": 0.0, "max_delay_s": 0.0, "mean_tt_s": 3.0, "mean_dist_m": 111.7, "free_flow_speed_mph": 48.0, "mean_speed_mph": 7.5}, {"mv": "SBR", "type": "right", "lanes": 1, "ib": 255, "ob": 297, "pattern": "255 -> 297", "journeys": 19, "delay_n": 18, "mean_delay_s": 18.41, "median_delay_s": 1.97, "p95_delay_s": 25.28, "min_delay_s": 1.46, "max_delay_s": 220.35, "mean_tt_s": 19.83, "mean_dist_m": 33.1, "free_flow_speed_mph": 51.9, "mean_speed_mph": 9.94}, {"mv": "SBL", "type": "left", "lanes": 1, "ib": 255, "ob": 416, "pattern": "255 -> 416", "journeys": 9, "delay_n": 9, "mean_delay_s": 2.35, "median_delay_s": 2.34, "p95_delay_s": 2.73, "min_delay_s": 2.13, "max_delay_s": 2.73, "mean_tt_s": 3.0, "mean_dist_m": 16.5, "free_flow_speed_mph": 56.6, "mean_speed_mph": 13.67}, {"mv": "WBL", "type": "left", "lanes": 1, "ib": 284, "ob": 21, "pattern": "284 -> 21", "journeys": 107, "delay_n": 37, "mean_delay_s": 4.59, "median_delay_s": 2.22, "p95_delay_s": 10.82, "min_delay_s": 1.69, "max_delay_s": 67.97, "mean_tt_s": 5.43, "mean_dist_m": 19.1, "free_flow_speed_mph": 50.8, "mean_speed_mph": 14.7}, {"mv": "WBR", "type": "right", "lanes": 1, "ib": 284, "ob": 144, "pattern": "284 -> 144", "journeys": 22, "delay_n": 22, "mean_delay_s": 15.11, "median_delay_s": 1.79, "p95_delay_s": 58.88, "min_delay_s": 0.32, "max_delay_s": 70.87, "mean_tt_s": 16.55, "mean_dist_m": 33.0, "free_flow_speed_mph": 51.4, "mean_speed_mph": 12.32}, {"mv": "WBT", "type": "thru", "lanes": 1, "ib": 284, "ob": 297, "pattern": "284 -> 297", "journeys": 77, "delay_n": 76, "mean_delay_s": 5.23, "median_delay_s": 2.18, "p95_delay_s": 4.11, "min_delay_s": 0.79, "max_delay_s": 76.46, "mean_tt_s": 6.38, "mean_dist_m": 28.8, "free_flow_speed_mph": 56.0, "mean_speed_mph": 23.42}, {"mv": "WBU", "type": "uturn", "lanes": 1, "ib": 284, "ob": 416, "pattern": "284 -> 416", "journeys": 3, "delay_n": 3, "mean_delay_s": 6.47, "median_delay_s": 2.12, "p95_delay_s": 17.29, "min_delay_s": 0.0, "max_delay_s": 17.29, "mean_tt_s": 8.0, "mean_dist_m": 70.3, "free_flow_speed_mph": 58.6, "mean_speed_mph": 13.83}, {"mv": "EBR", "type": "right", "lanes": 1, "ib": 298, "ob": 21, "pattern": "298 -> 21", "journeys": 83, "delay_n": 67, "mean_delay_s": 2.94, "median_delay_s": 1.51, "p95_delay_s": 13.51, "min_delay_s": 0.63, "max_delay_s": 25.38, "mean_tt_s": 4.45, "mean_dist_m": 33.9, "free_flow_speed_mph": 50.2, "mean_speed_mph": 11.59}, {"mv": "EBL", "type": "left", "lanes": 1, "ib": 298, "ob": 144, "pattern": "298 -> 144", "journeys": 38, "delay_n": 35, "mean_delay_s": 2.01, "median_delay_s": 1.84, "p95_delay_s": 2.33, "min_delay_s": 1.01, "max_delay_s": 8.59, "mean_tt_s": 3.29, "mean_dist_m": 28.9, "free_flow_speed_mph": 50.8, "mean_speed_mph": 14.47}, {"mv": "EBT", "type": "thru", "lanes": 2, "ib": 298, "ob": 416, "pattern": "298 -> 416", "journeys": 83, "delay_n": 82, "mean_delay_s": 2.71, "median_delay_s": 2.37, "p95_delay_s": 3.57, "min_delay_s": 1.41, "max_delay_s": 26.21, "mean_tt_s": 3.49, "mean_dist_m": 20.5, "free_flow_speed_mph": 58.9, "mean_speed_mph": 21.58}]}}, {"name": "E UNIVERSITY DR & S RURAL RD", "timing": {"nid": "6447", "name": "E UNIVERSITY DR & S RURAL RD", "lat": 33.422013, "lon": -111.926287, "corridor": "University", "cycle": 110.0, "offset": 91.0, "ctrl": "Traffic Actuated", "phases": [1, 2, 3, 4, 5, 6, 7, 8], "split": ["14.0", "45.0", "18.0", "33.0", "14.0", "45.0", "14.0", "37.0"], "yellow": ["3.0", "4.5", "3.0", "4.5", "3.0", "4.5", "3.0", "4.5"], "red_clear": ["1.0", "1.5", "2.0", "1.5", "1.0", "1.5", "2.0", "1.5"], "min_green": ["5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0"], "max_green": ["10.0", "39.0", "13.0", "27.0", "10.0", "39.0", "9.0", "31.0"]}, "movement_summary": {"total_journeys": 1059, "weighted_mean_delay_s": 3.374, "busiest_movement": {"mv": "NBT", "type": "thru", "lanes": 2, "ib": 350, "ob": 361, "pattern": "350 -> 361", "journeys": 230, "delay_n": 226, "mean_delay_s": 1.52, "median_delay_s": 1.58, "p95_delay_s": 2.06, "min_delay_s": 0.0, "max_delay_s": 3.54, "mean_tt_s": 3.04, "mean_dist_m": 38.3, "free_flow_speed_mph": 56.0, "mean_speed_mph": 26.16}, "highest_delay_movement": {"mv": "WBR", "type": "right", "lanes": 1, "ib": 283, "ob": 361, "pattern": "283 -> 361", "journeys": 45, "delay_n": 31, "mean_delay_s": 9.39, "median_delay_s": 1.59, "p95_delay_s": 30.91, "min_delay_s": 1.1, "max_delay_s": 79.24, "mean_tt_s": 10.97, "mean_dist_m": 42.2, "free_flow_speed_mph": 59.7, "mean_speed_mph": 10.98}, "movements": [{"mv": "EBT", "type": "thru", "lanes": 2, "ib": 280, "ob": 282, "pattern": "280 -> 282", "journeys": 115, "delay_n": 112, "mean_delay_s": 2.57, "median_delay_s": 2.16, "p95_delay_s": 2.87, "min_delay_s": 0.63, "max_delay_s": 56.4, "mean_tt_s": 3.52, "mean_dist_m": 25.5, "free_flow_speed_mph": 60.1, "mean_speed_mph": 26.59}, {"mv": "EBR", "type": "right", "lanes": 1, "ib": 280, "ob": 358, "pattern": "280 -> 358", "journeys": 40, "delay_n": 33, "mean_delay_s": 6.33, "median_delay_s": 1.66, "p95_delay_s": 19.65, "min_delay_s": 0.35, "max_delay_s": 55.64, "mean_tt_s": 7.85, "mean_dist_m": 38.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 11.17}, {"mv": "EBL", "type": "left", "lanes": 1, "ib": 280, "ob": 361, "pattern": "280 -> 361", "journeys": 83, "delay_n": 58, "mean_delay_s": 5.77, "median_delay_s": 2.21, "p95_delay_s": 4.44, "min_delay_s": 0.8, "max_delay_s": 100.63, "mean_tt_s": 6.66, "mean_dist_m": 22.1, "free_flow_speed_mph": 56.0, "mean_speed_mph": 16.49}, {"mv": "WBT", "type": "thru", "lanes": 2, "ib": 283, "ob": 281, "pattern": "283 -> 281", "journeys": 101, "delay_n": 99, "mean_delay_s": 2.43, "median_delay_s": 2.45, "p95_delay_s": 2.92, "min_delay_s": 1.16, "max_delay_s": 4.98, "mean_tt_s": 3.12, "mean_dist_m": 18.7, "free_flow_speed_mph": 60.1, "mean_speed_mph": 21.63}, {"mv": "WBL", "type": "left", "lanes": 1, "ib": 283, "ob": 358, "pattern": "283 -> 358", "journeys": 46, "delay_n": 42, "mean_delay_s": 2.26, "median_delay_s": 2.25, "p95_delay_s": 2.62, "min_delay_s": 1.01, "max_delay_s": 4.45, "mean_tt_s": 3.05, "mean_dist_m": 20.9, "free_flow_speed_mph": 59.0, "mean_speed_mph": 16.23}, {"mv": "WBR", "type": "right", "lanes": 1, "ib": 283, "ob": 361, "pattern": "283 -> 361", "journeys": 45, "delay_n": 31, "mean_delay_s": 9.39, "median_delay_s": 1.59, "p95_delay_s": 30.91, "min_delay_s": 1.1, "max_delay_s": 79.24, "mean_tt_s": 10.97, "mean_dist_m": 42.2, "free_flow_speed_mph": 59.7, "mean_speed_mph": 10.98}, {"mv": "SBR", "type": "right", "lanes": 1, "ib": 335, "ob": 281, "pattern": "335 -> 281", "journeys": 65, "delay_n": 48, "mean_delay_s": 4.62, "median_delay_s": 1.43, "p95_delay_s": 37.08, "min_delay_s": 0.81, "max_delay_s": 40.0, "mean_tt_s": 6.29, "mean_dist_m": 41.9, "free_flow_speed_mph": 56.0, "mean_speed_mph": 12.22}, {"mv": "SBL", "type": "left", "lanes": 2, "ib": 335, "ob": 282, "pattern": "335 -> 282", "journeys": 66, "delay_n": 59, "mean_delay_s": 4.89, "median_delay_s": 2.19, "p95_delay_s": 3.36, "min_delay_s": 0.93, "max_delay_s": 109.26, "mean_tt_s": 5.81, "mean_dist_m": 24.6, "free_flow_speed_mph": 59.9, "mean_speed_mph": 16.86}, {"mv": "SBT", "type": "thru", "lanes": 1, "ib": 335, "ob": 358, "pattern": "335 -> 358", "journeys": 185, "delay_n": 182, "mean_delay_s": 2.4, "median_delay_s": 1.64, "p95_delay_s": 2.68, "min_delay_s": 0.0, "max_delay_s": 76.68, "mean_tt_s": 4.04, "mean_dist_m": 41.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 26.65}, {"mv": "SBU", "type": "uturn", "lanes": 1, "ib": 335, "ob": 361, "pattern": "335 -> 361", "journeys": 1, "delay_n": 0, "mean_delay_s": 0.0, "median_delay_s": 0.0, "p95_delay_s": 0.0, "min_delay_s": 0.0, "max_delay_s": 0.0, "mean_tt_s": 0.0, "mean_dist_m": 0.0, "free_flow_speed_mph": 56.0, "mean_speed_mph": 0.0}, {"mv": "NBL", "type": "left", "lanes": 1, "ib": 350, "ob": 281, "pattern": "350 -> 281", "journeys": 32, "delay_n": 30, "mean_delay_s": 2.18, "median_delay_s": 2.04, "p95_delay_s": 3.05, "min_delay_s": 0.93, "max_delay_s": 5.24, "mean_tt_s": 3.17, "mean_dist_m": 24.7, "free_flow_speed_mph": 56.0, "mean_speed_mph": 15.1}, {"mv": "NBR", "type": "right", "lanes": 1, "ib": 350, "ob": 282, "pattern": "350 -> 282", "journeys": 47, "delay_n": 44, "mean_delay_s": 6.03, "median_delay_s": 1.72, "p95_delay_s": 19.65, "min_delay_s": 0.85, "max_delay_s": 85.43, "mean_tt_s": 7.59, "mean_dist_m": 42.0, "free_flow_speed_mph": 60.3, "mean_speed_mph": 12.61}, {"mv": "NBU", "type": "uturn", "lanes": 1, "ib": 350, "ob": 358, "pattern": "350 -> 358", "journeys": 3, "delay_n": 1, "mean_delay_s": 1.06, "median_delay_s": 1.06, "p95_delay_s": 1.06, "min_delay_s": 1.06, "max_delay_s": 1.06, "mean_tt_s": 3.0, "mean_dist_m": 48.4, "free_flow_speed_mph": 56.0, "mean_speed_mph": 11.5}, {"mv": "NBT", "type": "thru", "lanes": 2, "ib": 350, "ob": 361, "pattern": "350 -> 361", "journeys": 230, "delay_n": 226, "mean_delay_s": 1.52, "median_delay_s": 1.58, "p95_delay_s": 2.06, "min_delay_s": 0.0, "max_delay_s": 3.54, "mean_tt_s": 3.04, "mean_dist_m": 38.3, "free_flow_speed_mph": 56.0, "mean_speed_mph": 26.16}]}}, {"name": "HAYDEN FERRY LAKESIDE & E RIO SALADO PKY", "timing": {"nid": "6363", "name": "HAYDEN FERRY LAKESIDE & E RIO SALADO PKY", "lat": 33.430466, "lon": -111.937434, "corridor": "Rio_Salado", "cycle": 110.0, "offset": 38.0, "ctrl": "Traffic Actuated", "phases": [1, 2], "split": ["75.0", "35.0"], "yellow": ["4.0", "4.0"], "red_clear": ["2.0", "2.0"], "min_green": ["5.0", "5.0"], "max_green": ["69.0", "29.0"]}, "movement_summary": {"total_journeys": 211, "weighted_mean_delay_s": 2.86, "busiest_movement": {"mv": "EBT", "type": "thru", "lanes": 2, "ib": 395, "ob": 90, "pattern": "395 -> 90", "journeys": 211, "delay_n": 124, "mean_delay_s": 2.86, "median_delay_s": 1.17, "p95_delay_s": 2.34, "min_delay_s": 0.0, "max_delay_s": 92.16, "mean_tt_s": 4.69, "mean_dist_m": 45.8, "free_flow_speed_mph": 56.0, "mean_speed_mph": 32.31}, "highest_delay_movement": {"mv": "EBT", "type": "thru", "lanes": 2, "ib": 395, "ob": 90, "pattern": "395 -> 90", "journeys": 211, "delay_n": 124, "mean_delay_s": 2.86, "median_delay_s": 1.17, "p95_delay_s": 2.34, "min_delay_s": 0.0, "max_delay_s": 92.16, "mean_tt_s": 4.69, "mean_dist_m": 45.8, "free_flow_speed_mph": 56.0, "mean_speed_mph": 32.31}, "movements": [{"mv": "EBT", "type": "thru", "lanes": 2, "ib": 395, "ob": 90, "pattern": "395 -> 90", "journeys": 211, "delay_n": 124, "mean_delay_s": 2.86, "median_delay_s": 1.17, "p95_delay_s": 2.34, "min_delay_s": 0.0, "max_delay_s": 92.16, "mean_tt_s": 4.69, "mean_dist_m": 45.8, "free_flow_speed_mph": 56.0, "mean_speed_mph": 32.31}]}}, {"name": "METRO LIGHT RAIL & S MILL AVE", "timing": {"nid": "50227", "name": "METRO LIGHT RAIL & S MILL AVE", "lat": 33.42744, "lon": -111.940002, "corridor": "Mill", "cycle": 120.0, "offset": 15.0, "ctrl": "Traffic Actuated", "phases": [2, 4, 6, 8, 12, 16], "split": ["25.0", "59.0", "25.0", "59.0", "36.0", "36.0"], "yellow": ["4.0", "4.0", "4.0", "4.0", "2.0", "2.0"], "red_clear": ["2.0", "2.0", "2.0", "2.0", "1.0", "1.0"], "min_green": ["5.0", "5.0", "5.0", "5.0", "5.0", "5.0"], "max_green": ["19.0", "53.0", "19.0", "53.0", "33.0", "33.0"]}, "movement_summary": {"total_journeys": 248, "weighted_mean_delay_s": 3.593, "busiest_movement": {"mv": "SBT", "type": "thru", "lanes": 1, "ib": 583, "ob": 143, "pattern": "583 -> 143", "journeys": 114, "delay_n": 40, "mean_delay_s": 3.02, "median_delay_s": 1.78, "p95_delay_s": 2.54, "min_delay_s": 0.76, "max_delay_s": 50.68, "mean_tt_s": 4.22, "mean_dist_m": 25.9, "free_flow_speed_mph": 48.0, "mean_speed_mph": 18.46}, "highest_delay_movement": {"mv": "SBU", "type": "uturn", "lanes": 1, "ib": 583, "ob": 206, "pattern": "583 -> 206", "journeys": 6, "delay_n": 3, "mean_delay_s": 20.53, "median_delay_s": 2.57, "p95_delay_s": 56.52, "min_delay_s": 2.51, "max_delay_s": 56.52, "mean_tt_s": 21.0, "mean_dist_m": 10.0, "free_flow_speed_mph": 48.0, "mean_speed_mph": 7.83}, "movements": [{"mv": "EBR", "type": "right", "lanes": 1, "ib": 165, "ob": 143, "pattern": "165 -> 143", "journeys": 4, "delay_n": 4, "mean_delay_s": 4.22, "median_delay_s": 2.21, "p95_delay_s": 10.81, "min_delay_s": 1.67, "max_delay_s": 10.81, "mean_tt_s": 5.25, "mean_dist_m": 19.5, "free_flow_speed_mph": 42.6, "mean_speed_mph": 7.12}, {"mv": "NBU", "type": "uturn", "lanes": 1, "ib": 264, "ob": 143, "pattern": "264 -> 143", "journeys": 8, "delay_n": 2, "mean_delay_s": 4.35, "median_delay_s": 4.35, "p95_delay_s": 5.9, "min_delay_s": 2.8, "max_delay_s": 5.9, "mean_tt_s": 4.5, "mean_dist_m": 3.3, "free_flow_speed_mph": 48.0, "mean_speed_mph": 4.75}, {"mv": "NBL", "type": "left", "lanes": 1, "ib": 264, "ob": 164, "pattern": "264 -> 164", "journeys": 1, "delay_n": 1, "mean_delay_s": 2.16, "median_delay_s": 2.16, "p95_delay_s": 2.16, "min_delay_s": 2.16, "max_delay_s": 2.16, "mean_tt_s": 3.0, "mean_dist_m": 15.5, "free_flow_speed_mph": 41.2, "mean_speed_mph": 8.5}, {"mv": "NBT", "type": "thru", "lanes": 1, "ib": 264, "ob": 206, "pattern": "264 -> 206", "journeys": 112, "delay_n": 69, "mean_delay_s": 3.26, "median_delay_s": 1.78, "p95_delay_s": 3.09, "min_delay_s": 0.69, "max_delay_s": 52.98, "mean_tt_s": 4.48, "mean_dist_m": 26.2, "free_flow_speed_mph": 48.0, "mean_speed_mph": 17.79}, {"mv": "SBT", "type": "thru", "lanes": 1, "ib": 583, "ob": 143, "pattern": "583 -> 143", "journeys": 114, "delay_n": 40, "mean_delay_s": 3.02, "median_delay_s": 1.78, "p95_delay_s": 2.54, "min_delay_s": 0.76, "max_delay_s": 50.68, "mean_tt_s": 4.22, "mean_dist_m": 25.9, "free_flow_speed_mph": 48.0, "mean_speed_mph": 18.46}, {"mv": "SBR", "type": "right", "lanes": 1, "ib": 583, "ob": 164, "pattern": "583 -> 164", "journeys": 3, "delay_n": 2, "mean_delay_s": 1.56, "median_delay_s": 1.56, "p95_delay_s": 1.6, "min_delay_s": 1.51, "max_delay_s": 1.6, "mean_tt_s": 3.0, "mean_dist_m": 26.1, "free_flow_speed_mph": 40.4, "mean_speed_mph": 12.25}, {"mv": "SBU", "type": "uturn", "lanes": 1, "ib": 583, "ob": 206, "pattern": "583 -> 206", "journeys": 6, "delay_n": 3, "mean_delay_s": 20.53, "median_delay_s": 2.57, "p95_delay_s": 56.52, "min_delay_s": 2.51, "max_delay_s": 56.52, "mean_tt_s": 21.0, "mean_dist_m": 10.0, "free_flow_speed_mph": 48.0, "mean_speed_mph": 7.83}]}}, {"name": "METRO LIGHT RAIL & UNIVERSITY & RURAL STATION", "timing": {"nid": "6483", "name": "METRO LIGHT RAIL & UNIVERSITY & RURAL STATION", "lat": 33.420173, "lon": -111.926294, "corridor": "University", "cycle": 110.0, "offset": 26.0, "ctrl": "Traffic Actuated", "phases": [2, 3, 4, 6, 7, 8, 12, 16], "split": ["33.0", "11.0", "58.0", "33.0", "13.0", "56.0", "8.0", "8.0"], "yellow": ["4.0", "4.0", "5.0", "4.0", "4.0", "5.0", "2.0", "2.0"], "red_clear": ["2.0", "2.0", "2.0", "2.0", "2.0", "2.0", "1.0", "1.0"], "min_green": ["5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0", "5.0"], "max_green": ["27.0", "5.0", "51.0", "27.0", "7.0", "49.0", "5.0", "5.0"]}, "movement_summary": {"total_journeys": 503, "weighted_mean_delay_s": 2.5, "busiest_movement": {"mv": "SBT", "type": "thru", "lanes": 3, "ib": 339, "ob": 604, "pattern": "339 -> 604", "journeys": 252, "delay_n": 1, "mean_delay_s": 2.39, "median_delay_s": 2.39, "p95_delay_s": 2.39, "min_delay_s": 2.39, "max_delay_s": 2.39, "mean_tt_s": 3.0, "mean_dist_m": 15.4, "free_flow_speed_mph": 56.0, "mean_speed_mph": 10.5}, "highest_delay_movement": {"mv": "NBT", "type": "thru", "lanes": 3, "ib": 603, "ob": 338, "pattern": "603 -> 338", "journeys": 251, "delay_n": 2, "mean_delay_s": 2.61, "median_delay_s": 2.61, "p95_delay_s": 2.67, "min_delay_s": 2.54, "max_delay_s": 2.67, "mean_tt_s": 3.0, "mean_dist_m": 9.8, "free_flow_speed_mph": 56.0, "mean_speed_mph": 6.75}, "movements": [{"mv": "SBT", "type": "thru", "lanes": 3, "ib": 339, "ob": 604, "pattern": "339 -> 604", "journeys": 252, "delay_n": 1, "mean_delay_s": 2.39, "median_delay_s": 2.39, "p95_delay_s": 2.39, "min_delay_s": 2.39, "max_delay_s": 2.39, "mean_tt_s": 3.0, "mean_dist_m": 15.4, "free_flow_speed_mph": 56.0, "mean_speed_mph": 10.5}, {"mv": "NBT", "type": "thru", "lanes": 3, "ib": 603, "ob": 338, "pattern": "603 -> 338", "journeys": 251, "delay_n": 2, "mean_delay_s": 2.61, "median_delay_s": 2.61, "p95_delay_s": 2.67, "min_delay_s": 2.54, "max_delay_s": 2.67, "mean_tt_s": 3.0, "mean_dist_m": 9.8, "free_flow_speed_mph": 56.0, "mean_speed_mph": 6.75}]}}, {"name": "N MILL AVE & W 1ST ST", "timing": {"nid": "6357", "name": "N MILL AVE & W 1ST ST", "lat": 33.429621, "lon": -111.940027, "corridor": "Mill", "cycle": 110.0, "offset": 90.0, "ctrl": "Traffic Actuated", "phases": [1, 2, 3, 4, 5, 6, 7, 8], "split": ["16.0", "35.0", "27.0", "32.0", "16.0", "35.0", "16.0", "43.0"], "yellow": ["3.0", "4.0", "3.0", "4.0", "3.0", "4.0", "3.0", "4.0"], "red_clear": ["1.0", "2.0", "1.0", "2.0", "1.0", "2.0", "1.0", "2.0"], "min_green": ["5.0", "10.0", "5.0", "5.0", "5.0", "10.0", "5.0", "5.0"], "max_green": ["12.0", "29.0", "23.0", "26.0", "12.0", "29.0", "12.0", "37.0"]}, "movement_summary": {"total_journeys": 640, "weighted_mean_delay_s": 3.81, "busiest_movement": {"mv": "WBR", "type": "right", "lanes": 1, "ib": 312, "ob": 605, "pattern": "312 -> 605", "journeys": 155, "delay_n": 33, "mean_delay_s": 4.93, "median_delay_s": 2.07, "p95_delay_s": 20.18, "min_delay_s": 1.73, "max_delay_s": 35.28, "mean_tt_s": 5.94, "mean_dist_m": 25.0, "free_flow_speed_mph": 55.3, "mean_speed_mph": 11.23}, "highest_delay_movement": {"mv": "EBU", "type": "uturn", "lanes": 1, "ib": 317, "ob": 318, "pattern": "317 -> 318", "journeys": 2, "delay_n": 1, "mean_delay_s": 109.46, "median_delay_s": 109.46, "p95_delay_s": 109.46, "min_delay_s": 109.46, "max_delay_s": 109.46, "mean_tt_s": 111.0, "mean_dist_m": 38.5, "free_flow_speed_mph": 56.0, "mean_speed_mph": 7.0}, "movements": [{"mv": "NBU", "type": "uturn", "lanes": 1, "ib": 263, "ob": 267, "pattern": "263 -> 267", "journeys": 7, "delay_n": 1, "mean_delay_s": 1.89, "median_delay_s": 1.89, "p95_delay_s": 1.89, "min_delay_s": 1.89, "max_delay_s": 1.89, "mean_tt_s": 3.0, "mean_dist_m": 23.8, "free_flow_speed_mph": 48.0, "mean_speed_mph": 19.5}, {"mv": "NBL", "type": "left", "lanes": 1, "ib": 263, "ob": 318, "pattern": "263 -> 318", "journeys": 9, "delay_n": 5, "mean_delay_s": 2.54, "median_delay_s": 2.24, "p95_delay_s": 3.97, "min_delay_s": 1.87, "max_delay_s": 3.97, "mean_tt_s": 3.8, "mean_dist_m": 30.0, "free_flow_speed_mph": 53.3, "mean_speed_mph": 15.62}, {"mv": "NBR", "type": "right", "lanes": 1, "ib": 263, "ob": 396, "pattern": "263 -> 396", "journeys": 50, "delay_n": 25, "mean_delay_s": 2.59, "median_delay_s": 1.97, "p95_delay_s": 6.31, "min_delay_s": 0.92, "max_delay_s": 14.01, "mean_tt_s": 3.76, "mean_dist_m": 28.6, "free_flow_speed_mph": 54.5, "mean_speed_mph": 15.9}, {"mv": "NBT", "type": "thru", "lanes": 1, "ib": 263, "ob": 605, "pattern": "263 -> 605", "journeys": 60, "delay_n": 12, "mean_delay_s": 2.12, "median_delay_s": 2.13, "p95_delay_s": 2.44, "min_delay_s": 1.61, "max_delay_s": 2.5, "mean_tt_s": 3.0, "mean_dist_m": 18.9, "free_flow_speed_mph": 48.0, "mean_speed_mph": 18.79}, {"mv": "SBT", "type": "thru", "lanes": 1, "ib": 287, "ob": 267, "pattern": "287 -> 267", "journeys": 55, "delay_n": 22, "mean_delay_s": 2.08, "median_delay_s": 1.98, "p95_delay_s": 3.22, "min_delay_s": 0.99, "max_delay_s": 3.85, "mean_tt_s": 3.18, "mean_dist_m": 23.6, "free_flow_speed_mph": 48.0, "mean_speed_mph": 22.09}, {"mv": "SBR", "type": "right", "lanes": 1, "ib": 287, "ob": 318, "pattern": "287 -> 318", "journeys": 20, "delay_n": 8, "mean_delay_s": 1.99, "median_delay_s": 1.89, "p95_delay_s": 3.3, "min_delay_s": 1.44, "max_delay_s": 3.3, "mean_tt_s": 3.12, "mean_dist_m": 28.0, "free_flow_speed_mph": 55.3, "mean_speed_mph": 12.06}, {"mv": "SBL", "type": "left", "lanes": 1, "ib": 287, "ob": 396, "pattern": "287 -> 396", "journeys": 76, "delay_n": 14, "mean_delay_s": 2.31, "median_delay_s": 2.13, "p95_delay_s": 2.97, "min_delay_s": 2.0, "max_delay_s": 3.9, "mean_tt_s": 3.29, "mean_dist_m": 24.4, "free_flow_speed_mph": 55.7, "mean_speed_mph": 17.21}, {"mv": "WBL", "type": "left", "lanes": 1, "ib": 312, "ob": 267, "pattern": "312 -> 267", "journeys": 56, "delay_n": 24, "mean_delay_s": 5.01, "median_delay_s": 2.46, "p95_delay_s": 26.21, "min_delay_s": 1.64, "max_delay_s": 38.14, "mean_tt_s": 5.67, "mean_dist_m": 14.8, "free_flow_speed_mph": 50.2, "mean_speed_mph": 15.15}, {"mv": "WBT", "type": "thru", "lanes": 1, "ib": 312, "ob": 318, "pattern": "312 -> 318", "journeys": 56, "delay_n": 56, "mean_delay_s": 2.29, "median_delay_s": 2.27, "p95_delay_s": 3.04, "min_delay_s": 1.26, "max_delay_s": 4.49, "mean_tt_s": 3.12, "mean_dist_m": 20.8, "free_flow_speed_mph": 56.0, "mean_speed_mph": 20.89}, {"mv": "WBU", "type": "uturn", "lanes": 1, "ib": 312, "ob": 396, "pattern": "312 -> 396", "journeys": 5, "delay_n": 2, "mean_delay_s": 18.79, "median_delay_s": 18.79, "p95_delay_s": 35.2, "min_delay_s": 2.39, "max_delay_s": 35.2, "mean_tt_s": 19.5, "mean_dist_m": 17.7, "free_flow_speed_mph": 56.0, "mean_speed_mph": 13.75}, {"mv": "WBR", "type": "right", "lanes": 1, "ib": 312, "ob": 605, "pattern": "312 -> 605", "journeys": 155, "delay_n": 33, "mean_delay_s": 4.93, "median_delay_s": 2.07, "p95_delay_s": 20.18, "min_delay_s": 1.73, "max_delay_s": 35.28, "mean_tt_s": 5.94, "mean_dist_m": 25.0, "free_flow_speed_mph": 55.3, "mean_speed_mph": 11.23}, {"mv": "EBR", "type": "right", "lanes": 1, "ib": 317, "ob": 267, "pattern": "317 -> 267", "journeys": 15, "delay_n": 10, "mean_delay_s": 1.94, "median_delay_s": 1.9, "p95_delay_s": 2.71, "min_delay_s": 1.63, "max_delay_s": 2.71, "mean_tt_s": 3.1, "mean_dist_m": 25.8, "free_flow_speed_mph": 49.7, "mean_speed_mph": 11.35}, {"mv": "EBU", "type": "uturn", "lanes": 1, "ib": 317, "ob": 318, "pattern": "317 -> 318", "journeys": 2, "delay_n": 1, "mean_delay_s": 109.46, "median_delay_s": 109.46, "p95_delay_s": 109.46, "min_delay_s": 109.46, "max_delay_s": 109.46, "mean_tt_s": 111.0, "mean_dist_m": 38.5, "free_flow_speed_mph": 56.0, "mean_speed_mph": 7.0}, {"mv": "EBT", "type": "thru", "lanes": 1, "ib": 317, "ob": 396, "pattern": "317 -> 396", "journeys": 56, "delay_n": 56, "mean_delay_s": 2.18, "median_delay_s": 2.11, "p95_delay_s": 2.88, "min_delay_s": 1.09, "max_delay_s": 5.17, "mean_tt_s": 3.07, "mean_dist_m": 22.4, "free_flow_speed_mph": 56.0, "mean_speed_mph": 22.99}, {"mv": "EBL", "type": "left", "lanes": 1, "ib": 317, "ob": 605, "pattern": "317 -> 605", "journeys": 18, "delay_n": 9, "mean_delay_s": 9.95, "median_delay_s": 2.32, "p95_delay_s": 71.87, "min_delay_s": 1.87, "max_delay_s": 71.87, "mean_tt_s": 10.67, "mean_dist_m": 17.6, "free_flow_speed_mph": 55.1, "mean_speed_mph": 15.83}]}}, {"name": "S PACKARD DR & E RIO SALADO PKY", "timing": {"nid": "6360", "name": "S PACKARD DR & E RIO SALADO PKY", "lat": 33.428725, "lon": -111.929278, "corridor": "Rio_Salado", "cycle": 110.0, "offset": 70.0, "ctrl": "Traffic Actuated", "phases": [1, 2, 4, 5, 6, 8], "split": ["36.0", "36.0", "38.0", "36.0", "36.0", "38.0"], "yellow": ["3.0", "4.0", "4.0", "3.0", "4.0", "4.0"], "red_clear": ["1.0", "2.0", "2.0", "1.0", "2.0", "2.0"], "min_green": ["5.0", "5.0", "8.0", "5.0", "5.0", "8.0"], "max_green": ["32.0", "30.0", "32.0", "32.0", "30.0", "32.0"]}, "movement_summary": {"total_journeys": 297, "weighted_mean_delay_s": 1.94, "busiest_movement": {"mv": "WBT", "type": "thru", "lanes": 2, "ib": 304, "ob": 390, "pattern": "304 -> 390", "journeys": 297, "delay_n": 172, "mean_delay_s": 1.94, "median_delay_s": 1.08, "p95_delay_s": 2.08, "min_delay_s": 0.0, "max_delay_s": 68.62, "mean_tt_s": 3.77, "mean_dist_m": 45.9, "free_flow_speed_mph": 56.0, "mean_speed_mph": 32.59}, "highest_delay_movement": {"mv": "WBT", "type": "thru", "lanes": 2, "ib": 304, "ob": 390, "pattern": "304 -> 390", "journeys": 297, "delay_n": 172, "mean_delay_s": 1.94, "median_delay_s": 1.08, "p95_delay_s": 2.08, "min_delay_s": 0.0, "max_delay_s": 68.62, "mean_tt_s": 3.77, "mean_dist_m": 45.9, "free_flow_speed_mph": 56.0, "mean_speed_mph": 32.59}, "movements": [{"mv": "WBT", "type": "thru", "lanes": 2, "ib": 304, "ob": 390, "pattern": "304 -> 390", "journeys": 297, "delay_n": 172, "mean_delay_s": 1.94, "median_delay_s": 1.08, "p95_delay_s": 2.08, "min_delay_s": 0.0, "max_delay_s": 68.62, "mean_tt_s": 3.77, "mean_dist_m": 45.9, "free_flow_speed_mph": 56.0, "mean_speed_mph": 32.59}]}}]};</script>
+<script>
+const PHASE_COLORS = ['#1d4ed8','#059669','#d97706','#7c3aed','#db2777','#0891b2','#65a30d','#dc2626'];
+const APPROACH_COLORS = { N:'#1d4ed8', S:'#059669', E:'#d97706', W:'#7c3aed' };
+
+const byName = Object.fromEntries(PAYLOAD.intersections.map(d => [d.name, d]));
+const tabsEl = document.getElementById('qtabs');
+const answerEl = document.getElementById('answer');
+const gridEl = document.getElementById('grid');
+let current = PAYLOAD.questions[0].id;
+const mapInstances = {};
+
+function fmt(x, d=1) {
+  if (x === null || x === undefined || x === '') return 'n/a';
+  const n = typeof x === 'number' ? x : parseFloat(x);
+  return isNaN(n) ? x : n.toFixed(d);
+}
+function asNum(x) {
+  if (x === null || x === undefined || x === '') return null;
+  const n = typeof x === 'number' ? x : parseFloat(x);
+  return isNaN(n) ? null : n;
+}
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderTabs() {
+  tabsEl.innerHTML = PAYLOAD.questions.map(q =>
+    `<button class="qtab ${q.id===current?'active':''}" data-q="${q.id}"><span class="qid">${q.id}</span>${escHtml(q.title)}</button>`
+  ).join('');
+  tabsEl.querySelectorAll('.qtab').forEach(b => b.addEventListener('click', () => {
+    current = b.dataset.q;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }));
+}
+
+function renderAnswer(q) {
+  answerEl.innerHTML = `
+    <div class="qcard">
+      <h2>${escHtml(q.id)}. ${escHtml(q.title)}</h2>
+      <p class="qsub"><b>Question:</b> ${escHtml(q.question)}</p>
+      <h3>Draft student answer</h3>
+      <p>${escHtml(q.draft_answer)}</p>
+      <h3>Dashboard panels to use</h3>
+      <div class="badges">${(q.dashboard_panels||[]).map(p => `<span class="badge">${escHtml(p.replaceAll('_',' '))}</span>`).join('')}</div>
+      <h3>Student task</h3>
+      <div class="task">${escHtml(q.student_task)}</div>
+    </div>`;
+}
+
+function timingPills(t) {
+  const pills = [];
+  if (t.corridor) pills.push(`<span class="pill corridor">${escHtml(t.corridor)}</span>`);
+  if (t.ctrl) pills.push(`<span class="pill ctrl">${escHtml(t.ctrl)}</span>`);
+  if (t.nid) pills.push(`<span class="pill">node ${escHtml(t.nid)}</span>`);
+  return pills.join('');
+}
+
+function buildSplitBar(t) {
+  const phases = t.phases || [];
+  const splits = (t.split || []).map(asNum);
+  const yellows = (t.yellow || []).map(asNum);
+  const reds = (t.red_clear || []).map(asNum);
+  const cycle = asNum(t.cycle);
+  if (!phases.length || !cycle) return '<div class="empty">No phase timing available.</div>';
+  const total = splits.reduce((a,b) => a + (b||0), 0) || cycle;
+
+  const segs = phases.map((p,i) => {
+    const sp = splits[i] || 0;
+    const w = (sp / total) * 100;
+    const c = PHASE_COLORS[i % PHASE_COLORS.length];
+    const tip = `Φ${p}: split ${sp}s, yellow ${yellows[i]||0}s, red-clear ${reds[i]||0}s`;
+    return `<div class="tseg" style="width:${w}%; background:${c}" title="${escHtml(tip)}">
+      <span class="ph">Φ${escHtml(p)}</span><span class="sp">${sp}s</span></div>`;
+  }).join('');
+
+  const ySegs = phases.map((p,i) => {
+    const sp = splits[i] || 0;
+    const w = (sp / total) * 100;
+    const yv = yellows[i] || 0;
+    return `<div class="tseg" style="width:${w}%; background:${yv ? '#facc15' : '#f3f4f6'}; color:#1f2937" title="Yellow ${yv}s">${yv ? yv+'y' : ''}</div>`;
+  }).join('');
+  const rSegs = phases.map((p,i) => {
+    const sp = splits[i] || 0;
+    const w = (sp / total) * 100;
+    const rv = reds[i] || 0;
+    return `<div class="tseg" style="width:${w}%; background:${rv ? '#b91c1c' : '#f3f4f6'}" title="Red-clear ${rv}s">${rv ? rv+'r' : ''}</div>`;
+  }).join('');
+
+  return `
+    <div class="tband">
+      <div class="tlabel">Cycle ${cycle}s · phase splits</div>
+      <div class="tbar">${segs}</div>
+      <div class="tbar thin">${ySegs}</div>
+      <div class="tbar thin">${rSegs}</div>
+      <div class="tlegend">
+        <span><i style="background:#1d4ed8"></i>green split</span>
+        <span><i style="background:#facc15"></i>yellow</span>
+        <span><i style="background:#b91c1c"></i>red-clear</span>
+      </div>
+    </div>`;
+}
+
+function approachColor(mv) {
+  if (!mv) return '#6b7280';
+  return APPROACH_COLORS[mv.charAt(0)] || '#6b7280';
+}
+
+function movementChips(m) {
+  const moves = (m.movements || []).slice()
+    .sort((a,b) => (b.journeys||0) - (a.journeys||0))
+    .slice(0, 4);
+  if (!moves.length) return '';
+  const chips = moves.map(r => {
+    const c = approachColor(r.mv);
+    return `<span class="chip"><span class="dot" style="background:${c}">${escHtml((r.mv||'').slice(0,2))}</span>
+      <span class="mvc">${escHtml(r.mv||'?')}</span>
+      <span class="mvd">${r.journeys||0}j · ${fmt(r.mean_delay_s,1)}s</span></span>`;
+  }).join('');
+  return `<div class="movements"><div class="mtitle">Top movements (by journeys)</div><div class="chips">${chips}</div></div>`;
+}
+
+function callout(m) {
+  if (!m || (!m.busiest_movement && !m.highest_delay_movement)) return '';
+  const fmtMv = (mv) => mv ? `<span class="mv">${escHtml(mv.mv||'?')}</span> · ${mv.journeys||0} journeys · ${fmt(mv.mean_delay_s,2)} s` : 'n/a';
+  return `
+    <div class="callout">
+      <div class="cobox">
+        <div class="lab">Busiest movement</div>
+        <div class="val">${fmtMv(m.busiest_movement)}</div>
+      </div>
+      <div class="cobox">
+        <div class="lab">Highest-delay movement</div>
+        <div class="val">${fmtMv(m.highest_delay_movement)}</div>
+      </div>
+    </div>`;
+}
+
+function intersectionCard(name, idx) {
+  const d = byName[name];
+  if (!d || !d.timing) {
+    return `<div class="icard"><h3 class="iname">${escHtml(name)}</h3>
+      <div class="empty">No data joined for this intersection.</div></div>`;
+  }
+  const t = d.timing;
+  const m = d.movement_summary || {};
+  const mapId = `map_${current}_${idx}`;
+  const lat = asNum(t.lat), lon = asNum(t.lon);
+  const coords = (lat !== null && lon !== null)
+    ? `${lat.toFixed(5)}, ${lon.toFixed(5)}`
+    : 'no coordinates';
+  return `<div class="icard">
+    <h3 class="iname">${escHtml(name)}</h3>
+    <div class="pills">${timingPills(t)}</div>
+    <div class="satwrap">
+      <div class="satmap" id="${mapId}"></div>
+      <div class="satlabel">${escHtml(coords)}</div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="v">${fmt(t.cycle,0)}s</div><div class="l">Cycle</div></div>
+      <div class="metric"><div class="v">${fmt(t.offset,0)}s</div><div class="l">Offset</div></div>
+      <div class="metric"><div class="v">${m.total_journeys ?? 'n/a'}</div><div class="l">Journeys</div></div>
+      <div class="metric"><div class="v">${fmt(m.weighted_mean_delay_s,1)}</div><div class="l">Wt delay (s)</div></div>
+    </div>
+    ${buildSplitBar(t)}
+    ${movementChips(m)}
+    ${callout(m)}
+  </div>`;
+}
+
+function attachMap(name, idx) {
+  const d = byName[name];
+  if (!d || !d.timing) return;
+  const lat = asNum(d.timing.lat), lon = asNum(d.timing.lon);
+  if (lat === null || lon === null) return;
+  const mapId = `map_${current}_${idx}`;
+  const el = document.getElementById(mapId);
+  if (!el) return;
+  if (mapInstances[mapId]) { mapInstances[mapId].remove(); }
+  const map = L.map(el, {
+    zoomControl:false, attributionControl:false,
+    dragging:true, scrollWheelZoom:false, touchZoom:false,
+    doubleClickZoom:true, boxZoom:false, keyboard:false,
+  }).setView([lat, lon], 18);
+  L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom:20, attribution:'Imagery © Esri' }
+  ).addTo(map);
+  L.circleMarker([lat, lon], {
+    radius:9, color:'#FFC627', weight:3, fillColor:'#8C1D40', fillOpacity:.85
+  }).addTo(map);
+  mapInstances[mapId] = map;
+}
+
+function renderGrid(q) {
+  const list = q.example_intersections || [];
+  gridEl.innerHTML = list.map((n,i) => intersectionCard(n,i)).join('');
+  list.forEach((n,i) => attachMap(n,i));
+}
+
+function render() {
+  const q = PAYLOAD.questions.find(x => x.id === current) || PAYLOAD.questions[0];
+  Object.values(mapInstances).forEach(m => m.remove());
+  Object.keys(mapInstances).forEach(k => delete mapInstances[k]);
+  renderTabs();
+  renderAnswer(q);
+  renderGrid(q);
+}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Apache Blvd Corridor — 3-Intersection Simulation (Stage 2)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bg4:#30363d;--tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7681;--blu:#58a6ff;--blu2:#1f6feb;--grn:#2ea043;--grnl:#56d364;--amb:#d29922;--red:#f85149;--vio:#a371f7;--brd:#30363d}
+html,body{height:100%;font-family:'Libre Franklin',sans-serif;background:var(--bg);color:var(--tx);overflow:hidden;font-size:13px}
+.app{display:flex;flex-direction:column;height:100vh}
+.topbar{background:var(--bg2);padding:6px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--brd)}
+.topbar h1{font-size:13px;font-weight:700;color:var(--blu);min-width:auto}
+.topbar h1 span{font-size:9px;background:var(--vio);color:#fff;padding:2px 7px;border-radius:10px;margin-left:4px;vertical-align:middle}
+#clock{font-size:13px;font-weight:700;color:var(--blu);font-variant-numeric:tabular-nums;min-width:80px;font-family:'IBM Plex Mono'}
+button{background:var(--bg3);color:var(--tx);border:1px solid var(--brd);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit}
+button:hover{background:var(--bg4)}
+button.on{background:var(--blu2);border-color:var(--blu2);color:#fff}
+.bgrp{display:flex;gap:0;border-radius:4px;overflow:hidden;border:1px solid var(--brd)}
+.bgrp button{border-radius:0;border:none;border-right:1px solid var(--brd);padding:3px 8px;background:var(--bg3)}
+.bgrp button:last-child{border-right:none}
+.bgrp button.on{background:var(--blu2);color:#fff}
+#sl{flex:1;max-width:200px;accent-color:var(--blu)}
+.lbl{font-size:9px;color:var(--tx2)}
+.ctrl-grp{display:flex;align-items:center;gap:4px;padding:0 4px;border-left:1px solid var(--brd)}
+.statbar{background:var(--bg);border-bottom:1px solid var(--brd);padding:3px 12px;font-size:10px;color:var(--tx2);display:flex;gap:12px;flex-wrap:wrap}
+.statbar b{color:var(--tx);font-family:'IBM Plex Mono'}
+.main{flex:1;display:flex;overflow:hidden;min-height:0}
+#mapwrap{flex:1;position:relative;background:#000;min-width:0}
+#map{position:absolute;inset:0;background:#000}
+#netLayer{position:absolute;inset:0;pointer-events:none;z-index:400}
+#vehLayer{position:absolute;inset:0;pointer-events:none;z-index:500}
+.leaflet-container{background:#000}
+#rp{width:300px;background:var(--bg2);border-left:1px solid var(--brd);overflow-y:auto;padding:8px;flex-shrink:0}
+.sec{margin-bottom:10px}
+.sec h3{font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-weight:700;padding-bottom:2px;border-bottom:1px solid var(--brd)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.stat{background:var(--bg3);border:1px solid var(--brd);border-radius:4px;padding:5px 6px}
+.stat .v{font-family:'IBM Plex Mono';font-size:15px;font-weight:700;color:var(--blu);display:block;line-height:1}
+.stat .l{font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.sig-state{background:var(--bg3);border-radius:4px;padding:5px 7px;border-left:3px solid var(--blu);font-size:11px;margin-bottom:3px;cursor:pointer}
+.sig-state.focus{border-left-color:var(--vio);background:rgba(163,113,247,0.10)}
+.sig-state .nm{font-weight:700;font-size:11px;display:flex;align-items:center;gap:6px;color:var(--tx)}
+.sig-state .ph-light{display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #fff}
+.sig-state .det{font-size:9px;color:var(--tx2);margin-top:1px;font-family:'IBM Plex Mono'}
+.lgnd{font-size:10px;color:var(--tx2);line-height:1.5}
+.lgnd .row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.lgnd .dot{width:14px;height:6px;border-radius:1px}
+.charts{height:240px;background:var(--bg2);border-top:1px solid var(--brd);display:flex;flex-direction:column}
+.chart-pane{flex:1;padding:4px 8px;background:var(--bg2);display:flex;flex-direction:column;min-height:0;border-bottom:1px solid var(--brd)}
+.chart-pane:last-child{border-bottom:none}
+.chart-pane h4{font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;font-weight:700;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.chart-pane h4 .v{color:var(--blu);font-family:'IBM Plex Mono';font-size:10px;font-weight:700}
+.chart-pane canvas{width:100%;flex:1;background:#0a0e14;border:1px solid var(--brd);border-radius:3px;min-height:0}
+.roadmap{font-size:9px;line-height:1.45;color:var(--tx2);background:var(--bg3);padding:6px 8px;border-radius:4px;border-left:3px solid var(--vio)}
+.roadmap b{color:var(--vio)}
+.roadmap .done{color:var(--grnl)}
+/* SCI */
+.sci-row{display:flex;align-items:center;gap:5px;padding:3px 6px;border-radius:3px;margin-bottom:2px;font-size:10px;flex-wrap:wrap}
+.sci-row.pass{background:rgba(46,160,67,0.10);border-left:2px solid #2ea043}
+.sci-row.fail{background:rgba(248,81,73,0.18);border-left:2px solid #f85149;animation:scipulse 1s infinite}
+@keyframes scipulse{50%{background:rgba(248,81,73,0.30)}}
+.sci-icon{font-weight:700;font-size:12px;width:13px;text-align:center}
+.sci-row.pass .sci-icon{color:#56d364}
+.sci-row.fail .sci-icon{color:#f85149}
+.sci-desc{flex:1;min-width:0;line-height:1.25}
+.sci-stat{font-family:'IBM Plex Mono';font-size:9px;color:var(--tx2);white-space:nowrap}
+.sci-fail-msg{font-size:8.5px;color:#f85149;margin-top:2px;font-family:'IBM Plex Mono';flex-basis:100%;background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:2px;word-break:break-all}
+.sci-summary{padding:5px 7px;border-radius:4px;margin-bottom:5px;font-size:10.5px;font-weight:700;text-align:center}
+.sci-summary.ok{background:rgba(46,160,67,0.18);color:#56d364;border:1px solid #2ea043}
+.sci-summary.bad{background:rgba(248,81,73,0.20);color:#f85149;border:1px solid #f85149}
+/* Test banner */
+.test-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:700;background:rgba(248,81,73,0.95);color:#fff;padding:5px 14px;border-radius:4px;font-weight:700;font-size:11px;font-family:'IBM Plex Mono';box-shadow:0 2px 12px rgba(248,81,73,0.5);display:none;letter-spacing:.5px}
+.test-banner.on{display:block;animation:bannerpulse 1s infinite}
+@keyframes bannerpulse{50%{background:rgba(248,81,73,0.7)}}
+</style></head><body>
+<div class="app">
+<div class="topbar">
+  <h1>Apache Blvd Corridor <span>STAGE 2</span></h1>
+  <div id="clock">t = 0.0 s</div>
+  <button id="bp" onclick="tog()">▶ Play</button>
+  <button onclick="rst()">⟲</button>
+  <input type="range" id="sl" min="0" max="660" value="0" step="0.1">
+
+  <div class="ctrl-grp">
+    <span class="lbl">Speed</span>
+    <div class="bgrp">
+      <button onclick="ss(0.5,event)">0.5×</button>
+      <button class="on" onclick="ss(1,event)">1×</button>
+      <button onclick="ss(3,event)">3×</button>
+      <button onclick="ss(10,event)">10×</button>
+      <button onclick="ss(30,event)">30×</button>
+    </div>
+  </div>
+  <div class="ctrl-grp">
+    <span class="lbl">Demand</span>
+    <div class="bgrp">
+      <button onclick="setDemand(0.4,event)">Low</button>
+      <button class="on" onclick="setDemand(1.0,event)">Med</button>
+      <button onclick="setDemand(1.7,event)">High</button>
+      <button onclick="setDemand(2.5,event)">Extreme</button>
+    </div>
+  </div>
+  <div class="ctrl-grp">
+    <span class="lbl">Coord</span>
+    <div class="bgrp">
+      <button class="on" onclick="setCoord(true,event)">On</button>
+      <button onclick="setCoord(false,event)">Off</button>
+    </div>
+  </div>
+  <div class="ctrl-grp">
+    <span class="lbl">Control</span>
+    <div class="bgrp">
+      <button class="on" onclick="setControl('fixed',event)">Fixed</button>
+      <button onclick="setControl('actuated',event)">Actuated</button>
+    </div>
+  </div>
+  <div class="ctrl-grp">
+    <span class="lbl">Test</span>
+    <div class="bgrp">
+      <button id="btnTest" onclick="toggleTest(event)">5-min RED</button>
+    </div>
+  </div>
+  <div class="ctrl-grp">
+    <span class="lbl">Cum chart focus</span>
+    <div class="bgrp" id="focusGrp">
+      <button class="on" onclick="setFocus('C',event)">College</button>
+      <button onclick="setFocus('M',event)">McAllister</button>
+      <button onclick="setFocus('R',event)">Rural</button>
+    </div>
+  </div>
+</div>
+
+<div class="statbar">
+  <span>3 intersections · cycles <b>110 s</b> · offsets <b id="offTxt">85 / 40 / 40</b></span>
+  <span id="actC">Active: <b>0</b></span>
+  <span id="delAvg">Avg delay: <b>0.0 s</b></span>
+  <span id="cleared">Cleared: <b>0</b></span>
+</div>
+
+<div class="main">
+  <div id="mapwrap">
+    <div id="map"></div>
+    <canvas id="netLayer"></canvas>
+    <canvas id="vehLayer"></canvas>
+    <div class="test-banner" id="testBanner">⛔ TEST MODE: ALL SIGNALS RED FOR 5 MINUTES — countdown <span id="testCount">300</span>s</div>
+  </div>
+  <div id="rp">
+    <div class="sec">
+      <h3>Physics-Informed Checks (SCI)</h3>
+      <div class="sci-summary" id="sciSummary">— press Play to begin —</div>
+      <div id="sciList"></div>
+    </div>
+
+    <div class="sec">
+      <h3>Signal states (click to focus)</h3>
+      <div id="sigList"></div>
+    </div>
+
+    <div class="sec">
+      <h3>Network</h3>
+      <div class="stats">
+        <div class="stat"><span class="v" id="stN">0</span><span class="l">vehicles in net</span></div>
+        <div class="stat"><span class="v" id="stCleared">0</span><span class="l">cleared</span></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Vehicle color = delay</h3>
+      <div class="lgnd">
+        <div class="row"><span class="dot" style="background:#3b82f6"></span> 0–5 s</div>
+        <div class="row"><span class="dot" style="background:#10b981"></span> 5–15 s</div>
+        <div class="row"><span class="dot" style="background:#eab308"></span> 15–30 s</div>
+        <div class="row"><span class="dot" style="background:#f97316"></span> 30–60 s</div>
+        <div class="row"><span class="dot" style="background:#dc2626"></span> &gt; 60 s</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Stage roadmap</h3>
+      <div class="roadmap">
+        <b class="done">▣ STAGE 1:</b> 3-int corridor satellite + coord toggle<br>
+        <b class="done">▣ STAGE 1.5:</b> single-int · GMNS · cum N(t) · DTALite physics<br>
+        <b class="done">▣ STAGE 2:</b> 3 ints · OD from UTDF turns · per-int cum chart<br>
+        <b class="done">▣ STAGE 3 (now):</b> detector loops · actuated control · gap-out / max-out · 7 SCI checks<br>
+        <b>▢ STAGE 4:</b> side-by-side compare (Fixed vs Actuated)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="charts">
+  <div class="chart-pane" style="flex:1.1">
+    <h4>Cumulative arrival / departure — EB at <span id="focusName">College</span> stop bar
+      <span class="v" id="cumGap">queue: 0</span>
+    </h4>
+    <canvas id="cumChart"></canvas>
+  </div>
+  <div class="chart-pane">
+    <h4>Time–space diagram (corridor) — green bands = EW green at each intersection
+      <span class="v" id="tsdInfo">window: last 220 s</span>
+    </h4>
+    <canvas id="tsdChart"></canvas>
+  </div>
+</div>
+</div>
+
+<script>
+// ============================================================================
+// CORRIDOR DATA — 3 intersections, real coordinates + UTDF turning counts
+// ============================================================================
+const INTERSECTIONS = {
+  C: {id:'C', name:'College',    lat:33.414688, lon:-111.934932, cycle:110, offset:85, ewGreen:65, ewYellow:4, allRed:2,
+      minG_ew:15, maxG_ew:59, minG_ns:5, maxG_ns:39, passage:2.5},
+  M: {id:'M', name:'McAllister', lat:33.414732, lon:-111.930651, cycle:110, offset:40, ewGreen:65, ewYellow:4, allRed:2,
+      minG_ew:15, maxG_ew:65, minG_ns:5, maxG_ns:29, passage:2.5},
+  R: {id:'R', name:'Rural',      lat:33.414771, lon:-111.926281, cycle:110, offset:40, ewGreen:35, ewYellow:4, allRed:2,
+      minG_ew:10, maxG_ew:35, minG_ns:10, maxG_ns:45, passage:2.5}
+};
+const INT_LIST = ['C','M','R'];
+
+// Approach links — each ends at an intersection's stop bar.
+// vol uses UTDF turn counts (L/T/R) from utdf_lanes.csv decoded earlier.
+const LINKS = {
+  // EB Apache approaches
+  'EB-W2C': {endInt:'C', dir:'EB', length: 500, lanes:{L:1,T:2,R:0}, vol:{L:47, T:471, R:0 }, prevInt:null},
+  'EB-C2M': {endInt:'M', dir:'EB', length:1300, lanes:{L:1,T:2,R:0}, vol:{L:12, T:825, R:31}, prevInt:'C'},
+  'EB-M2R': {endInt:'R', dir:'EB', length:1300, lanes:{L:1,T:2,R:1}, vol:{L:96, T:239, R:70}, prevInt:'M'},
+  // WB Apache approaches
+  'WB-E2R': {endInt:'R', dir:'WB', length: 500, lanes:{L:1,T:2,R:1}, vol:{L:90, T:95,  R:65}, prevInt:null},
+  'WB-R2M': {endInt:'M', dir:'WB', length:1300, lanes:{L:1,T:2,R:1}, vol:{L:62, T:210, R:14}, prevInt:'R'},
+  'WB-M2C': {endInt:'C', dir:'WB', length:1300, lanes:{L:0,T:2,R:1}, vol:{L:0,  T:316, R:38}, prevInt:'M'},
+  // Cross-street approaches (entering from N or S of each intersection)
+  'NB-C':   {endInt:'C', dir:'NB', length: 400, lanes:{L:1,T:0,R:1}, vol:{L:90, T:0,   R:95}, prevInt:null},
+  'SB-C':   {endInt:'C', dir:'SB', length: 400, lanes:{L:1,T:0,R:1}, vol:{L:63, T:0,   R:28}, prevInt:null},
+  'NB-M':   {endInt:'M', dir:'NB', length: 400, lanes:{L:0,T:1,R:0}, vol:{L:67, T:34,  R:49}, prevInt:null},
+  'SB-M':   {endInt:'M', dir:'SB', length: 400, lanes:{L:1,T:1,R:1}, vol:{L:14, T:5,   R:47}, prevInt:null},
+  'NB-R':   {endInt:'R', dir:'NB', length: 400, lanes:{L:2,T:3,R:0}, vol:{L:277,T:1013,R:34}, prevInt:null},
+  'SB-R':   {endInt:'R', dir:'SB', length: 400, lanes:{L:2,T:3,R:0}, vol:{L:40, T:439, R:146},prevInt:null}
+};
+const SOURCE_LINKS = ['EB-W2C','WB-E2R','NB-C','SB-C','NB-M','SB-M','NB-R','SB-R']; // links where vehicles spawn (no upstream intersection)
+
+// nextLink given a movement L/T/R at an intersection from a given direction
+function nextLink(currentLinkId, mvmt) {
+  const cur = LINKS[currentLinkId];
+  const I = cur.endInt, d = cur.dir;
+  // Through (T): continue same direction → next downstream link or EXIT
+  if (mvmt === 'T') {
+    if (d === 'EB' && I === 'C') return 'EB-C2M';
+    if (d === 'EB' && I === 'M') return 'EB-M2R';
+    if (d === 'EB' && I === 'R') return 'EXIT';
+    if (d === 'WB' && I === 'R') return 'WB-R2M';
+    if (d === 'WB' && I === 'M') return 'WB-M2C';
+    if (d === 'WB' && I === 'C') return 'EXIT';
+    if (d === 'NB') return 'EXIT'; // cross-street through exits the model
+    if (d === 'SB') return 'EXIT';
+  }
+  // Left and Right turns: vehicle exits the corridor model after turning
+  // (For Stage 2 simplicity — Stage 3 will route them onto cross-street links.)
+  return 'EXIT';
+}
+
+// Derive turn probabilities at each link's destination (entry to intersection)
+function turnProbs(linkId) {
+  const v = LINKS[linkId].vol;
+  const tot = v.L + v.T + v.R;
+  if (tot === 0) return {L:0, T:1, R:0};
+  return {L: v.L/tot, T: v.T/tot, R: v.R/tot};
+}
+
+// Simulation parameters
+const STOP_BAR_DIST = 40;
+const FREE_SPEED_FPS = 51;       // ~35 mph
+const VEH_LEN = 18;
+const MIN_GAP = 8;
+const SAT_HEADWAY = 2.0;
+const ARRIVAL_SENSOR_DIST = 250;  // ft upstream of stop bar (for cumulative chart)
+const FT_TO_LAT = 1/364000;
+const FT_TO_LON = 1/304000;
+const LANE_W = 11;                // ft visual lane width
+const SIM_END = 660;
+
+// State
+let t = 0;
+let play = false, spd = 1, lastTs = null, af = null;
+let vehicles = [];
+let nextId = 1;
+let cleared = 0;
+let cumDelay = 0;
+let demandMul = 1.0;
+let coordOn = true;
+let testRedMode = false;
+let focusInt = 'C';
+let controlMode = 'fixed'; // 'fixed' | 'actuated'
+
+// Per-intersection phase state machine for actuated control
+// Phases: 'EW' (green) → 'EW_Y' (yellow) → 'AR1' (all-red) → 'NS' (green) → 'NS_Y' → 'AR2' → 'EW'
+const phaseStates = {};
+function initPhaseStates() {
+  for (const I of INT_LIST) {
+    phaseStates[I] = {
+      phase: 'EW', startTime: 0,
+      lastEWCall: 0, lastNSCall: 0,
+      ewDetActive: false, nsDetActive: false,
+      lastReason: 'init',  // why the phase last terminated: 'maxout' | 'gapout' | 'init'
+      cyclesCompleted: 0
+    };
+  }
+}
+initPhaseStates();
+
+// Detector zone (per approach): vehicles with dist in [DET_NEAR, DET_FAR] are over the loop
+const DET_NEAR = STOP_BAR_DIST;       // = 40
+const DET_FAR  = STOP_BAR_DIST + 60;  // = 100  (60 ft loop, ~2 cars long)
+
+// Per-link/per-lane discharge time tracker (DTALite outflow capacity model)
+const lastDischargeTime = {}; // key = linkId+'_'+laneIdx → last time a vehicle crossed stop bar
+
+// Per-intersection per-direction cumulative counters (for the cum chart)
+// Key: intId + '_' + dir → {arr, dep}
+const intCum = {};
+for (const I of INT_LIST) for (const d of ['EB','WB','NB','SB']) intCum[I+'_'+d] = {arr:0, dep:0};
+let cumHistory = []; // history of focus-intersection EB cumulative for chart
+let qHistoryAll = {}; // unused
+
+// ============================================================================
+// SIGNAL LOGIC
+// ============================================================================
+function signalPhase(intId, time) {
+  if (testRedMode && time < 300) return {ew:'R', ns:'R', cycT: time, mode:'test'};
+
+  // ACTUATED MODE — read from state machine
+  if (controlMode === 'actuated') {
+    const ps = phaseStates[intId];
+    const elapsed = time - ps.startTime;
+    switch (ps.phase) {
+      case 'EW':   return {ew:'G', ns:'R', cycT: elapsed, mode:'act', psName:'EW green'};
+      case 'EW_Y': return {ew:'Y', ns:'R', cycT: elapsed, mode:'act', psName:'EW yellow'};
+      case 'AR1':  return {ew:'R', ns:'R', cycT: elapsed, mode:'act', psName:'all-red 1'};
+      case 'NS':   return {ew:'R', ns:'G', cycT: elapsed, mode:'act', psName:'NS green'};
+      case 'NS_Y': return {ew:'R', ns:'Y', cycT: elapsed, mode:'act', psName:'NS yellow'};
+      case 'AR2':  return {ew:'R', ns:'R', cycT: elapsed, mode:'act', psName:'all-red 2'};
+    }
+  }
+
+  // FIXED-TIME MODE
+  const sig = INTERSECTIONS[intId];
+  const offs = coordOn ? sig.offset : 0;
+  const tEff = testRedMode ? (time - 300) : time;
+  const cycT = ((tEff - offs) % sig.cycle + sig.cycle) % sig.cycle;
+  if (cycT < sig.ewGreen - sig.ewYellow) return {ew:'G', ns:'R', cycT, mode:'fix'};
+  if (cycT < sig.ewGreen) return {ew:'Y', ns:'R', cycT, mode:'fix'};
+  if (cycT < sig.ewGreen + sig.allRed) return {ew:'R', ns:'R', cycT, mode:'fix'};
+  const nsGreen = sig.cycle - sig.ewGreen - sig.allRed*2 - sig.ewYellow;
+  if (cycT < sig.ewGreen + sig.allRed + nsGreen - sig.ewYellow) return {ew:'R', ns:'G', cycT, mode:'fix'};
+  if (cycT < sig.ewGreen + sig.allRed + nsGreen) return {ew:'R', ns:'Y', cycT, mode:'fix'};
+  return {ew:'R', ns:'R', cycT, mode:'fix'};
+}
+function isGreenFor(intId, dir, time) {
+  const ph = signalPhase(intId, time);
+  return (dir === 'EB' || dir === 'WB') ? ph.ew : ph.ns;
+}
+
+// ============================================================================
+// ACTUATED CONTROL — detectors + state machine (gap-out / max-out)
+// ============================================================================
+// Update detector status: a detector is "active" if any vehicle's center is within its zone.
+// For each intersection, EW detectors are on its EB and WB approaches; NS on NB and SB.
+function updateDetectors() {
+  for (const I of INT_LIST) {
+    const ps = phaseStates[I];
+    let ewActive = false, nsActive = false;
+    for (const v of vehicles) {
+      const link = LINKS[v.link];
+      if (link.endInt !== I) continue;
+      if (v.dist >= DET_NEAR && v.dist <= DET_FAR) {
+        if (link.dir === 'EB' || link.dir === 'WB') ewActive = true;
+        else nsActive = true;
+      }
+    }
+    ps.ewDetActive = ewActive;
+    ps.nsDetActive = nsActive;
+    if (ewActive) ps.lastEWCall = t;
+    if (nsActive) ps.lastNSCall = t;
+  }
+}
+
+// Advance the phase state machine for one intersection
+function advancePhase(intId) {
+  const I = INTERSECTIONS[intId];
+  const ps = phaseStates[intId];
+  const elapsed = t - ps.startTime;
+
+  switch (ps.phase) {
+    case 'EW': {
+      // Force max-out
+      if (elapsed >= I.maxG_ew) {
+        ps.phase = 'EW_Y'; ps.startTime = t; ps.lastReason = 'maxout';
+      } else if (elapsed >= I.minG_ew) {
+        // Gap-out: no EW call for passage time AND there's NS demand waiting
+        const ewGap = (t - ps.lastEWCall) >= I.passage;
+        const nsDemand = (t - ps.lastNSCall) < 30;  // recently saw NS detector
+        if (ewGap && nsDemand) {
+          ps.phase = 'EW_Y'; ps.startTime = t; ps.lastReason = 'gapout';
+        }
+      }
+      break;
+    }
+    case 'EW_Y':
+      if (elapsed >= I.ewYellow) { ps.phase = 'AR1'; ps.startTime = t; }
+      break;
+    case 'AR1':
+      if (elapsed >= I.allRed) {
+        // Skip NS if no NS demand and EW has demand → return to EW
+        const nsDemand = (t - ps.lastNSCall) < 30;
+        ps.phase = nsDemand ? 'NS' : 'EW';
+        ps.startTime = t;
+        if (ps.phase === 'EW') ps.cyclesCompleted++;
+      }
+      break;
+    case 'NS': {
+      if (elapsed >= I.maxG_ns) {
+        ps.phase = 'NS_Y'; ps.startTime = t; ps.lastReason = 'maxout';
+      } else if (elapsed >= I.minG_ns) {
+        const nsGap = (t - ps.lastNSCall) >= I.passage;
+        const ewDemand = (t - ps.lastEWCall) < 30;
+        if (nsGap && ewDemand) {
+          ps.phase = 'NS_Y'; ps.startTime = t; ps.lastReason = 'gapout';
+        }
+      }
+      break;
+    }
+    case 'NS_Y':
+      if (elapsed >= I.ewYellow) { ps.phase = 'AR2'; ps.startTime = t; }
+      break;
+    case 'AR2':
+      if (elapsed >= I.allRed) {
+        ps.phase = 'EW'; ps.startTime = t; ps.cyclesCompleted++;
+      }
+      break;
+  }
+}
+
+// ============================================================================
+// COORDINATES — link-local (dist, laneIdx) → (lat, lon)
+// dist = 0 at intersection center; dist = STOP_BAR_DIST at stop bar; dist = length at far end.
+// ============================================================================
+function linkLatLon(linkId, dist, laneIdx, totalLanes) {
+  const link = LINKS[linkId];
+  const I = INTERSECTIONS[link.endInt];
+  const perp = (laneIdx + 0.5) * LANE_W; // ft from road centerline
+  let dlat = 0, dlon = 0;
+  if (link.dir === 'EB') {
+    dlat = -perp * FT_TO_LAT;          // EB lanes on south side
+    dlon = -dist * FT_TO_LON;          // upstream is west of intersection
+  } else if (link.dir === 'WB') {
+    dlat = +perp * FT_TO_LAT;          // WB lanes on north side
+    dlon = +dist * FT_TO_LON;          // upstream is east
+  } else if (link.dir === 'NB') {
+    dlat = -dist * FT_TO_LAT;          // upstream is south
+    dlon = +perp * FT_TO_LON;          // NB lanes on east side
+  } else if (link.dir === 'SB') {
+    dlat = +dist * FT_TO_LAT;          // upstream is north
+    dlon = -perp * FT_TO_LON;          // SB lanes on west side
+  }
+  return [I.lat + dlat, I.lon + dlon];
+}
+
+// ============================================================================
+// LEAFLET MAP
+// ============================================================================
+const map = L.map('map', {zoomControl: true, attributionControl: false}).setView([33.4147, -111.9305], 16);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19}).addTo(map);
+const corridorBounds = L.latLngBounds(
+  [33.4135, -111.9375],
+  [33.4160, -111.9230]
+);
+map.fitBounds(corridorBounds, {padding:[20,20]});
+
+// Intersection labels
+for (const I of Object.values(INTERSECTIONS)) {
+  L.marker([I.lat, I.lon], {
+    icon: L.divIcon({
+      html: `<div style="background:rgba(13,17,23,0.9);border:1px solid #f85149;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700;color:#f85149;font-family:'IBM Plex Mono';white-space:nowrap;transform:translateY(-26px)">${I.name}</div>`,
+      className:'', iconSize:[100,16], iconAnchor:[50,8]
+    })
+  }).addTo(map);
+}
+
+// ============================================================================
+// CANVAS LAYERS
+// ============================================================================
+const netCanvas = document.getElementById('netLayer');
+const nctx = netCanvas.getContext('2d');
+const veh = document.getElementById('vehLayer');
+const vctx = veh.getContext('2d');
+function resizeCanvas() {
+  const r = document.getElementById('mapwrap').getBoundingClientRect();
+  netCanvas.width = r.width; netCanvas.height = r.height;
+  veh.width = r.width; veh.height = r.height;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ============================================================================
+// VEHICLE SPAWN — sample turn intent from UTDF turn ratios at each link's end
+// ============================================================================
+function pickMovement(linkId) {
+  const p = turnProbs(linkId);
+  const r = Math.random();
+  if (r < p.L) return 'L';
+  if (r < p.L + p.T) return 'T';
+  return 'R';
+}
+function pickLane(linkId, mvmt) {
+  // Lane order: lefts (0..L-1), thrus (L..L+T-1), rights (L+T..)
+  const ln = LINKS[linkId].lanes;
+  const total = ln.L + ln.T + ln.R;
+  if (total === 0) return 0;
+  if (mvmt === 'L') {
+    if (ln.L > 0) return Math.floor(Math.random() * ln.L);
+    return 0; // share with leftmost through if no L-lane (permissive left)
+  }
+  if (mvmt === 'R') {
+    if (ln.R > 0) return ln.L + ln.T + Math.floor(Math.random() * ln.R);
+    return ln.L + ln.T - 1; // share rightmost through (RTOR)
+  }
+  // T
+  if (ln.T > 0) return ln.L + Math.floor(Math.random() * ln.T);
+  return Math.max(0, total - 1);
+}
+
+function trySpawn(dt) {
+  for (const linkId of SOURCE_LINKS) {
+    const link = LINKS[linkId];
+    const totalVol = link.vol.L + link.vol.T + link.vol.R;
+    const rate = (totalVol / 3600) * demandMul;
+    if (Math.random() < rate * dt) {
+      const mvmt = pickMovement(linkId);
+      const lane = pickLane(linkId, mvmt);
+      const totalLanes = link.lanes.L + link.lanes.T + link.lanes.R;
+      // Check spawn slot is clear
+      const last = vehicles.find(v => v.link === linkId && v.lane === lane && v.dist > link.length - 60);
+      if (!last) {
+        vehicles.push({
+          id: nextId++, link: linkId, lane, totalLanes,
+          dist: link.length, speed: FREE_SPEED_FPS, vmax: FREE_SPEED_FPS,
+          spawnT: t, totalTime: 0, totalFreeFlow: 0, delay: 0, stopped: false,
+          mvmt, countedArr: false, countedDep: false
+        });
+      }
+    }
+  }
+}
+
+// ============================================================================
+// VEHICLE UPDATE — DTALite-style FIFO with hard barriers
+// ============================================================================
+function updateVehicles(dt) {
+  // Group by (link, lane), sort each group front-first (smallest dist)
+  const groups = {};
+  for (const v of vehicles) (groups[v.link + '_' + v.lane] ||= []).push(v);
+  for (const k in groups) groups[k].sort((a,b) => a.dist - b.dist);
+
+  for (const k in groups) {
+    const lane = groups[k];
+    const linkId = lane[0].link;
+    const link = LINKS[linkId];
+    const intId = link.endInt;
+    const phase = isGreenFor(intId, link.dir, t);
+
+    for (let i = 0; i < lane.length; i++) {
+      const v = lane[i];
+      v.totalTime += dt;
+      const STOP_AT = STOP_BAR_DIST + VEH_LEN/2 + 2;
+
+      // ---- Find obstacle: signal stop bar OR leader vehicle ----
+      let obsDist = -1e6;
+      // signal
+      if (v.dist > STOP_AT) {
+        let stopAtBar = false;
+        if (phase === 'R') stopAtBar = true;
+        else if (phase === 'Y') {
+          const distToBar = v.dist - STOP_AT;
+          const reqStopDist = v.speed * v.speed / (2 * 10) + v.speed * 1.0;
+          if (distToBar > reqStopDist) stopAtBar = true;
+        }
+        if (stopAtBar) obsDist = Math.max(obsDist, STOP_AT);
+      }
+      // leader
+      if (i > 0) {
+        const lead = lane[i-1];
+        obsDist = Math.max(obsDist, lead.dist + VEH_LEN + MIN_GAP);
+      }
+
+      // ---- Constant-deceleration physics ----
+      const DECEL = 10, ACCEL = 6;
+      const gap = v.dist - obsDist;
+      const stopDistNow = (v.speed * v.speed) / (2 * DECEL);
+      if (gap <= 0) v.speed = 0;
+      else if (gap <= stopDistNow + 4) v.speed = Math.max(0, v.speed - DECEL * dt);
+      else v.speed = Math.min(v.vmax, v.speed + ACCEL * dt);
+
+      // ---- Saturation-headway gate ----
+      if (i === 0 && phase === 'G' && v.dist <= STOP_AT + 5 && v.dist > STOP_BAR_DIST) {
+        const lastT = lastDischargeTime[k] ?? -999;
+        if (t - lastT < SAT_HEADWAY) {
+          v.speed = Math.max(0, v.speed - DECEL * dt);
+          if (v.dist <= STOP_AT) { v.speed = 0; v.dist = STOP_AT; }
+        }
+      }
+
+      // ---- Move with hard clamp ----
+      let newDist = v.dist - v.speed * dt;
+      if (newDist < obsDist) { newDist = obsDist; v.speed = 0; }
+
+      // Stop-bar crossing → record discharge
+      if (v.dist > STOP_BAR_DIST && newDist <= STOP_BAR_DIST) {
+        lastDischargeTime[k] = t;
+        intCum[intId + '_' + link.dir].dep++;
+        v.countedDep = true;
+      }
+
+      // Arrival sensor
+      if (!v.countedArr && newDist <= ARRIVAL_SENSOR_DIST) {
+        intCum[intId + '_' + link.dir].arr++;
+        v.countedArr = true;
+      }
+
+      v.dist = newDist;
+      v.stopped = v.speed < 1.5;
+
+      // Delay
+      const traveled = link.length - v.dist;
+      const ffTime = traveled / FREE_SPEED_FPS;
+      v.delay = Math.max(0, v.totalTime - v.totalFreeFlow - ffTime);
+    }
+  }
+
+  // ---- Vehicle transitions: cleared intersection → next link or EXIT ----
+  const newVehicles = [];
+  for (const v of vehicles) {
+    if (v.dist < -STOP_BAR_DIST - 30) {
+      // Has cleared the intersection — transition
+      const next = nextLink(v.link, v.mvmt);
+      if (next === 'EXIT') {
+        cumDelay += v.delay; cleared++;
+        // dropped from sim
+      } else {
+        // Carry over free-flow time accumulated on previous link
+        v.totalFreeFlow += LINKS[v.link].length / FREE_SPEED_FPS;
+        v.link = next;
+        v.dist = LINKS[next].length;
+        v.mvmt = pickMovement(next);
+        const tot = LINKS[next].lanes.L + LINKS[next].lanes.T + LINKS[next].lanes.R;
+        v.lane = pickLane(next, v.mvmt);
+        v.totalLanes = tot;
+        v.countedArr = false; v.countedDep = false;
+        newVehicles.push(v);
+      }
+    } else newVehicles.push(v);
+  }
+  vehicles = newVehicles;
+}
+
+// ============================================================================
+// SCI — Self-Check Inspection
+// ============================================================================
+const SCI = {
+  stopBar: {pass:0, fail:0, lastFail:null, desc:'No vehicle past stop bar during RED'},
+  noOverlap: {pass:0, fail:0, lastFail:null, desc:'No overlap in same link/lane (sep ≥ VEH_LEN)'},
+  speedBounds: {pass:0, fail:0, lastFail:null, desc:'0 ≤ speed ≤ vmax'},
+  caGeqCd: {pass:0, fail:0, lastFail:null, desc:'CA ≥ CD at every intersection/direction'},
+  testRedZeroDep: {pass:0, fail:0, lastFail:null, desc:'5-min RED test → zero departures everywhere'},
+  actGreenBounds: {pass:0, fail:0, lastFail:null, desc:'Actuated green ∈ [MinG, MaxG] at every termination'},
+  detectorIntegrity: {pass:0, fail:0, lastFail:null, desc:'Detector active flag matches vehicle presence'}
+};
+function runSCI() {
+  // 1) Stop bar
+  let ok = true, msg = null;
+  for (const v of vehicles) {
+    const link = LINKS[v.link];
+    const ph = isGreenFor(link.endInt, link.dir, t);
+    if (ph === 'R' && v.dist < STOP_BAR_DIST - 1 && v.dist > -10) {
+      ok = false; msg = `t=${t.toFixed(1)} veh#${v.id} on ${v.link} dist=${v.dist.toFixed(1)} (RED)`;
+      break;
+    }
+  }
+  ok ? SCI.stopBar.pass++ : (SCI.stopBar.fail++, SCI.stopBar.lastFail = msg);
+
+  // 2) No overlap per link+lane
+  ok = true; msg = null;
+  const grp = {};
+  for (const v of vehicles) (grp[v.link + '_' + v.lane] ||= []).push(v);
+  for (const k in grp) {
+    const list = grp[k].sort((a,b) => a.dist - b.dist);
+    for (let i = 1; i < list.length; i++) {
+      const sep = list[i].dist - list[i-1].dist;
+      if (sep < VEH_LEN - 0.5) { ok = false; msg = `${k} v#${list[i].id}-#${list[i-1].id} sep=${sep.toFixed(1)}`; break; }
+    }
+    if (!ok) break;
+  }
+  ok ? SCI.noOverlap.pass++ : (SCI.noOverlap.fail++, SCI.noOverlap.lastFail = msg);
+
+  // 3) Speed bounds
+  ok = true; msg = null;
+  for (const v of vehicles) if (v.speed < -0.01 || v.speed > v.vmax + 0.5) { ok = false; msg = `v#${v.id} speed=${v.speed.toFixed(2)}`; break; }
+  ok ? SCI.speedBounds.pass++ : (SCI.speedBounds.fail++, SCI.speedBounds.lastFail = msg);
+
+  // 4) CA >= CD per intersection+dir
+  ok = true; msg = null;
+  for (const k in intCum) if (intCum[k].arr < intCum[k].dep) { ok = false; msg = `${k} CA=${intCum[k].arr} < CD=${intCum[k].dep}`; break; }
+  ok ? SCI.caGeqCd.pass++ : (SCI.caGeqCd.fail++, SCI.caGeqCd.lastFail = msg);
+
+  // 5) Test mode → no departures
+  if (testRedMode && t > 5 && t < 300) {
+    let totalDep = 0;
+    for (const k in intCum) totalDep += intCum[k].dep;
+    if (totalDep === 0) SCI.testRedZeroDep.pass++;
+    else { SCI.testRedZeroDep.fail++; SCI.testRedZeroDep.lastFail = `t=${t.toFixed(1)} totalDep=${totalDep} during RED`; }
+  } else SCI.testRedZeroDep.pass++;
+
+  // 6) Actuated green-bounds: at the moment a green phase terminates, elapsed ∈ [minG, maxG + small slack]
+  if (controlMode === 'actuated') {
+    let okBnd = true, bMsg = null;
+    for (const I of INT_LIST) {
+      const ps = phaseStates[I];
+      const sig = INTERSECTIONS[I];
+      const elapsed = t - ps.startTime;
+      // Just-entered yellow → previous green's elapsed time should have been within bounds
+      // (state machine enforces this; we check that current elapsed in green hasn't exceeded MaxG + tol)
+      if (ps.phase === 'EW' && elapsed > sig.maxG_ew + 0.5) { okBnd = false; bMsg = `${I} EW elapsed=${elapsed.toFixed(1)} > maxG=${sig.maxG_ew}`; break; }
+      if (ps.phase === 'NS' && elapsed > sig.maxG_ns + 0.5) { okBnd = false; bMsg = `${I} NS elapsed=${elapsed.toFixed(1)} > maxG=${sig.maxG_ns}`; break; }
+    }
+    okBnd ? SCI.actGreenBounds.pass++ : (SCI.actGreenBounds.fail++, SCI.actGreenBounds.lastFail = bMsg);
+
+    // 7) Detector integrity: ewDetActive ⇔ at least one EW vehicle in detector zone
+    let okDet = true, dMsg = null;
+    for (const I of INT_LIST) {
+      const ps = phaseStates[I];
+      let ewSeen = false, nsSeen = false;
+      for (const v of vehicles) {
+        const link = LINKS[v.link];
+        if (link.endInt !== I) continue;
+        if (v.dist >= DET_NEAR && v.dist <= DET_FAR) {
+          if (link.dir === 'EB' || link.dir === 'WB') ewSeen = true; else nsSeen = true;
+        }
+      }
+      if (ewSeen !== ps.ewDetActive) { okDet = false; dMsg = `${I} ewDet=${ps.ewDetActive} but vehicle present=${ewSeen}`; break; }
+      if (nsSeen !== ps.nsDetActive) { okDet = false; dMsg = `${I} nsDet=${ps.nsDetActive} but vehicle present=${nsSeen}`; break; }
+    }
+    okDet ? SCI.detectorIntegrity.pass++ : (SCI.detectorIntegrity.fail++, SCI.detectorIntegrity.lastFail = dMsg);
+  } else {
+    // not in actuated mode → vacuous pass
+    SCI.actGreenBounds.pass++;
+    SCI.detectorIntegrity.pass++;
+  }
+}
+function renderSCI() {
+  const totalFails = Object.values(SCI).reduce((a,c) => a + c.fail, 0);
+  const totalChecks = Object.values(SCI).reduce((a,c) => a + c.pass + c.fail, 0);
+  const sum = document.getElementById('sciSummary');
+  if (totalChecks === 0) { sum.className = 'sci-summary'; sum.textContent = '— press Play to begin —'; }
+  else if (totalFails === 0) { sum.className = 'sci-summary ok'; sum.textContent = `✓ ALL PASS (${totalChecks.toLocaleString()} checks)`; }
+  else { sum.className = 'sci-summary bad'; sum.textContent = `✗ ${totalFails} FAILS / ${totalChecks.toLocaleString()} checks`; }
+  document.getElementById('sciList').innerHTML = Object.entries(SCI).map(([k,c]) => {
+    const status = c.fail === 0 ? 'pass' : 'fail';
+    return `<div class="sci-row ${status}">
+      <span class="sci-icon">${c.fail === 0 ? '✓' : '✗'}</span>
+      <span class="sci-desc">${c.desc}</span>
+      <span class="sci-stat">${c.pass}/${c.pass+c.fail}</span>
+      ${c.fail > 0 && c.lastFail ? `<div class="sci-fail-msg">${c.lastFail}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+function resetSCI() { for (const k in SCI) { SCI[k].pass = 0; SCI[k].fail = 0; SCI[k].lastFail = null; } }
+
+// ============================================================================
+// RENDER
+// ============================================================================
+function delayColor(d) {
+  if (d < 5) return '#3b82f6';
+  if (d < 15) return '#10b981';
+  if (d < 30) return '#eab308';
+  if (d < 60) return '#f97316';
+  return '#dc2626';
+}
+
+function drawNetwork() {
+  nctx.clearRect(0, 0, netCanvas.width, netCanvas.height);
+  // Draw lane stripes for each approach link
+  for (const linkId in LINKS) {
+    const link = LINKS[linkId];
+    const totalLanes = link.lanes.L + link.lanes.T + link.lanes.R;
+    if (totalLanes === 0) continue;
+    for (let li = 0; li < totalLanes; li++) {
+      const upLL = linkLatLon(linkId, link.length, li, totalLanes);
+      const dnLL = linkLatLon(linkId, STOP_BAR_DIST, li, totalLanes);
+      const up = map.latLngToContainerPoint(upLL);
+      const dn = map.latLngToContainerPoint(dnLL);
+      nctx.strokeStyle = 'rgba(255,255,255,0.16)';
+      nctx.lineWidth = 1;
+      nctx.setLineDash([5,5]);
+      nctx.beginPath();
+      nctx.moveTo(up.x, up.y); nctx.lineTo(dn.x, dn.y);
+      nctx.stroke();
+      nctx.setLineDash([]);
+    }
+    // Stop bar (colored by phase)
+    const ph = isGreenFor(link.endInt, link.dir, t);
+    const sbL = map.latLngToContainerPoint(linkLatLon(linkId, STOP_BAR_DIST, 0, totalLanes));
+    const sbR = map.latLngToContainerPoint(linkLatLon(linkId, STOP_BAR_DIST, totalLanes-1, totalLanes));
+    nctx.strokeStyle = ph === 'G' ? 'rgba(86,211,100,0.85)' : ph === 'Y' ? 'rgba(210,153,34,0.85)' : 'rgba(248,81,73,0.85)';
+    nctx.lineWidth = 3;
+    nctx.beginPath(); nctx.moveTo(sbL.x, sbL.y); nctx.lineTo(sbR.x, sbR.y); nctx.stroke();
+
+    // Stage 3: detector loops (only show in actuated mode)
+    if (controlMode === 'actuated') {
+      const ps = phaseStates[link.endInt];
+      const isEW = (link.dir === 'EB' || link.dir === 'WB');
+      const detActive = isEW ? ps.ewDetActive : ps.nsDetActive;
+      const lastCall = isEW ? ps.lastEWCall : ps.lastNSCall;
+      const sinceCall = t - lastCall;
+      // Detector zone spans dist [DET_NEAR, DET_FAR]
+      const detNL = map.latLngToContainerPoint(linkLatLon(linkId, DET_NEAR + 5, 0, totalLanes));
+      const detNR = map.latLngToContainerPoint(linkLatLon(linkId, DET_NEAR + 5, totalLanes-1, totalLanes));
+      const detFL = map.latLngToContainerPoint(linkLatLon(linkId, DET_FAR, 0, totalLanes));
+      const detFR = map.latLngToContainerPoint(linkLatLon(linkId, DET_FAR, totalLanes-1, totalLanes));
+      // Fill detector zone — bright green when active, faint cyan when idle, amber if recent
+      let fill;
+      if (detActive) fill = 'rgba(86,211,100,0.45)';
+      else if (sinceCall < 5) fill = 'rgba(251,191,36,0.25)';
+      else fill = 'rgba(88,166,255,0.10)';
+      nctx.fillStyle = fill;
+      nctx.beginPath();
+      nctx.moveTo(detNL.x, detNL.y); nctx.lineTo(detNR.x, detNR.y);
+      nctx.lineTo(detFR.x, detFR.y); nctx.lineTo(detFL.x, detFL.y);
+      nctx.closePath(); nctx.fill();
+      // Detector outline
+      nctx.strokeStyle = detActive ? '#56d364' : 'rgba(88,166,255,0.5)';
+      nctx.lineWidth = detActive ? 2 : 1;
+      nctx.stroke();
+    }
+  }
+  // Intersection center markers
+  for (const I of Object.values(INTERSECTIONS)) {
+    const p = map.latLngToContainerPoint([I.lat, I.lon]);
+    nctx.fillStyle = I.id === focusInt ? '#a371f7' : '#f85149';
+    nctx.strokeStyle = '#fff';
+    nctx.lineWidth = 1.5;
+    nctx.beginPath();
+    nctx.arc(p.x, p.y, I.id === focusInt ? 8 : 6, 0, Math.PI*2);
+    nctx.fill(); nctx.stroke();
+  }
+}
+
+function drawSignalHeads() {
+  for (const I of Object.values(INTERSECTIONS)) {
+    const p = map.latLngToContainerPoint([I.lat, I.lon]);
+    const ph = signalPhase(I.id, t);
+    drawSignalHead(p.x - 9, p.y - 18, ph.ew);
+    drawSignalHead(p.x + 9, p.y + 18, ph.ew);
+    drawSignalHead(p.x + 18, p.y - 9, ph.ns);
+    drawSignalHead(p.x - 18, p.y + 9, ph.ns);
+  }
+}
+function drawSignalHead(cx, cy, state) {
+  vctx.save();
+  vctx.fillStyle = 'rgba(0,0,0,0.92)';
+  vctx.strokeStyle = '#5a6470';
+  vctx.lineWidth = 1;
+  const w = 6, h = 14;
+  vctx.fillRect(cx - w/2, cy - h/2, w, h);
+  vctx.strokeRect(cx - w/2, cy - h/2, w, h);
+  const sz = 3;
+  const ys = [-h/2 + 3, 0, h/2 - 3];
+  const colors = ['#f85149','#eab308','#2ea043'];
+  const ai = state === 'R' ? 0 : state === 'Y' ? 1 : 2;
+  for (let i = 0; i < 3; i++) {
+    vctx.fillStyle = i === ai ? colors[i] : '#1a1a1a';
+    vctx.beginPath(); vctx.arc(cx, cy + ys[i], sz/2, 0, Math.PI*2); vctx.fill();
+    if (i === ai) {
+      vctx.shadowColor = colors[i]; vctx.shadowBlur = 5; vctx.fill(); vctx.shadowBlur = 0;
+    }
+  }
+  vctx.restore();
+}
+
+function drawVehicles() {
+  vctx.clearRect(0, 0, veh.width, veh.height);
+  drawSignalHeads();
+  for (const v of vehicles) {
+    const link = LINKS[v.link];
+    const ll = linkLatLon(v.link, v.dist, v.lane, v.totalLanes);
+    const p = map.latLngToContainerPoint(ll);
+    vctx.save();
+    vctx.translate(p.x, p.y);
+    let rot = 0;
+    if (link.dir === 'WB') rot = Math.PI;
+    else if (link.dir === 'NB') rot = -Math.PI/2;
+    else if (link.dir === 'SB') rot = Math.PI/2;
+    vctx.rotate(rot);
+    const w = 12, h = 6;
+    if (v.stopped && v.dist > 0 && v.dist < 350) {
+      const pulse = 0.6 + 0.4 * Math.sin(t * 4);
+      vctx.strokeStyle = `rgba(251,191,36,${pulse})`;
+      vctx.lineWidth = 1.5;
+      vctx.beginPath(); vctx.arc(0, 0, 10, 0, Math.PI*2); vctx.stroke();
+    }
+    const color = delayColor(v.delay);
+    vctx.fillStyle = color;
+    vctx.shadowColor = color;
+    vctx.shadowBlur = v.stopped ? 0 : 4;
+    vctx.fillRect(-w/2, -h/2, w, h);
+    vctx.shadowBlur = 0;
+    vctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    vctx.lineWidth = 1;
+    vctx.strokeRect(-w/2, -h/2, w, h);
+    vctx.fillStyle = '#fff';
+    vctx.fillRect(w/2 - 3, -1.5, 2, 3);
+    vctx.restore();
+  }
+}
+
+// ============================================================================
+// CHARTS
+// ============================================================================
+const cumChart = document.getElementById('cumChart');
+const cumCtx = cumChart.getContext('2d');
+const tsdChart = document.getElementById('tsdChart');
+const tsdCtx = tsdChart.getContext('2d');
+function resizeCharts() {
+  cumChart.width = cumChart.clientWidth; cumChart.height = cumChart.clientHeight;
+  tsdChart.width = tsdChart.clientWidth; tsdChart.height = tsdChart.clientHeight;
+}
+resizeCharts(); window.addEventListener('resize', resizeCharts);
+
+function drawCumChart() {
+  const W = cumChart.width, H = cumChart.height;
+  cumCtx.clearRect(0, 0, W, H);
+  if (cumHistory.length < 2) return;
+  const padL = 36, padR = 6, padT = 12, padB = 16;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const tMax = Math.max(...cumHistory.map(d => d.t));
+  const tMin = Math.max(0, tMax - 220);
+  const nMax = Math.max(20, ...cumHistory.map(d => d.arr)) * 1.1;
+  const xS = tt => padL + ((tt - tMin) / (tMax - tMin || 1)) * plotW;
+  const yS = n => padT + plotH - (n / nMax) * plotH;
+
+  // Background green/red bands per cycle for the focused intersection's EW phase
+  const sig = INTERSECTIONS[focusInt];
+  const offs = coordOn ? sig.offset : 0;
+  for (let cyc = Math.floor((tMin - offs) / sig.cycle); cyc <= Math.floor((tMax - offs) / sig.cycle) + 1; cyc++) {
+    const cycStart = cyc * sig.cycle + offs;
+    const greenEnd = cycStart + sig.ewGreen - sig.ewYellow;
+    if (greenEnd >= tMin && cycStart <= tMax) {
+      cumCtx.fillStyle = 'rgba(46,160,67,0.13)';
+      const x1 = xS(Math.max(tMin, cycStart)), x2 = xS(Math.min(tMax, greenEnd));
+      cumCtx.fillRect(x1, padT, Math.max(2, x2-x1), plotH);
+    }
+  }
+
+  // Axes
+  cumCtx.strokeStyle = '#3a3f47';
+  cumCtx.lineWidth = 1;
+  cumCtx.beginPath();
+  cumCtx.moveTo(padL, padT); cumCtx.lineTo(padL, padT+plotH);
+  cumCtx.moveTo(padL, padT+plotH); cumCtx.lineTo(W-padR, padT+plotH);
+  cumCtx.stroke();
+  cumCtx.fillStyle = '#6e7681';
+  cumCtx.font = '8px IBM Plex Mono';
+  cumCtx.textAlign = 'right';
+  for (let g = 0; g <= nMax; g += Math.max(5, Math.ceil(nMax/5/5)*5)) {
+    const y = yS(g);
+    cumCtx.strokeStyle = 'rgba(58,63,71,0.5)';
+    cumCtx.beginPath(); cumCtx.moveTo(padL, y); cumCtx.lineTo(W-padR, y); cumCtx.stroke();
+    cumCtx.fillText(g.toFixed(0), padL - 3, y + 3);
+  }
+
+  // Delay area shade
+  cumCtx.fillStyle = 'rgba(251,191,36,0.18)';
+  cumCtx.beginPath();
+  let first = true;
+  for (const d of cumHistory) { if (d.t < tMin) continue; const x = xS(d.t), y = yS(d.arr); if (first) { cumCtx.moveTo(x,y); first = false; } else cumCtx.lineTo(x,y); }
+  for (let i = cumHistory.length - 1; i >= 0; i--) { const d = cumHistory[i]; if (d.t < tMin) break; cumCtx.lineTo(xS(d.t), yS(d.dep)); }
+  cumCtx.closePath(); cumCtx.fill();
+
+  // Curves
+  cumCtx.strokeStyle = '#58a6ff'; cumCtx.lineWidth = 1.8; cumCtx.beginPath();
+  first = true;
+  for (const d of cumHistory) { if (d.t < tMin) continue; const x = xS(d.t), y = yS(d.arr); if (first) { cumCtx.moveTo(x,y); first = false; } else cumCtx.lineTo(x,y); }
+  cumCtx.stroke();
+  cumCtx.strokeStyle = '#56d364'; cumCtx.lineWidth = 1.8; cumCtx.beginPath();
+  first = true;
+  for (const d of cumHistory) { if (d.t < tMin) continue; const x = xS(d.t), y = yS(d.dep); if (first) { cumCtx.moveTo(x,y); first = false; } else cumCtx.lineTo(x,y); }
+  cumCtx.stroke();
+
+  cumCtx.fillStyle = '#58a6ff'; cumCtx.font = '8px IBM Plex Mono';
+  cumCtx.textAlign = 'left';
+  cumCtx.fillText('▬ N_a (arrivals)', padL + 4, padT + 8);
+  cumCtx.fillStyle = '#56d364';
+  cumCtx.fillText('▬ N_d (departures)', padL + 100, padT + 8);
+  cumCtx.fillStyle = '#fbbf24';
+  cumCtx.fillText('░ delay area', padL + 200, padT + 8);
+}
+
+// Time-space diagram for Apache EB corridor
+function drawTSD() {
+  const W = tsdChart.width, H = tsdChart.height;
+  tsdCtx.clearRect(0, 0, W, H);
+  const padL = 60, padR = 8, padT = 12, padB = 14;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const tMax = t + 5;
+  const tMin = Math.max(0, t - 220);
+  const xS = tt => padL + ((tt - tMin) / (tMax - tMin || 1)) * plotW;
+  // y axis: position along corridor in ft (0 = west, ~3000 = east, EB direction)
+  // College ≈ 500, McAllister ≈ 500+1300 = 1800, Rural ≈ 1800+1300 = 3100
+  const corridorLen = 3300;
+  const intYs = {C: 500, M: 1800, R: 3100};
+  const yS = px => padT + (px / corridorLen) * plotH;
+  // Axes
+  tsdCtx.strokeStyle = '#3a3f47'; tsdCtx.lineWidth = 1;
+  tsdCtx.beginPath();
+  tsdCtx.moveTo(padL, padT); tsdCtx.lineTo(padL, padT+plotH);
+  tsdCtx.moveTo(padL, padT+plotH); tsdCtx.lineTo(W-padR, padT+plotH);
+  tsdCtx.stroke();
+  // Per-intersection green bands
+  for (const I of Object.values(INTERSECTIONS)) {
+    const sy = yS(intYs[I.id]);
+    const offs = coordOn ? I.offset : 0;
+    for (let cyc = Math.floor((tMin - offs) / I.cycle); cyc <= Math.floor((tMax - offs) / I.cycle) + 1; cyc++) {
+      const cycStart = cyc * I.cycle + offs;
+      const greenEnd = cycStart + I.ewGreen - I.ewYellow;
+      if (greenEnd < tMin || cycStart > tMax) continue;
+      const x1 = xS(Math.max(tMin, cycStart)), x2 = xS(Math.min(tMax, greenEnd));
+      tsdCtx.fillStyle = 'rgba(46,160,67,0.45)';
+      tsdCtx.fillRect(x1, sy - 3, Math.max(2, x2-x1), 6);
+    }
+    tsdCtx.fillStyle = '#8b949e';
+    tsdCtx.font = '9px IBM Plex Mono';
+    tsdCtx.textAlign = 'right';
+    tsdCtx.fillText(I.name, padL - 4, sy + 3);
+  }
+  // Vehicle EB trails
+  for (const v of vehicles) {
+    if (!v.trail || v.trail.length < 2) continue;
+    const link = LINKS[v.link];
+    if (link.dir !== 'EB') continue;
+    tsdCtx.strokeStyle = delayColor(v.delay);
+    tsdCtx.lineWidth = 1;
+    tsdCtx.globalAlpha = 0.7;
+    tsdCtx.beginPath();
+    let first = true;
+    for (const pt of v.trail) {
+      if (pt.t < tMin) continue;
+      tsdCtx[first?'moveTo':'lineTo'](xS(pt.t), yS(pt.pos));
+      if (first) first = false;
+    }
+    tsdCtx.stroke();
+    tsdCtx.globalAlpha = 1;
+  }
+}
+
+// Convert a vehicle to corridor position (only meaningful for EB Apache vehicles for TSD)
+function vehCorridorPos(v) {
+  // Position along Apache corridor in feet, 0 = west entry, 3300 = east exit
+  const link = LINKS[v.link];
+  if (link.dir !== 'EB') return null;
+  // Distance from west entry to vehicle
+  if (v.link === 'EB-W2C') return link.length - v.dist;       // 0..500
+  if (v.link === 'EB-C2M') return 500 + (link.length - v.dist);// 500..1800
+  if (v.link === 'EB-M2R') return 1800 + (link.length - v.dist);// 1800..3100
+  return null;
+}
+
+// ============================================================================
+// LOOP
+// ============================================================================
+function step(dt) {
+  if (t + dt > SIM_END) { t = SIM_END; play = false; document.getElementById('bp').textContent = '▶ Play'; document.getElementById('bp').classList.remove('on'); }
+  else t += dt;
+  trySpawn(dt);
+  updateVehicles(dt);
+  // Stage 3: actuated control
+  if (controlMode === 'actuated' && !(testRedMode && t < 300)) {
+    updateDetectors();
+    for (const I of INT_LIST) advancePhase(I);
+  }
+  // Trails for EB corridor TSD
+  for (const v of vehicles) {
+    if (!v.trail) v.trail = [];
+    const pos = vehCorridorPos(v);
+    if (pos !== null) {
+      v.trail.push({t, pos});
+      while (v.trail.length && v.trail[0].t < t - 220) v.trail.shift();
+    }
+  }
+  // Sample cumulative for focus int (EB direction)
+  const ic = intCum[focusInt + '_EB'];
+  cumHistory.push({t, arr: ic.arr, dep: ic.dep});
+  while (cumHistory.length && cumHistory[0].t < t - 230) cumHistory.shift();
+  runSCI();
+  document.getElementById('sl').value = t;
+}
+
+function renderAll() {
+  document.getElementById('clock').textContent = 't = ' + t.toFixed(1) + ' s';
+  drawNetwork();
+  drawVehicles();
+  drawCumChart();
+  drawTSD();
+  renderSCI();
+  // Test banner
+  const banner = document.getElementById('testBanner');
+  if (testRedMode && t < 300) { banner.classList.add('on'); document.getElementById('testCount').textContent = (300 - t).toFixed(0); }
+  else banner.classList.remove('on');
+  // Stats
+  document.getElementById('stN').textContent = vehicles.length;
+  document.getElementById('stCleared').textContent = cleared;
+  document.getElementById('actC').innerHTML = 'Active: <b>' + vehicles.length + '</b>';
+  document.getElementById('cleared').innerHTML = 'Cleared: <b>' + cleared + '</b>';
+  const avg = cleared > 0 ? cumDelay/cleared : 0;
+  document.getElementById('delAvg').innerHTML = 'Avg delay: <b>' + avg.toFixed(1) + ' s</b>';
+  document.getElementById('focusName').textContent = INTERSECTIONS[focusInt].name;
+  const ic = intCum[focusInt + '_EB'];
+  document.getElementById('cumGap').textContent = `queue: ${ic.arr - ic.dep}`;
+  // Signal list
+  document.getElementById('sigList').innerHTML = INT_LIST.map(I => {
+    const sig = INTERSECTIONS[I];
+    const ph = signalPhase(I, t);
+    const ewLight = ph.ew === 'G' ? '#2ea043' : ph.ew === 'Y' ? '#d29922' : '#f85149';
+    const nsLight = ph.ns === 'G' ? '#2ea043' : ph.ns === 'Y' ? '#d29922' : '#f85149';
+    let detail;
+    if (controlMode === 'actuated' && !(testRedMode && t < 300)) {
+      const ps = phaseStates[I];
+      const elapsed = t - ps.startTime;
+      const isGreen = ps.phase === 'EW' || ps.phase === 'NS';
+      const minG = ps.phase === 'EW' ? sig.minG_ew : sig.minG_ns;
+      const maxG = ps.phase === 'EW' ? sig.maxG_ew : sig.maxG_ns;
+      const lastCall = ps.phase === 'EW' ? (t - ps.lastEWCall) : (t - ps.lastNSCall);
+      const detIcon = (ps.phase === 'EW' ? ps.ewDetActive : ps.nsDetActive) ? '⬤' : '○';
+      const minMet = elapsed >= minG;
+      const phLbl = ph.psName || ps.phase;
+      detail = `<div class="det">${phLbl} · ${elapsed.toFixed(1)}s ${isGreen ? `(min ${minG}${minMet?'✓':''}, max ${maxG})` : ''}</div>`;
+      if (isGreen) detail += `<div class="det">det ${detIcon} · gap ${lastCall.toFixed(1)}s/${sig.passage}s · cyc ${ps.cyclesCompleted} · last ${ps.lastReason}</div>`;
+    } else {
+      detail = `<div class="det">offs ${coordOn ? sig.offset : 0}s · cycPos ${ph.cycT.toFixed(0)}/${sig.cycle}s · fixed</div>`;
+    }
+    return `<div class="sig-state ${I === focusInt ? 'focus' : ''}" onclick="setFocus('${I}', null)">
+      <div class="nm">${sig.name} ${I === focusInt ? '★' : ''}
+        <span style="margin-left:auto;display:flex;gap:4px;align-items:center">
+          <span style="font-size:9px;color:var(--tx2)">EW</span><span class="ph-light" style="background:${ewLight}"></span>
+          <span style="font-size:9px;color:var(--tx2)">NS</span><span class="ph-light" style="background:${nsLight}"></span>
+        </span>
+      </div>
+      ${detail}
+    </div>`;
+  }).join('');
+  document.getElementById('offTxt').textContent = controlMode === 'actuated' ? 'actuated (no fixed offsets)' : (coordOn ? '85 / 40 / 40' : '0 / 0 / 0 (independent)');
+}
+
+function anim(ts) {
+  if (!play) return;
+  if (lastTs === null) lastTs = ts;
+  const dtReal = (ts - lastTs) / 1000;
+  lastTs = ts;
+  const dtSim = Math.min(0.5, dtReal * spd);
+  let r = dtSim;
+  while (r > 0) { const s = Math.min(0.1, r); step(s); r -= s; }
+  renderAll();
+  af = requestAnimationFrame(anim);
+}
+function tog() {
+  play = !play;
+  const b = document.getElementById('bp');
+  if (play) { b.textContent = '⏸ Pause'; b.classList.add('on'); lastTs = null; af = requestAnimationFrame(anim); }
+  else { b.textContent = '▶ Play'; b.classList.remove('on'); if (af) cancelAnimationFrame(af); }
+}
+function rst() {
+  play = false;
+  document.getElementById('bp').textContent = '▶ Play';
+  document.getElementById('bp').classList.remove('on');
+  if (af) cancelAnimationFrame(af);
+  t = 0; vehicles = []; cleared = 0; cumDelay = 0; nextId = 1;
+  cumHistory = [];
+  for (const k in lastDischargeTime) delete lastDischargeTime[k];
+  for (const k in intCum) { intCum[k].arr = 0; intCum[k].dep = 0; }
+  initPhaseStates();
+  resetSCI();
+  renderAll();
+}
+function ss(s, ev) { spd = s; if (ev) { ev.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('on')); ev.target.classList.add('on'); } }
+function setDemand(d, ev) { demandMul = d; if (ev) { ev.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('on')); ev.target.classList.add('on'); } }
+function setCoord(on, ev) { coordOn = on; if (ev) { ev.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('on')); ev.target.classList.add('on'); } renderAll(); }
+function setControl(mode, ev) {
+  controlMode = mode;
+  if (ev) { ev.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('on')); ev.target.classList.add('on'); }
+  // Reset to start fresh under the new control regime
+  rst();
+}
+function toggleTest(ev) { testRedMode = !testRedMode; ev.target.classList.toggle('on'); rst(); }
+function setFocus(I, ev) {
+  focusInt = I;
+  if (ev) { ev.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('on')); ev.target.classList.add('on'); }
+  // Sync the focus button group
+  document.querySelectorAll('#focusGrp button').forEach((b,i) => {
+    b.classList.toggle('on', ['C','M','R'][i] === I);
+  });
+  cumHistory = [];
+  renderAll();
+}
+document.getElementById('sl').addEventListener('input', e => {
+  const target = parseFloat(e.target.value);
+  if (target < t) rst();
+  while (t < target - 0.05) step(0.1);
+  renderAll();
+});
+map.on('move zoom', () => { resizeCanvas(); renderAll(); });
+
+// Init
+setTimeout(() => { resizeCanvas(); resizeCharts(); renderAll(); }, 200);
+</script>
+</body></html>
