@@ -29,6 +29,16 @@ concrete done-test so "done" is not a matter of opinion.
   *Done-test:* load each template with the network disabled; nothing 404s.
 - [ ] **C3 CHANGELOG + version bump to 0.2.0** on the above.
 
+## Phase E — best-in-class viz techniques (from `VIZ_LANDSCAPE_REVIEW.md`)
+Upgrades to the four cores, informed by SimWrapper (MATSim) + deck.gl/kepler.gl. Mostly enhancements to
+what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper needs its app; we don't).
+- [ ] **E1 Flow-bundle path bandwidth** (Core 1) — aggregate top-K paths into widening bands (Visum-style); biggest readability win for path viewing.
+- [ ] **E2 Capacity-width glyph** (Core 2) — link width = capacity·lanes, color = V/C, so capacity itself is visible, not just the ratio.
+- [ ] **E3 Fading trajectory trails + GPU trips in the main dashboard** (Core 4) — port the web-gl TripsLayer trail into the generated dashboard so every one animates trajectories at scale with tails.
+- [ ] **E4 MOE small-multiples** (Core 3) — speed | volume | queue space-time contours side-by-side for a corridor.
+- [ ] **E5 `dashboard.yaml` dashboards-as-code** (SimWrapper model) — declare panels/layers in YAML; ties directly to the catalog engine (B2). The manifest *is* the dashboard spec.
+- [ ] **E6 Optional deck.gl GPU backend** — keep zero-dep canvas default; allow a deck.gl path for regional-scale animation (raw-WebGL2 already covers most).
+
 ## Phase D — coverage (grow the catalog)
 - [ ] **D1 Caltrans PeMS** highway detector template (`highway_sensor_timeseries`) — the corridor-detector counterpart to the trajectory-rich ITS I-95 hub.
 - [ ] **D2 NGSIM I-80/US-101** trajectory template (`highway_vehicle_trajectory`) — lane-change / car-following / FD sampling.
