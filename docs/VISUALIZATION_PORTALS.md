@@ -51,11 +51,18 @@ Two real networks, exported and rendered so you can *see* them before you click:
 ![ARC Atlanta regional in Kepler.gl](portal_demo/kepler/arc_preview.png)
 
 - **ARC Atlanta regional** (145,971 links) — the whole metro; the freeway spokes (I-75/85/20 + the I-285
-  perimeter) load red out of downtown. Same one-folder pipeline, just a bigger network.
+  perimeter) load red out of downtown. Reprojected from state-plane (EPSG:2240) to lon/lat and
+  **[▶ live in Kepler.gl](https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/arc/map.kepler.json)**
+  (top 6,000 links by volume, so it loads fast) · [deck.gl](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/arc/deckgl/)
+  · [Google Earth KML](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/arc/gmns.kml).
 
-Make one for any GMNS folder: `python renderers/kepler_demo.py <folder> "<label>" -o out/kepler` (writes a
-`map.kepler.json` for the live link, a `preview.png`, and the drag-drop files). **ITS I-95** renders
-identically — but its INRIX/VDOT data is restricted, so it stays **local only, never published**.
+Each demo also ships a **Google Earth `.kml`** (3D volume-extruded bars): open it in Google Earth Pro or
+import it at earth.google.com — [Chicago](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/kepler/gmns.kml)
+· [ARC](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/arc/gmns.kml).
+
+Make one for any GMNS folder: `python renderers/kepler_demo.py <folder> "<label>" -o out --top 6000`
+(reprojects via `crs.txt`, writes `map.kepler.json` for the live link, `preview.png`, `gmns.kml`, a deck.gl
+page, and the drag-drop files).
 
 ## Online *and* offline — the point
 

@@ -12,6 +12,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 _spec = importlib.util.spec_from_file_location("gmns_to_viz", os.path.join(HERE, "..", "exporters", "gmns_to_viz.py"))
 gv = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(gv)
 
+def reproject(D, epsg):
+    """Reproject link/OD/trip coords from a projected CRS (e.g. ARC EPSG:2240) to lon/lat for map portals."""
+    from pyproj import Transformer
+    tr = Transformer.from_crs(epsg, "EPSG:4326", always_xy=True)
+    for L in D["links"]:
+        L["poly"] = [tr.transform(x, y) for x, y in L["poly"]]
+    D["od"] = [(*tr.transform(o[0], o[1]), *tr.transform(o[2], o[3]), o[4]) for o in D["od"]]
+    D["trips"] = [[(*tr.transform(x, y), t) for x, y, t in trp] for trp in D["trips"]]
+    D["geo"] = True
+    return D
+
 def _metric(D):
     """Pick the field that actually varies: volume (network loading) if present, else free-flow speed.
     Returns (value_fn, label, hot_high) — hot_high=True means high value = red (busy)."""
@@ -79,14 +90,28 @@ def main():
     src = a[0]; label = a[1] if len(a) > 1 and not a[1].startswith("-") else os.path.basename(src)
     out = a[a.index("-o") + 1] if "-o" in a else os.path.join(src, "kepler")
     zoom = float(a[a.index("--zoom") + 1]) if "--zoom" in a else 9.0
+    top = int(a[a.index("--top") + 1]) if "--top" in a else 0
     os.makedirs(out, exist_ok=True)
     D = gv.read_gmns(src, max_traj=300)
-    gv.export_kepler(D, out)
-    preview_png(D, os.path.join(out, "preview.png"), f"{label} — {len(D['links']):,} links · Kepler.gl")
-    if "--no-map" not in a:
+    # reproject projected coords (crs.txt or --crs) so map portals place the network correctly
+    epsg = a[a.index("--crs") + 1] if "--crs" in a else None
+    if not epsg and os.path.exists(os.path.join(src, "crs.txt")):
+        epsg = open(os.path.join(src, "crs.txt")).read().strip()
+    if epsg and not D["geo"]:
+        reproject(D, epsg); print(f"reprojected {epsg} -> lon/lat")
+    # for big networks, keep the top-N links by volume so the live map loads fast
+    if top and len(D["links"]) > top:
+        D["links"] = sorted(D["links"], key=lambda L: -L["vol"])[:top]
+        label = f"{label} — top {top:,} by volume"
+    gv.export_kepler(D, out)                                    # drag-drop geojson set
+    gv.export_kml(D, out)                                       # Google Earth KML
+    if "--no-deck" not in a:
+        gv.export_deckgl(D, os.path.join(out, "deckgl"))       # standalone deck.gl page
+    preview_png(D, os.path.join(out, "preview.png"), f"{label} · {len(D['links']):,} links")
+    if "--no-map" not in a and D["geo"]:
         json.dump(kepler_map(D, label, zoom), open(os.path.join(out, "map.kepler.json"), "w"))
-    mb = sum(os.path.getsize(os.path.join(out, f)) for f in os.listdir(out)) / 1e6
-    print(f"kepler demo -> {out}/  ({len(D['links']):,} links, geo={D['geo']}, {mb:.1f} MB total)")
+    mb = sum(os.path.getsize(os.path.join(out, f)) for f in os.listdir(out) if os.path.isfile(os.path.join(out, f))) / 1e6
+    print(f"portal demo -> {out}/  ({len(D['links']):,} links, geo={D['geo']}, {mb:.1f} MB)")
 
 if __name__ == "__main__":
     main()
