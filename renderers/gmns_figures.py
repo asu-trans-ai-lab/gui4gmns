@@ -39,7 +39,9 @@ def read(d):
             a = nodes.get(str(int(fnum(r.get("from_node_id") or 0)))); b = nodes.get(str(int(fnum(r.get("to_node_id") or 0))))
             if a and b: pts = [(a[0], a[1]), (b[0], b[1])]
         if len(pts) < 2: continue
-        links.append({"pts": pts, "type": (r.get("link_type_name") or r.get("link_type") or r.get("facility_type") or "").strip(),
+        links.append({"id": str(int(fnum(r["link_id"]))), "pts": pts,
+                      "fn": str(int(fnum(r.get("from_node_id") or 0))), "tn": str(int(fnum(r.get("to_node_id") or 0))),
+                      "type": (r.get("link_type_name") or r.get("link_type") or r.get("facility_type") or "").strip(),
                       "fs": fnum(r.get("free_speed") or r.get("free_speed_mph") or 0),
                       "lanes": fnum(r.get("lanes") or 0), "cap": fnum(r.get("capacity") or 0),
                       "len": fnum(r.get("length") or r.get("vdf_length_mi") or 0),
@@ -60,7 +62,13 @@ def read(d):
     for r in rd("demand.csv"):
         o = (r.get("o_zone_id") or "").strip(); dd = (r.get("d_zone_id") or "").strip(); v = fnum(r.get("volume"))
         if o and dd: demand.append((o, dd, v))
-    return {"nodes": nodes, "links": links, "zones": zones, "zpts": zpts, "pois": pois, "demand": demand}
+    lanes = [{"link": str(int(fnum(r["link_id"]))), "num": int(fnum(r.get("lane_num") or 1)),
+              "width": fnum(r.get("width") or 12)} for r in rd("lane.csv") if r.get("link_id")]
+    moves = [{"node": str(int(fnum(r.get("node_id") or 0))), "ib": str(int(fnum(r.get("ib_link_id") or 0))),
+              "ob": str(int(fnum(r.get("ob_link_id") or 0))), "type": (r.get("type") or "").strip()}
+             for r in rd("movement.csv") if r.get("ib_link_id")]
+    return {"nodes": nodes, "links": links, "zones": zones, "zpts": zpts, "pois": pois, "demand": demand,
+            "lanes": lanes, "moves": moves, "lbyid": {L["id"]: L for L in links}}
 
 def _fig():
     f, ax = plt.subplots(figsize=(10, 8), dpi=120, facecolor="white")
@@ -165,6 +173,50 @@ def fig_demand_OD(N, out):   # the plot4gmns figure that crashed on ZoneStyle.ed
     for z, (x, y) in zc.items(): ax.plot(x, y, "s", color="orange", markeredgecolor="blue", ms=4)
     ax.autoscale(); ax.set_title(f"Demand OD desire lines (top {len(top)})"); _save(f, out, "demand_OD")
 
+def _perp(pts):   # unit perpendicular of a polyline's overall direction
+    import math
+    dx, dy = pts[-1][0] - pts[0][0], pts[-1][1] - pts[0][1]
+    n = math.hypot(dx, dy) or 1
+    return (-dy / n, dx / n)
+
+def fig_lanes(N, out):
+    if not N["lanes"]: return
+    xs = [p[0] for L in N["links"] for p in L["pts"]]; ys = [p[1] for L in N["links"] for p in L["pts"]]
+    off = ((max(xs) - min(xs)) ** 2 + (max(ys) - min(ys)) ** 2) ** 0.5 * 0.004   # per-lane offset scale
+    f, ax = _fig()
+    ax.add_collection(LineCollection([L["pts"] for L in N["links"]], colors="#dddddd", linewidths=0.5))
+    segs = []
+    for ln in N["lanes"]:
+        L = N["lbyid"].get(ln["link"])
+        if not L: continue
+        px, py = _perp(L["pts"]); k = (ln["num"] - 0.5) * off
+        segs.append([(x + px * k, y + py * k) for x, y in L["pts"]])
+    ax.add_collection(LineCollection(segs, colors="green", linewidths=1.4))   # LaneStyle green
+    ax.autoscale(); ax.set_title(f"Network lanes ({len(N['lanes'])} lanes on {len({l['link'] for l in N['lanes']})} links)")
+    _save(f, out, "lanes")
+
+def fig_movements(N, out):
+    if not N["moves"]: return
+    col = {"left": "#8B4513", "right": "#cd853f", "through": "#a0522d"}
+    f, ax = _fig()
+    ax.add_collection(LineCollection([L["pts"] for L in N["links"]], colors="#dddddd", linewidths=0.5))
+    segs, cs, nx, ny = [], [], [], []
+    for m in N["moves"]:
+        ib = N["lbyid"].get(m["ib"]); ob = N["lbyid"].get(m["ob"])
+        nd = N["nodes"].get(m["node"])
+        if not ib or not ob: continue
+        a = ib["pts"][-1]; b = ob["pts"][0]                 # inbound end -> outbound start (turning path)
+        via = (nd[0], nd[1]) if nd else ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+        segs.append([a, via]); segs.append([via, b])
+        c = col.get(m["type"], "brown"); cs += [c, c]
+        if nd: nx.append(nd[0]); ny.append(nd[1])
+    ax.add_collection(LineCollection(segs, colors=cs, linewidths=1.6))   # MovementStyle brown
+    ax.scatter(nx, ny, s=14, c="k", zorder=3)
+    import matplotlib.lines as ml
+    ax.legend(handles=[ml.Line2D([], [], color=c, lw=2, label=t) for t, c in col.items()], fontsize=8, loc="upper right")
+    ax.autoscale(); ax.set_title(f"Intersection movements ({len(N['moves'])} at {len({m['node'] for m in N['moves']})} nodes)")
+    _save(f, out, "movements")
+
 def export_all(d, out, only=None):
     N = read(d); os.makedirs(out, exist_ok=True)
     print(f"read {len(N['nodes'])} nodes, {len(N['links'])} links, {len(N['zones']) or len(N['zpts'])} zones, "
@@ -180,6 +232,7 @@ def export_all(d, out, only=None):
         "dist_free_speed": lambda: fig_distribution(N, out, "fs", "free_speed", "free-flow speed"),
         "dist_lanes": lambda: fig_distribution(N, out, "lanes", "lanes", "lanes"),
         "demand_heatmap": lambda: fig_demand_heatmap(N, out), "demand_OD": lambda: fig_demand_OD(N, out),
+        "lanes": lambda: fig_lanes(N, out), "movements": lambda: fig_movements(N, out),
     }
     names = only or list(jobs); ok = 0
     for nm in names:
