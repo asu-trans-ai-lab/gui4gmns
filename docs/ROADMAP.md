@@ -32,14 +32,14 @@ concrete done-test so "done" is not a matter of opinion.
 ## Phase E — best-in-class viz techniques (from `VIZ_LANDSCAPE_REVIEW.md`)
 Upgrades to the four cores, informed by SimWrapper (MATSim) + deck.gl/kepler.gl. Mostly enhancements to
 what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper needs its app; we don't).
-- [ ] **E1 Flow-bundle path bandwidth** (Core 1) — aggregate top-K paths into widening bands (Visum-style); biggest readability win for path viewing.
+- [x] **E1 Flow-bundle path bandwidth** (DONE) — `path bundle` MOE mode: link width & warmth ∝ Σ path volume through it (Visum-style widening bands). Verified on Chicago Sketch (138 bundle links).
 - [ ] **E2 Capacity-width glyph** (Core 2) — link width = capacity·lanes, color = V/C, so capacity itself is visible, not just the ratio.
-- [ ] **E3 Fading trajectory trails + GPU trips in the main dashboard** (Core 4) — port the web-gl TripsLayer trail into the generated dashboard so every one animates trajectories at scale with tails.
+- [x] **E3 Fading trajectory trails** (DONE) — comet trails in every generated dashboard (`trails` toggle) + CityPhi-style oblique `3D` tilt. Verified: 2.7k trail px at peak vs 0.46k off-peak.
 - [ ] **E4 MOE small-multiples** (Core 3) — speed | volume | queue space-time contours side-by-side for a corridor.
 - [ ] **E5 `dashboard.yaml` dashboards-as-code** (SimWrapper model) — declare panels/layers in YAML; ties directly to the catalog engine (B2). The manifest *is* the dashboard spec.
 - [ ] **E6 Optional deck.gl GPU backend** — keep zero-dep canvas default; allow a deck.gl path for regional-scale animation (raw-WebGL2 already covers most).
 - [x] **E7 GUI-X exporters** (DONE) — `exporters/gmns_to_viz.py`: GMNS -> kepler.gl (GeoJSON+Trip+arcs+config), deck.gl (TripsLayer page), QGIS (GeoJSON+.qml+PyQGIS loader), Google Earth KML (3D volume bars + time slider). gui4gmns feeds external tools so users add their own layers + get 3D/fly free.
-- [x] **E8 Semi-dynamic trajectory synthesis** (DONE) — `adapters/semidynamic_trajectories.py`: propagate vehicles along paths using time-dependent LINK travel time (speed, or BPR/queue when only flow given) -> animatable `agent_trajectory.csv`, even with no micro-sim. Verified on Chicago Sketch (2,000 vehicles from path_flow + TD flow/queue).
+- [x] **E8 Semi-dynamic trajectory synthesis** (DONE) — `adapters/semidynamic_trajectories.py`: propagate vehicles along paths using time-dependent LINK travel time (speed, or BPR/queue when only flow given) -> animatable `agent_trajectory.csv`, even with no micro-sim. Verified on Chicago Sketch (2,000 vehicles from path_flow + TD flow/queue); `--window HH:MM-HH:MM` + peaked departure profile give a realistic AM build-up (14→168→79 concurrent).
 
 ## Phase D — coverage (grow the catalog)
 - [ ] **D1 Caltrans PeMS** highway detector template (`highway_sensor_timeseries`) — the corridor-detector counterpart to the trajectory-rich ITS I-95 hub.

@@ -98,20 +98,29 @@ def main():
                 if len(ids) >= 1 and vol > 0: paths.append((vol, ids))
     if not paths: sys.exit("no paths found (need path_flow.csv or route_assignment.csv with link_ids)")
 
-    # ---- departure window from TD bins (else 07:00-09:00) ----
-    t0 = min(bins) if bins else 420
-    t1 = (max(bins) + 15) if bins else 540
+    # ---- departure window: --window HH:MM-HH:MM overrides the TD-bin span ----
+    if "--window" in a:
+        w = a[a.index("--window") + 1]; s, e = w.split("-")
+        t0, t1 = hhmm2min(s), hhmm2min(e)
+    else:
+        t0 = min(bins) if bins else 420
+        t1 = (max(bins) + 15) if bins else 540
+    profile = a[a.index("--profile") + 1] if "--profile" in a else "peak"   # peak | uniform
     total_vol = sum(v for v, _ in paths)
-    print(f"paths={len(paths)} total_vol={total_vol:.0f} | TT source: {src} | depart window {t0//60:02d}:{t0%60:02d}-{t1//60:02d}:{t1%60:02d} | synth {N} vehicles")
+    # peaked departures: inverse-CDF of a symmetric triangular over [0,1] concentrates the sample
+    def shape(f):
+        if profile != "peak": return f
+        return math.sqrt(f * 0.5) if f <= 0.5 else 1 - math.sqrt((1 - f) * 0.5)
+    print(f"paths={len(paths)} total_vol={total_vol:.0f} | TT source: {src} | depart window "
+          f"{t0//60:02d}:{t0%60:02d}-{t1//60:02d}:{t1%60:02d} ({profile}) | synth {N} vehicles")
 
-    # ---- allocate N vehicles across paths ∝ volume; spread departures over the window ----
-    # deterministic (no RNG): stride the departure times; jitter by index for spread
+    # ---- allocate N vehicles across paths ∝ volume; spread departures (deterministic, no RNG) ----
     rows_out = []; aid = 0
     for vol, ids in paths:
         k = max(1, round(N * vol / total_vol))
         for j in range(k):
             if aid >= N: break
-            frac = (j + 0.5) / k
+            frac = shape((j + 0.5) / k)
             dep = t0 + frac * (t1 - t0) + ((aid * 7) % 11 - 5) * 0.3   # small deterministic jitter
             t = dep
             for lid in ids:
