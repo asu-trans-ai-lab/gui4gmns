@@ -68,6 +68,9 @@ are referenced from `asu-trans-ai-lab/dynamic-odme-lab` rather than duplicated h
 
 Sample-data attribution: Sioux Falls / Chicago from bstabler/TransportationNetworks; basemap tiles ©
 OpenStreetMap contributors and Imagery © Esri, Maxar, Earthstar Geographics (embedded per their terms).
+The local-only ITS I-95 (VA) data-hub demo is sourced from the USDOT JPO CodeHub **Data Cleaning and
+Fusion Tool** (https://github.com/usdot-jpo-codehub/data-cleaning-and-fusion-tool); its INRIX/VDOT/probe
+layers are restricted and never committed.
 
 ## Docs
 `docs/gui4gmns_Users_Guide.md` · `SHARED_CONTRACT.md` · `REFACTOR_PLAN.md` ·

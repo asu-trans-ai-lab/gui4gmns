@@ -21,7 +21,9 @@ dataset hiding the individual features.
 
 **ITS I-95 (VA)** is the **local-only** demo for **digital-infrastructure demonstration**: one corridor
 fusing GMNS network + INRIX TMC speed + VDOT loop sensors + probe trajectories + GPS waypoints + probe OD
-— the "connect-from-the-DataHub" data hub (`adapters/its_datahub.py`, `its_datahub.html`). Because the
+— the "connect-from-the-DataHub" data hub (`adapters/its_datahub.py`, `its_datahub.html`). Data source:
+the USDOT JPO CodeHub **Data Cleaning and Fusion Tool**
+(https://github.com/usdot-jpo-codehub/data-cleaning-and-fusion-tool). Because the
 speeds/sensors/probes are INRIX/VDOT-restricted, **this dataset and its rendered dashboard are never
 committed** (`datasets/08_public_ITS_VA_1-95_sample/` is git-ignored). It demonstrates the full capability
 locally; the **shipped** public showcase is **Chicago Sketch** (network + MOE + time-dependent flow +

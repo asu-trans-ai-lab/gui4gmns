@@ -1,5 +1,11 @@
 # ITS I-95 (VA) — multi-source data-hub SAMPLE
 
+**Data source:** the multi-source I-95 dataset comes from the USDOT JPO CodeHub
+**Data Cleaning and Fusion Tool** — https://github.com/usdot-jpo-codehub/data-cleaning-and-fusion-tool
+(Fredericksburg/Stafford VA corridor). The underlying TMC speeds (INRIX / RITIS) and VDOT loop-sensor feeds
+are **restricted** — so this sample and its rendered dashboard are **local-only, never committed** (the
+`_sample/` folder is git-ignored). It demonstrates the full data-hub capability locally.
+
 Space-saving sample extracted from the 2.3 GB source (`../../../../_raw_sources/08_public_ITS_VA_1-95/`, moved out of the repo tree) by
 `../../templates/adapters/its_i95_sample.py`. **2.3 GB -> 5.2 MB**, all six ITS layers preserved for
 Fredericksburg/Stafford VA, 2024-08-05:
