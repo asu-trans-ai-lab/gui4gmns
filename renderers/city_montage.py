@@ -32,20 +32,29 @@ def find_cities(store):
         if name not in seen: seen[name] = c
     return seen   # name -> dir
 
+# plot4gmns-style discrete free-speed classes (saturated, readable on a WHITE background)
+SPEED_CLASSES = [(55, "#d62728", 1.3, "freeway (>=55 mph)"),
+                 (40, "#ff7f0e", 0.9, "major arterial (40-55)"),
+                 (25, "#2ca02c", 0.6, "collector (25-40)"),
+                 (0,  "#9aa7bd", 0.3, "local (<25)")]
+def speed_class(s):
+    for thr, col, w, _ in SPEED_CLASSES:
+        if s >= thr: return col, w
+    return SPEED_CLASSES[-1][1], SPEED_CLASSES[-1][2]
+
 def read_links(d, cap_n):
-    segs, ws, sp = [], [], []
+    segs, ws, cs = [], [], []
     n = 0
     with open(os.path.join(d, "link.csv"), encoding="utf-8-sig") as f:
         for r in csv.DictReader(f):
             pts = re.findall(r"(-?\d+\.?\d*)\s+(-?\d+\.?\d*)", r.get("geometry") or "")
             if len(pts) < 2: continue
             segs.append([(float(x), float(y)) for x, y in pts])
-            cap = fnum(r.get("capacity") or 1000) * max(1, fnum(r.get("lanes") or 1))
-            ws.append(0.15 + 0.9 * min(1, cap / 6000))
-            sp.append(fnum(r.get("free_speed") or r.get("free_speed_mph") or 30))
+            s = fnum(r.get("free_speed") or r.get("free_speed_mph") or 30)
+            col, w = speed_class(s); cs.append(col); ws.append(w)
             n += 1
             if n >= cap_n: break
-    return segs, ws, sp
+    return segs, ws, cs
 
 def main():
     a = sys.argv[1:]
@@ -59,23 +68,27 @@ def main():
     names = list(cities)[:mx]
     print(f"store has {len(cities)} city networks; rendering {len(names)}")
     rows = math.ceil(len(names) / cols)
-    fig, axes = plt.subplots(rows, cols, figsize=(cols * 3.0, rows * 3.0), dpi=130)
+    fig, axes = plt.subplots(rows, cols, figsize=(cols * 3.0, rows * 3.0), dpi=130,
+                             facecolor="white")
     axes = np.array(axes).reshape(-1)
-    smin, smax = 15, 70
     for i, name in enumerate(names):
-        ax = axes[i]; segs, ws, sp = read_links(cities[name], cap_n)
+        ax = axes[i]; segs, ws, cs = read_links(cities[name], cap_n)
         if not segs:
             ax.set_title(name[:22], fontsize=8); ax.axis("off"); continue
-        cs = [plt.cm.plasma(max(0, min(1, (s - smin) / (smax - smin)))) for s in sp]
         ax.add_collection(LineCollection(segs, linewidths=ws, colors=cs))
-        ax.autoscale(); ax.set_aspect("equal"); ax.set_facecolor("#0c0f13")
+        ax.autoscale(); ax.set_aspect("equal"); ax.set_facecolor("white")
+        for sp in ax.spines.values(): sp.set_edgecolor("#cccccc")
         ax.set_xticks([]); ax.set_yticks([])
-        ax.set_title(f"{re.sub(r'^[0-9]+_','',name)[:24]}  ({len(segs):,} links)", fontsize=8)
+        ax.set_title(f"{re.sub(r'^[0-9]+_','',name)[:24]}  ({len(segs):,} links)", fontsize=8, color="#222")
     for j in range(len(names), len(axes)): axes[j].axis("off")
+    import matplotlib.lines as ml
+    leg = [ml.Line2D([], [], color=c, lw=2.2, label=lab) for _, c, _, lab in SPEED_CLASSES]
+    fig.legend(handles=leg, loc="lower center", ncol=4, fontsize=9, frameon=False,
+               bbox_to_anchor=(0.5, -0.01))
     fig.suptitle(f"GMNS global data-store coverage — {len(names)} city networks "
-                 f"(width = capacity, color = free-flow speed)", fontsize=12, y=0.995)
-    fig.tight_layout(rect=[0, 0, 1, 0.98]); fig.savefig(out, bbox_inches="tight"); plt.close(fig)
-    print("wrote", out)
+                 f"(color = free-flow speed class, width = road class)", fontsize=12, y=0.995, color="#222")
+    fig.tight_layout(rect=[0, 0.02, 1, 0.98]); fig.savefig(out, bbox_inches="tight", facecolor="white")
+    plt.close(fig); print("wrote", out)
 
 if __name__ == "__main__":
     main()
