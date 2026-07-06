@@ -8,6 +8,16 @@ some fully offline, some rich online platforms — without you rewriting the dat
 
 You edit the network in the legacy NEXTA GUI (or any GMNS editor). Everything below is for *seeing* it.
 
+![One GMNS folder to many visualization portals](portals_hub.svg)
+
+**▶ Live demo** (nothing to install): open the deck.gl view of Chicago Sketch at
+**https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/**, or browse every dashboard and figure at
+**https://asu-trans-ai-lab.github.io/gui4gmns/gallery.html**.
+
+> **It's automatic.** Every dashboard the generator makes now also writes a `portals/` folder beside it
+> (`kepler/ deckgl/ qgis/ kml/`). Run `python ai-gen/gui4gmns.py <folder>` once and you have the offline
+> dashboard *and* every outbound portal export — no extra step (add `--no-portals` to skip).
+
 ## The portals
 
 | Portal | Online / offline | Best for | How you get there from a GMNS folder |

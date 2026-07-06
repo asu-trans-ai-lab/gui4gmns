@@ -12,6 +12,8 @@ datasets/06_*/
 **/dashboard.html
 **/dashboard_*.html
 **/dashboard_layers/
+**/portals/
+**/export/
 desktop-qt/snapshots/
 desktop-qt/tile_cache/
 demo/

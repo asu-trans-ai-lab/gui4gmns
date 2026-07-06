@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" font-family="system-ui,Segoe UI,Arial">
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="6.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#8a94a3"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1000" height="620" fill="#ffffff"/>
+  <text x="500" y="28" text-anchor="middle" font-size="19" font-weight="700" fill="#1d232b">
+    One GMNS folder <tspan fill="#8a94a3">&#8594;</tspan> many visualization portals</text>
+  <text x="500" y="48" text-anchor="middle" font-size="12.5" fill="#5a6472">
+    a shared format opened in a family of portals &#8212; like DICOM in medical imaging &#183; offline and online</text>
+
+  <!-- spokes (drawn first; hub box covers their inner ends) -->
+  <g stroke="#c2cad6" stroke-width="2">
+    <line x1="500" y1="300" x2="500" y2="112" marker-end="url(#ah)"/>
+    <line x1="500" y1="300" x2="689" y2="157" marker-end="url(#ah)"/>
+    <line x1="500" y1="300" x2="790" y2="267" marker-end="url(#ah)"/>
+    <line x1="500" y1="300" x2="756" y2="394" marker-end="url(#ah)"/>
+    <line x1="500" y1="300" x2="601" y2="477" marker-end="url(#ah)"/>
+    <line x1="500" y1="300" x2="399" y2="477" marker-end="url(#ah)"/>
+    <line x1="500" y1="300" x2="244" y2="394" marker-end="url(#ah)"/>
+    <line x1="500" y1="300" x2="210" y2="267" marker-end="url(#ah)"/>
+    <line x1="500" y1="300" x2="311" y2="157" marker-end="url(#ah)"/>
+  </g>
+
+  <!-- center hub: the GMNS source -->
+  <rect x="398" y="266" width="204" height="68" rx="11" fill="#1d232b"/>
+  <text x="500" y="293" text-anchor="middle" font-size="15" font-weight="700" fill="#58a6ff">GMNS folder</text>
+  <text x="500" y="312" text-anchor="middle" font-size="10.5" fill="#c3ccd8">node.csv &#183; link.csv</text>
+  <text x="500" y="325" text-anchor="middle" font-size="10.5" fill="#c3ccd8">link_performance &#183; trips</text>
+
+  <!-- portal nodes: green = offline, blue = online -->
+  <!-- i0 dashboard (offline, base) -->
+  <g><rect x="421" y="44" width="158" height="52" rx="9" fill="#e9f6ef" stroke="#2f9e5e" stroke-width="1.8"/>
+    <text x="500" y="66" text-anchor="middle" font-size="14" font-weight="600" fill="#1c6b3f">gui4gmns dashboard</text>
+    <text x="500" y="83" text-anchor="middle" font-size="10.5" fill="#5a6472">self-contained &#183; the base</text></g>
+  <!-- i1 Kepler.gl (online) -->
+  <g><rect x="652" y="98" width="158" height="52" rx="9" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+    <text x="731" y="120" text-anchor="middle" font-size="14" font-weight="600" fill="#1b4bb3">Kepler.gl</text>
+    <text x="731" y="137" text-anchor="middle" font-size="10.5" fill="#5a6472">3D &#183; trajectories &#183; OD</text></g>
+  <!-- i2 deck.gl (online) -->
+  <g><rect x="775" y="234" width="158" height="52" rx="9" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+    <text x="854" y="256" text-anchor="middle" font-size="14" font-weight="600" fill="#1b4bb3">deck.gl</text>
+    <text x="854" y="273" text-anchor="middle" font-size="10.5" fill="#5a6472">TripsLayer &#183; web</text></g>
+  <!-- i3 Google Earth (online) -->
+  <g><rect x="733" y="389" width="158" height="52" rx="9" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.8"/>
+    <text x="812" y="411" text-anchor="middle" font-size="14" font-weight="600" fill="#1b4bb3">Google Earth</text>
+    <text x="812" y="428" text-anchor="middle" font-size="10.5" fill="#5a6472">3D bars &#183; globe tour</text></g>
+  <!-- i4 QGIS (offline) -->
+  <g><rect x="544" y="490" width="158" height="52" rx="9" fill="#e9f6ef" stroke="#2f9e5e" stroke-width="1.8"/>
+    <text x="623" y="512" text-anchor="middle" font-size="14" font-weight="600" fill="#1c6b3f">QGIS</text>
+    <text x="623" y="529" text-anchor="middle" font-size="10.5" fill="#5a6472">GIS &#183; analysis</text></g>
+  <!-- i5 static figures (offline) -->
+  <g><rect x="298" y="490" width="158" height="52" rx="9" fill="#e9f6ef" stroke="#2f9e5e" stroke-width="1.8"/>
+    <text x="377" y="512" text-anchor="middle" font-size="14" font-weight="600" fill="#1c6b3f">static figures</text>
+    <text x="377" y="529" text-anchor="middle" font-size="10.5" fill="#5a6472">PNG &#183; reports</text></g>
+  <!-- i6 desktop-qt (offline) -->
+  <g><rect x="109" y="389" width="158" height="52" rx="9" fill="#e9f6ef" stroke="#2f9e5e" stroke-width="1.8"/>
+    <text x="188" y="411" text-anchor="middle" font-size="14" font-weight="600" fill="#1c6b3f">desktop-qt</text>
+    <text x="188" y="428" text-anchor="middle" font-size="10.5" fill="#5a6472">desktop app</text></g>
+  <!-- i7 web-gl (offline, 3D) -->
+  <g><rect x="67" y="234" width="158" height="52" rx="9" fill="#e9f6ef" stroke="#2f9e5e" stroke-width="1.8"/>
+    <text x="146" y="256" text-anchor="middle" font-size="14" font-weight="600" fill="#1c6b3f">web-gl</text>
+    <text x="146" y="273" text-anchor="middle" font-size="10.5" fill="#5a6472">GPU 3D &#183; animation</text></g>
+  <!-- i8 web-lite (offline) -->
+  <g><rect x="190" y="98" width="158" height="52" rx="9" fill="#e9f6ef" stroke="#2f9e5e" stroke-width="1.8"/>
+    <text x="269" y="120" text-anchor="middle" font-size="14" font-weight="600" fill="#1c6b3f">web-lite</text>
+    <text x="269" y="137" text-anchor="middle" font-size="10.5" fill="#5a6472">drag-drop QC</text></g>
+
+  <!-- legend + command -->
+  <g font-size="12">
+    <rect x="40" y="576" width="13" height="13" rx="3" fill="#e9f6ef" stroke="#2f9e5e" stroke-width="1.5"/>
+    <text x="60" y="587" fill="#333">offline &#8212; works with no internet</text>
+    <rect x="270" y="576" width="13" height="13" rx="3" fill="#eaf1ff" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="290" y="587" fill="#333">online &#8212; richer 3D / trajectories</text>
+  </g>
+  <text x="960" y="587" text-anchor="end" font-size="11.5" fill="#5a6472" font-family="monospace">
+    python exporters/gmns_to_viz.py &lt;folder&gt; --target all</text>
+</svg>

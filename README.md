@@ -60,6 +60,9 @@ in their dev homes: DTALite/TAPLite C++ → `dtalite_with_taplite_Cpp_kernel/` �
 | **desktop-qt** | `desktop-qt/nexta_qt.py` | desktop app: open folders, **Run engine**, basemap, snapshots |
 
 ## Visualization portals — online + offline
+
+![One GMNS folder to many visualization portals](docs/portals_hub.svg)
+
 GMNS is a shared exchange format — think **DICOM in medical imaging**: you don't read the raw file, you open
 it in a *portal*. gui4gmns opens one GMNS folder in a whole family of them. **Offline** (no internet): the
 dashboard, web-lite, web-gl, desktop-qt, QGIS, Google Earth Pro, static figures. **Online** (richer 3D +
@@ -67,8 +70,13 @@ trajectories): **Kepler.gl**, **deck.gl**, **Google Earth**. One command exports
 ```bash
 python exporters/gmns_to_viz.py <gmns_folder> --target all    # -> kepler + deckgl + qgis + kml, each with a README
 ```
-Full guide — what each portal is for, 3D & trajectories, and how **students swap in their own datasets**:
-**[docs/VISUALIZATION_PORTALS.md](docs/VISUALIZATION_PORTALS.md)**.
+Every generated dashboard **auto-writes** a `portals/` folder beside it (kepler/deckgl/qgis/kml) — one run,
+every portal (`--no-portals` to skip). Full guide — what each portal is for, 3D & trajectories, and how
+**students swap in their own datasets**: **[docs/VISUALIZATION_PORTALS.md](docs/VISUALIZATION_PORTALS.md)**.
+
+**▶ Live demo** (no install — opens in your browser): a deck.gl view of the Chicago Sketch network at
+**https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/** · browse the gallery at
+**https://asu-trans-ai-lab.github.io/gui4gmns/gallery.html**.
 
 ## Data policy
 This repository ships the generator, viewers, and **public** sample networks only. Agency data

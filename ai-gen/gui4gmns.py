@@ -586,10 +586,30 @@ def _export_figures(folder):
     except Exception as e:
         print(f"  (figures skipped — {type(e).__name__})")
 
-def generate(folder, out=None, basemap="osm", max_traj=2000, split=True, figures=True):
+def _export_portals(folder):
+    """Auto-export the outbound portal set (Kepler.gl / deck.gl / QGIS / Google Earth KML) to
+    <folder>/portals/ — so one GMNS folder opens in every visualization portal, online and offline.
+    Pure-stdlib (uses exporters/gmns_to_viz.py); skipped gracefully if that file isn't alongside."""
+    try:
+        import importlib.util
+        fp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "exporters", "gmns_to_viz.py")
+        if not os.path.exists(fp): return
+        spec = importlib.util.spec_from_file_location("gmns_to_viz", fp)
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        D = mod.read_gmns(folder)
+        base = os.path.join(folder, "portals")
+        for name, fn in mod.TARGETS.items():
+            fn(D, os.path.join(base, name))
+        note = "" if D.get("geo") else "  (non-geographic coords: QGIS ok; kepler/kml/deck.gl need lon/lat)"
+        print(f"portals -> {base}/  (kepler, deckgl, qgis, kml){note}")
+    except Exception as e:
+        print(f"  (portals skipped — {type(e).__name__}: {str(e)[:60]})")
+
+def generate(folder, out=None, basemap="osm", max_traj=2000, split=True, figures=True, portals=True):
     """The gui4gmns AI-Gen core: GMNS run folder -> self-contained dashboard.html.
     Importable like plot4gmns:  from gui4gmns import generate; generate('datasets/01_sioux_falls').
-    figures=True also writes a static PNG figure set to <folder>/figures/. Returns the dashboard path."""
+    figures=True also writes a static PNG figure set to <folder>/figures/; portals=True writes the
+    outbound portal exports (kepler/deckgl/qgis/kml) to <folder>/portals/. Returns the dashboard path."""
     out = out or os.path.join(folder, "dashboard.html")
     mt, bm = max_traj, basemap
     D = load(folder, mt, bm)
@@ -633,6 +653,7 @@ def generate(folder, out=None, basemap="osm", max_traj=2000, split=True, figures
           f"{', split layers' if split else ', single-file'}) — checks: {len(D['meta']['checks'])}")
     for c in D["meta"]["checks"]: print("  ", c)
     if figures: _export_figures(folder)
+    if portals: _export_portals(folder)
     return out
 
 def main():
@@ -643,6 +664,6 @@ def main():
     mt = int(args[args.index("--max-traj") + 1]) if "--max-traj" in args else 2000
     bm = args[args.index("--basemap") + 1] if "--basemap" in args else "osm"   # osm | satellite | none
     generate(folder, out=out, basemap=bm, max_traj=mt, split="--single" not in args,
-             figures="--no-figures" not in args)
+             figures="--no-figures" not in args, portals="--no-portals" not in args)
 
 if __name__ == "__main__": main()
