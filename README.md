@@ -12,8 +12,14 @@ GMNS run folder in → one self-contained, offline-capable `dashboard.html` out.
 no editing to learn — the legacy NEXTA GUI stays the editor; this is the modern viewer + generator.
 
 **gui4gmns** is the project name — the pip-installable generator core plus its viewers. It is the
-cross-platform successor of the Windows-only MFC NEXTA GUI (formerly branded *gui4gmns*), rebuilt on
-one shared data contract with an AI-guided generator at its core. See `NAMING.md`.
+cross-platform successor of the Windows-only MFC NEXTA GUI, rebuilt on one shared data contract with an
+AI-guided generator at its core. See `NAMING.md`.
+
+## The process — decompose it forward, transfer to any city
+![Decomposed forward process, transferable to any city](docs/process_pipeline.svg)
+
+Five steps forward — `osm2gmns → demand → assignment → integrate → visualize` — then swap the city's inputs
+and the steps + dashboards stay the same. Full how-to: [docs/GMNS_TO_DASHBOARD_SKILL.md](docs/GMNS_TO_DASHBOARD_SKILL.md).
 
 ## Quickstart
 ```bash

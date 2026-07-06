@@ -8,6 +8,8 @@ How to turn a city's raw data into a **GMNS folder** and then into a **dashboard
 user query ─▶ dataset catalog ─▶ geofence/time/scenario filter ─▶ data adapter ─▶ QA gate ─▶ dashboard template
 ```
 
+![The decomposed forward process, transferable to any city](process_pipeline.svg)
+
 ## 1. The data elements (what a GMNS folder is made of)
 
 | element | file(s) | required for | notes |

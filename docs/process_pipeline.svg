@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 470" font-family="system-ui,Segoe UI,Arial">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="6.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#8a94a3"/>
+    </marker>
+  </defs>
+  <rect width="1140" height="470" fill="#ffffff"/>
+  <text x="30" y="30" font-size="20" font-weight="700" fill="#1d232b">One process, decomposed &#8212; then transfer it to any city</text>
+  <text x="30" y="52" font-size="13" fill="#5a6472">swap the inputs; the five steps forward, and the dashboards they produce, stay the same</text>
+
+  <!-- INPUT HOPPER (transferable: any city) -->
+  <rect x="26" y="92" width="158" height="256" rx="12" fill="#fff3ec" stroke="#b8562a" stroke-width="1.6"/>
+  <text x="105" y="112" text-anchor="middle" font-size="12.5" font-weight="700" fill="#b8562a">inputs &#183; any city</text>
+  <g font-size="11" fill="#5a3418">
+    <rect x="40" y="124" width="130" height="24" rx="6" fill="#fff" stroke="#e6c3ab"/><text x="105" y="140" text-anchor="middle">OSM map</text>
+    <rect x="40" y="154" width="130" height="24" rx="6" fill="#fff" stroke="#e6c3ab"/><text x="105" y="170" text-anchor="middle">GTFS transit</text>
+    <rect x="40" y="184" width="130" height="24" rx="6" fill="#fff" stroke="#e6c3ab"/><text x="105" y="200" text-anchor="middle">counts / demand</text>
+    <rect x="40" y="214" width="130" height="24" rx="6" fill="#fff" stroke="#e6c3ab"/><text x="105" y="230" text-anchor="middle">sensors / TMC</text>
+    <rect x="40" y="244" width="130" height="24" rx="6" fill="#fff" stroke="#e6c3ab"/><text x="105" y="260" text-anchor="middle">probe / trajectories</text>
+  </g>
+  <text x="105" y="292" text-anchor="middle" font-size="10.5" fill="#8a5a3a">Tempe &#183; ADOT</text>
+  <text x="105" y="308" text-anchor="middle" font-size="10.5" fill="#8a5a3a">I-95 &#183; your city</text>
+  <text x="105" y="332" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b8562a">missing layer? it just</text>
+  <text x="105" y="345" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b8562a">switches off.</text>
+
+  <!-- FORWARD ARROWS + 5 STAGES -->
+  <g stroke="#c2cad6" stroke-width="2.2">
+    <line x1="188" y1="217" x2="210" y2="217" marker-end="url(#a)"/>
+    <line x1="332" y1="217" x2="354" y2="217" marker-end="url(#a)"/>
+    <line x1="476" y1="217" x2="498" y2="217" marker-end="url(#a)"/>
+    <line x1="620" y1="217" x2="642" y2="217" marker-end="url(#a)"/>
+    <line x1="764" y1="217" x2="786" y2="217" marker-end="url(#a)"/>
+    <line x1="908" y1="217" x2="930" y2="217" marker-end="url(#a)"/>
+  </g>
+
+  <!-- stage template: x, fill, stroke, badge, num, title, add1, add2, script -->
+  <!-- 1 osm2gmns -->
+  <g><rect x="212" y="150" width="118" height="136" rx="11" fill="#eef3ff" stroke="#2563eb" stroke-width="1.6"/>
+    <circle cx="230" cy="168" r="12" fill="#2563eb"/><text x="230" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">1</text>
+    <text x="271" y="176" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1d232b">osm2gmns</text>
+    <text x="271" y="200" text-anchor="middle" font-size="10.5" fill="#5a6472">OSM &#8594; GMNS network</text>
+    <text x="271" y="215" text-anchor="middle" font-size="10.5" fill="#5a6472">node.csv &#183; link.csv</text>
+    <text x="271" y="272" text-anchor="middle" font-size="9.5" font-family="monospace" fill="#1b4bb3">step1_osm2gmns.py</text></g>
+  <!-- 2 demand -->
+  <g><rect x="356" y="150" width="118" height="136" rx="11" fill="#eef3ff" stroke="#2563eb" stroke-width="1.6"/>
+    <circle cx="374" cy="168" r="12" fill="#2563eb"/><text x="374" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">2</text>
+    <text x="415" y="176" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1d232b">demand</text>
+    <text x="415" y="200" text-anchor="middle" font-size="10.5" fill="#5a6472">+ zones + OD</text>
+    <text x="415" y="215" text-anchor="middle" font-size="10.5" fill="#5a6472">zone &#183; demand.csv</text>
+    <text x="415" y="272" text-anchor="middle" font-size="9.5" font-family="monospace" fill="#1b4bb3">step2_zones_demand.py</text></g>
+  <!-- 3 assignment -->
+  <g><rect x="500" y="150" width="118" height="136" rx="11" fill="#eef3ff" stroke="#2563eb" stroke-width="1.6"/>
+    <circle cx="518" cy="168" r="12" fill="#2563eb"/><text x="518" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">3</text>
+    <text x="559" y="176" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1d232b">assignment</text>
+    <text x="559" y="200" text-anchor="middle" font-size="10.5" fill="#5a6472">+ flow + speed</text>
+    <text x="559" y="215" text-anchor="middle" font-size="10.5" fill="#5a6472">link_performance</text>
+    <text x="559" y="272" text-anchor="middle" font-size="9.5" font-family="monospace" fill="#1b4bb3">step3_assignment.py</text></g>
+  <!-- 4 integrate -->
+  <g><rect x="644" y="150" width="118" height="136" rx="11" fill="#eef3ff" stroke="#2563eb" stroke-width="1.6"/>
+    <circle cx="662" cy="168" r="12" fill="#2563eb"/><text x="662" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">4</text>
+    <text x="703" y="176" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1d232b">integrate</text>
+    <text x="703" y="200" text-anchor="middle" font-size="10.5" fill="#5a6472">+ GTFS &#183; signals</text>
+    <text x="703" y="215" text-anchor="middle" font-size="10.5" fill="#5a6472">+ sensors &#183; probe</text>
+    <text x="703" y="272" text-anchor="middle" font-size="9.5" font-family="monospace" fill="#1b4bb3">one data hub</text></g>
+  <!-- 5 visualize -->
+  <g><rect x="788" y="150" width="118" height="136" rx="11" fill="#e9f6ef" stroke="#2f9e5e" stroke-width="1.8"/>
+    <circle cx="806" cy="168" r="12" fill="#2f9e5e"/><text x="806" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">5</text>
+    <text x="847" y="176" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1c6b3f">visualize</text>
+    <text x="847" y="200" text-anchor="middle" font-size="10.5" fill="#4a6553">dashboard + figures</text>
+    <text x="847" y="215" text-anchor="middle" font-size="10.5" fill="#4a6553">+ portals</text>
+    <text x="847" y="272" text-anchor="middle" font-size="9.5" font-family="monospace" fill="#1c6b3f">gui4gmns generate</text></g>
+
+  <!-- OUTPUT -->
+  <rect x="930" y="150" width="180" height="136" rx="11" fill="#f6f0ff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="1020" y="170" text-anchor="middle" font-size="12.5" font-weight="700" fill="#6d28d9">outputs</text>
+  <g font-size="10.5" fill="#4c2a86">
+    <rect x="944" y="180" width="152" height="18" rx="5" fill="#fff" stroke="#d9c9f5"/><text x="1020" y="193" text-anchor="middle">dashboard.html</text>
+    <rect x="944" y="202" width="152" height="18" rx="5" fill="#fff" stroke="#d9c9f5"/><text x="1020" y="215" text-anchor="middle">figures/</text>
+    <rect x="944" y="224" width="152" height="18" rx="5" fill="#fff" stroke="#d9c9f5"/><text x="1020" y="237" text-anchor="middle">Kepler &#183; deck.gl</text>
+    <rect x="944" y="246" width="152" height="18" rx="5" fill="#fff" stroke="#d9c9f5"/><text x="1020" y="259" text-anchor="middle">Google Earth &#183; QGIS</text>
+  </g>
+
+  <!-- phase labels under the stages -->
+  <text x="487" y="358" text-anchor="middle" font-size="12" font-weight="700" fill="#2563eb">decompose &#8212; build the data up, layer by layer</text>
+  <text x="1020" y="358" text-anchor="middle" font-size="12" font-weight="700" fill="#2f9e5e">integrate &amp; see</text>
+
+  <!-- transferable banner -->
+  <rect x="26" y="392" width="1084" height="52" rx="10" fill="#f2f6ff" stroke="#cdd9f5"/>
+  <text x="46" y="414" font-size="13.5" font-weight="700" fill="#1d232b">Transferable:</text>
+  <text x="46" y="432" font-size="12.5" fill="#3a4457">Tempe &#8594; ADOT &#8594; ITS I-95 &#8594; your city &#8212; same five steps, same catalog, same dashboards. Only the inputs change; the QA gate keeps every city honest.</text>
+</svg>
