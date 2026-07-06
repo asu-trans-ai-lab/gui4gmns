@@ -52,6 +52,8 @@ what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper n
 - [ ] **D1 Caltrans PeMS** highway detector template (`highway_sensor_timeseries`) — the corridor-detector counterpart to the trajectory-rich ITS I-95 hub.
 - [ ] **D2 NGSIM I-80/US-101** trajectory template (`highway_vehicle_trajectory`) — lane-change / car-following / FD sampling.
 - [ ] **D3 GTFS multimodal** real dataset behind `gmns_dashboard_04`.
+- [x] **Global data-store coverage montage** (DONE) — `renderers/city_montage.py`: many GMNS city networks in one figure (15 TransportationNetworks cities, 76-34k links, ~5s). `docs/moe_gallery/global_city_coverage.png`.
+- [ ] **E14 Scenario A/B comparison** (stakeholder ask) — build-vs-no-build side-by-side dashboard.
 - [ ] **D5 AZ subarea tool** — Maricopa/MAG (or Tucson) subarea cut + corridor MOE (I-10) automation; and NVTA-style subarea corridor extraction as a reusable step.
 - [ ] **D4 ITS DataHub geofence query** template (`its_open_data_geofence_query`).
 
