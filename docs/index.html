@@ -44,8 +44,8 @@
   <h2 class="see" style="margin-top:4px">The process — decompose it forward, then transfer to any city</h2>
   <img class="hub" src="process_pipeline.svg" alt="Forward process: OSM to GMNS network, then demand, assignment, integrate (GTFS/signals/sensors/probe), then gui4gmns generate to dashboard + figures + portals; transferable to any city">
   <p class="tag" style="margin:0 0 14px">Five steps forward (<code>osm2gmns → demand → assignment → integrate → visualize</code>); swap the
-  city's inputs and the steps + dashboards stay the same. Details in the
-  <a href="GMNS_TO_DASHBOARD_SKILL.md">GMNS → dashboards skill</a>.</p>
+  city's inputs and the steps + dashboards stay the same. <b><a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/tempe/map.kepler.json" target="_blank">▶ see it run on Tempe, AZ</a></b> ·
+  details in the <a href="GMNS_TO_DASHBOARD_SKILL.md">GMNS → dashboards skill</a>.</p>
 
   <h2 class="see">The output — one GMNS folder opens in every portal</h2>
   <img class="hub" src="portals_hub.svg" alt="One GMNS folder to many visualization portals">
@@ -79,6 +79,15 @@
         <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95/map.kepler.json" target="_blank">Kepler.gl</a> ·
         <a href="portal_demo/i95/deckgl/">deck.gl</a> ·
         <a href="portal_demo/i95/gmns.kml">Google Earth</a></figcaption>
+    </figure>
+    <figure>
+      <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/tempe/map.kepler.json" target="_blank"><img src="portal_demo/tempe/preview.png" alt="Tempe AZ network colored by assignment volume"></a>
+      <figcaption><b>Tempe, AZ</b> — built end-to-end from OSM: <code>osm2gmns → demand → assignment</code>,
+        colored by assigned volume (arterials red, local streets green). The transferable process, run on a real city.<br>
+        <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/tempe/map.kepler.json" target="_blank">▶ Kepler.gl</a> ·
+        <a href="portal_demo/tempe/deckgl/">deck.gl</a> ·
+        <a href="portal_demo/tempe/gmns.kml">Google Earth</a> ·
+        <a href="https://github.com/asu-trans-ai-lab/gui4gmns/tree/main/docs/portal_demo/tempe">files</a></figcaption>
     </figure>
     <figure>
       <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/kepler/map.kepler.json" target="_blank"><img src="portal_demo/kepler/preview.png" alt="Chicago Sketch network colored by volume"></a>
