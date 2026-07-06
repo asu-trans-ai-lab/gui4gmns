@@ -10,6 +10,9 @@ Usage: python gui4gmns.py <dataset_or_run_folder> [-o dashboard.html] [--max-tra
 """
 import csv, json, math, os, re, sys
 
+__version__ = "0.1.0"
+__all__ = ["generate", "load", "main", "__version__"]
+
 def fnum(v):
     try: return float(v)
     except: return 0.0

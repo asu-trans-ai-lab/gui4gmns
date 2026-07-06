@@ -36,3 +36,11 @@ __pycache__/
 .idea/
 .vscode/
 .DS_Store
+
+# ---- ITS I-95 raw source: 2.3 GB; commit only the extracted sample (datasets/08_*_sample/) ----
+datasets/08_public_ITS_VA_1-95/
+
+# ---- python build artifacts ----
+build/
+dist/
+*.egg-info/
