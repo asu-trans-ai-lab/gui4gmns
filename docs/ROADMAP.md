@@ -48,6 +48,10 @@ what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper n
 - [x] **E12 Static MOE PNG renderer** (DONE) — `renderers/moe_static.py`: traffic-speed bandwidth + space-time SPEED & DENSITY contours (matplotlib, report-ready), gnuplot replacement. Gallery in `docs/moe_gallery/`.
 - [x] **E13 Auto sim2trajectory in the generator** (DONE) — dataset with paths + TD performance but no trajectories -> dashboard auto-synthesizes + animates 1,500 vehicles (peaked window). One step, semi-dynamic -> moving picture.
 
+- [x] **Auto-export figure set in generator** (DONE) — every `generate()` writes `figures/` (15 native plot4gmns-style PNGs) alongside the dashboard; `--no-figures` opts out; graceful w/o matplotlib.
+- [x] **Gallery index** (DONE) — `renderers/build_gallery.py` -> `docs/gallery.html` (22 figures + 9 datasets).
+- [x] **PyPI package build** (DONE) — wheel+sdist build, `twine check` PASSED, pip-install verified. Upload pending token.
+
 ## Phase D — coverage (grow the catalog)
 - [ ] **D1 Caltrans PeMS** highway detector template (`highway_sensor_timeseries`) — the corridor-detector counterpart to the trajectory-rich ITS I-95 hub.
 - [ ] **D2 NGSIM I-80/US-101** trajectory template (`highway_vehicle_trajectory`) — lane-change / car-following / FD sampling.

@@ -571,10 +571,25 @@ try{renderSci();}catch(e){}   // run once on load so the button badges immediate
 fit();requestAnimationFrame(draw);
 </script></body></html>"""
 
-def generate(folder, out=None, basemap="osm", max_traj=2000, split=True):
+def _export_figures(folder):
+    """Auto-export the native static figure set (plot4gmns-style) alongside the dashboard.
+    Optional: needs matplotlib; skipped gracefully if absent so the pure-stdlib core still works."""
+    try:
+        import importlib.util
+        fp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "renderers", "gmns_figures.py")
+        if not os.path.exists(fp): return
+        spec = importlib.util.spec_from_file_location("gmns_figures", fp)
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        mod.export_all(folder, os.path.join(folder, "figures"))
+    except ImportError:
+        print("  (figures skipped — install matplotlib for the static figure set)")
+    except Exception as e:
+        print(f"  (figures skipped — {type(e).__name__})")
+
+def generate(folder, out=None, basemap="osm", max_traj=2000, split=True, figures=True):
     """The NeXTA-X AI-Gen core: GMNS run folder -> self-contained dashboard.html.
     Importable like plot4gmns:  from gui4gmns import generate; generate('datasets/01_sioux_falls').
-    Returns the output path."""
+    figures=True also writes a static PNG figure set to <folder>/figures/. Returns the dashboard path."""
     out = out or os.path.join(folder, "dashboard.html")
     mt, bm = max_traj, basemap
     D = load(folder, mt, bm)
@@ -617,6 +632,7 @@ def generate(folder, out=None, basemap="osm", max_traj=2000, split=True):
     print(f"generated {out} ({os.path.getsize(out)/1e6:.2f} MB"
           f"{', split layers' if split else ', single-file'}) — checks: {len(D['meta']['checks'])}")
     for c in D["meta"]["checks"]: print("  ", c)
+    if figures: _export_figures(folder)
     return out
 
 def main():
@@ -626,6 +642,7 @@ def main():
     out = args[args.index("-o") + 1] if "-o" in args else None
     mt = int(args[args.index("--max-traj") + 1]) if "--max-traj" in args else 2000
     bm = args[args.index("--basemap") + 1] if "--basemap" in args else "osm"   # osm | satellite | none
-    generate(folder, out=out, basemap=bm, max_traj=mt, split="--single" not in args)
+    generate(folder, out=out, basemap=bm, max_traj=mt, split="--single" not in args,
+             figures="--no-figures" not in args)
 
 if __name__ == "__main__": main()
