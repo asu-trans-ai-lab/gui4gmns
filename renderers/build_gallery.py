@@ -193,6 +193,7 @@ def write_gallery(out, thumbs):
 <p class="desc">Every dataset produces a self-contained dashboard (base) + a static figure set (additional):</p>
 <ul>{ds_rows}</ul></section>
 <section><h2>Docs</h2><ul>
+<li><a href="VISUALIZATION_PORTALS.md">VISUALIZATION_PORTALS.md</a> — online+offline portals (Kepler / deck.gl / Google Earth / QGIS), 3D &amp; trajectories, student how-to</li>
 <li><a href="PACKAGE.md">PACKAGE.md</a> — package overview &amp; review checklist</li>
 <li><a href="DATASETS_COVERAGE.md">DATASETS_COVERAGE.md</a> — flagship + partial-coverage matrix</li>
 <li><a href="FINAL_REVIEW.md">FINAL_REVIEW.md</a> · <a href="TRB_VIZ_REVIEW.md">TRB viz</a> · <a href="STAKEHOLDER_REVIEW.md">stakeholder</a> · <a href="ROADMAP.md">roadmap</a></li>

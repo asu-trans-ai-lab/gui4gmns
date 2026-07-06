@@ -59,6 +59,17 @@ in their dev homes: DTALite/TAPLite C++ → `dtalite_with_taplite_Cpp_kernel/` �
 | **web-gl** | `web-gl/nexta_xgl.html` | GPU animation at regional scale + live-follow of a running sim |
 | **desktop-qt** | `desktop-qt/nexta_qt.py` | desktop app: open folders, **Run engine**, basemap, snapshots |
 
+## Visualization portals — online + offline
+GMNS is a shared exchange format — think **DICOM in medical imaging**: you don't read the raw file, you open
+it in a *portal*. gui4gmns opens one GMNS folder in a whole family of them. **Offline** (no internet): the
+dashboard, web-lite, web-gl, desktop-qt, QGIS, Google Earth Pro, static figures. **Online** (richer 3D +
+trajectories): **Kepler.gl**, **deck.gl**, **Google Earth**. One command exports outward to all four:
+```bash
+python exporters/gmns_to_viz.py <gmns_folder> --target all    # -> kepler + deckgl + qgis + kml, each with a README
+```
+Full guide — what each portal is for, 3D & trajectories, and how **students swap in their own datasets**:
+**[docs/VISUALIZATION_PORTALS.md](docs/VISUALIZATION_PORTALS.md)**.
+
 ## Data policy
 This repository ships the generator, viewers, and **public** sample networks only. Agency data
 (NVTA / VDOT / INRIX / CBI and any QVDF corridor derived from them) is **never** committed — it is
@@ -73,5 +84,6 @@ Fusion Tool** (https://github.com/usdot-jpo-codehub/data-cleaning-and-fusion-too
 layers are restricted and never committed.
 
 ## Docs
-`docs/gui4gmns_Users_Guide.md` · `SHARED_CONTRACT.md` · `REFACTOR_PLAN.md` ·
+[`docs/VISUALIZATION_PORTALS.md`](docs/VISUALIZATION_PORTALS.md) (online+offline portals, 3D/trajectories,
+student how-to) · `docs/gui4gmns_Users_Guide.md` · `SHARED_CONTRACT.md` · `REFACTOR_PLAN.md` ·
 `ai-gen/VIZ_SCHEMA.md` (build your own dashboard, AI-guided) · `ai-gen/LEARNINGS_FROM_PLOT4GMNS.md`.
