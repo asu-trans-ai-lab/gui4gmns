@@ -42,7 +42,7 @@ python -c "import gui4gmns; gui4gmns.generate('datasets/02_chicago_sketch')"
 - Static PNGs on ARC/Tucson are *space* profiles (space-**time** needs time-dependent link data).
 - Some DTALite period-column schemas (Tucson) need column mapping for volumes (partly handled).
 - CDN dependency only in exported deck.gl/`apache_*` templates, never in the core dashboard.
-- **AZ subarea tool** (Maricopa/MAG subarea extraction + corridor MOE) is planned, not built — roadmap D5.
+- **AZ subarea tool** (metro subarea extraction from OSM + corridor MOE) is planned, not built — roadmap D5.
 
 ## Workspace + release
 Dev: `gui4gmns/github_dev` (this tree). Public: `gui4gmns/github_release` (clone, remote

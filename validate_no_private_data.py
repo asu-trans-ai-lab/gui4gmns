@@ -9,7 +9,7 @@ BLOCK_PATH = ["06_nvta", "data_private", "dashboard_layers"]
 # filename (i17_dashboard.html slipped the name check but embeds I-17 CBI data). Deliberately specific so
 # UI labels ("INRIX observed"), design credits ("PeMS/RITIS"), supported schema columns ("speed_inrix"),
 # and base64 tile noise do NOT trip it.
-CONTENT_BLOCK = re.compile(r"(CBI Dashboard|I-17 CBI|06_nvta|nvta_am_PRIVATE)", re.I)
+CONTENT_BLOCK = re.compile(r"(CBI Dashboard|I-17 CBI|06_nvta|nvta_am_PRIVATE|08_Phoenix_MAG|MAG regional|MAG model)", re.I)
 BINARY_EXT = (".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".pptx", ".xlsx",
               ".zip", ".whl", ".gz", ".tar", ".woff", ".woff2", ".ttf")
 SIZE_WARN_MB = 5.0   # roadmap B4 size gate: flag any tracked file larger than this
