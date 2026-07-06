@@ -4,14 +4,14 @@ The showcase strategy: **one comprehensive network exercising every visualizatio
 several networks that each light up a subset — so a reviewer sees the full range without one giant
 dataset hiding the individual features.
 
-> **What ships publicly:** **Chicago Sketch** is the public showcase (richest shipped coverage). ITS I-95
-> is a **local-only** demo — it fuses INRIX TMC + VDOT sensors + probe data, which are restricted and
-> **never committed** (guarded in `.gitignore`); it is rendered locally for demonstration, not shipped.
+> **What ships publicly:** **ITS I-95 (VA)** is the published flagship data hub (network + INRIX/RITIS
+> speed + VDOT sensors + probe + OD), cleared as public USDOT ITS demonstration data. Chicago Sketch and
+> ARC Atlanta are the other live portal demos. Only the multi-GB I-95 *raw* source stays out of the repo.
 
 | dataset | network | MOE (vol/VC/queue) | time-dep MOE | QVDF/TMC speed | paths / bundle | trajectories | space-time contour | sensors | OD | 3D/KML export |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **ITS I-95 (VA)** — local demo, **not shipped** | ✓ | ✓ | ✓ | ✓ (TMC) | – | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Chicago Sketch** ★ PUBLIC SHOWCASE | ✓ | ✓ | ✓ | (BPR) | ✓ | ✓ (+auto-synth) | ✓ | – | – | ✓ |
+| **ITS I-95 (VA)** ★ FLAGSHIP (published) | ✓ | ✓ | ✓ | ✓ (TMC) | – | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Chicago Sketch** (live portal demo) | ✓ | ✓ | ✓ | (BPR) | ✓ | ✓ (+auto-synth) | ✓ | – | – | ✓ |
 | ARC Atlanta (145k) | ✓ | ✓ | – | – | – | – | – (static profile) | – | – | ✓ |
 | NVTA I-395 (TMC, local) | ✓ | ✓ | ✓ | ✓ (QVDF+INRIX) | – | (semi-dyn) | ✓ real breakdown | – | – | ✓ |
 | Tucson (I-10) | ✓ | ✓ | – | – | – | – | – (static profile) | – | – | ✓ |
@@ -19,15 +19,16 @@ dataset hiding the individual features.
 | Sioux Falls | ✓ | – | – | – | – | – | – | – | ✓ | – |
 | toy bottleneck/merge/signal | ✓ | ✓ | ✓ | – | – | – | ✓ (teaching) | – | – | – |
 
-**ITS I-95 (VA)** is the **local-only** demo for **digital-infrastructure demonstration**: one corridor
-fusing GMNS network + INRIX TMC speed + VDOT loop sensors + probe trajectories + GPS waypoints + probe OD
-— the "connect-from-the-DataHub" data hub (`adapters/its_datahub.py`, `its_datahub.html`). Data source:
+**ITS I-95 (VA)** is the **published flagship** for **digital-infrastructure demonstration**: one corridor
+fusing GMNS network + INRIX/RITIS TMC speed + VDOT loop sensors + probe trajectories + GPS waypoints + probe
+OD — the "connect-from-the-DataHub" data hub (`adapters/its_datahub.py`, `its_datahub.html`). Data source:
 the USDOT JPO CodeHub **Data Cleaning and Fusion Tool**
-(https://github.com/usdot-jpo-codehub/data-cleaning-and-fusion-tool). Because the
-speeds/sensors/probes are INRIX/VDOT-restricted, **this dataset and its rendered dashboard are never
-committed** (`datasets/08_public_ITS_VA_1-95_sample/` is git-ignored). It demonstrates the full capability
-locally; the **shipped** public showcase is **Chicago Sketch** (network + MOE + time-dependent flow +
-paths/bundle + trajectories + space-time contour + 3D/KML export).
+(https://github.com/usdot-jpo-codehub/data-cleaning-and-fusion-tool), cleared as **public ITS demonstration
+data**. The extracted `datasets/08_public_ITS_VA_1-95_sample/` ships; only the multi-GB raw source is
+git-ignored. Live: [data hub](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95/datahub.html) ·
+[Kepler.gl](https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95/map.kepler.json)
+· [deck.gl](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95/deckgl/) ·
+[Google Earth](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95/gmns.kml).
 
 **NVTA I-395** uses the **TMC-converted GMNS corridor network** (`cases/05_nvta_nb_am/network/`) — small,
 corridor-only — for the real congested space-time speed contour (green free-flow -> red AM breakdown).

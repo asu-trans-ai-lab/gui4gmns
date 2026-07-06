@@ -22,12 +22,15 @@ def tracked():
     return [l for l in out.splitlines() if l.strip()]
 
 SELF_OK = {"validate_no_private_data.py", ".gitignore"}   # both legitimately name the private paths they screen/exclude
+# Owner-cleared public despite matching a block token (USDOT JPO CodeHub ITS demonstration data, 2026-07-06):
+ALLOW = ("datasets/08_public_ITS_VA_1-95_sample/",)
+def _allowed(f): return any(f.startswith(p) for p in ALLOW)
 
 def content_hits(files):
     """Files whose CONTENT embeds restricted data / private-path coupling (not just a private filename)."""
     out = []
     for f in files:
-        if f in SELF_OK or f.lower().endswith(BINARY_EXT) or not os.path.exists(f):
+        if f in SELF_OK or _allowed(f) or f.lower().endswith(BINARY_EXT) or not os.path.exists(f):
             continue
         try:
             with open(f, encoding="utf-8", errors="ignore") as fh:
@@ -40,7 +43,7 @@ def content_hits(files):
 def main():
     files = tracked()
     bad = [f for f in files
-           if f not in SELF_OK and (BLOCK_NAME.search(f) or any(b in f for b in BLOCK_PATH))]
+           if f not in SELF_OK and not _allowed(f) and (BLOCK_NAME.search(f) or any(b in f for b in BLOCK_PATH))]
     for f in content_hits(files):
         if f not in bad:
             bad.append(f)

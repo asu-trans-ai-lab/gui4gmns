@@ -2,9 +2,12 @@
 
 **Data source:** the multi-source I-95 dataset comes from the USDOT JPO CodeHub
 **Data Cleaning and Fusion Tool** — https://github.com/usdot-jpo-codehub/data-cleaning-and-fusion-tool
-(Fredericksburg/Stafford VA corridor). The underlying TMC speeds (INRIX / RITIS) and VDOT loop-sensor feeds
-are **restricted** — so this sample and its rendered dashboard are **local-only, never committed** (the
-`_sample/` folder is git-ignored). It demonstrates the full data-hub capability locally.
+(Fredericksburg/Stafford VA corridor), released as **public ITS demonstration data**. This is the published
+flagship data hub: GMNS network + INRIX/RITIS TMC speed + VDOT loop sensors + probe trips/waypoints + OD,
+fused into one corridor. Live: [data hub](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95/datahub.html)
+· [Kepler.gl](https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95/map.kepler.json)
+· [Google Earth](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95/gmns.kml). (Only the multi-GB
+raw source stays out of the repo; this extracted sample ships.)
 
 Space-saving sample extracted from the 2.3 GB source (`../../../../_raw_sources/08_public_ITS_VA_1-95/`, moved out of the repo tree) by
 `../../templates/adapters/its_i95_sample.py`. **2.3 GB -> 5.2 MB**, all six ITS layers preserved for

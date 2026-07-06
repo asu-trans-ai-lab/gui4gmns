@@ -43,13 +43,11 @@ __pycache__/
 # ---- dev-workspace only (names private data; must never reach the public release) ----
 DEV_README.md
 
-# ---- ITS I-95: raw source (2.3 GB) AND the extracted sample are LOCAL-ONLY ----
-# The extracted sample derives from INRIX TMC (tmc_speed_15min.csv) + VDOT sensors (sensor_15min.csv) +
-# probe trips/waypoints — all restricted by the never-commit rule. It is rendered locally for the flagship
-# demo, but is NOT shipped as-is. A sanitized public flagship must be prepared deliberately (see NAMING.md
-# / data policy) before anything from this folder is committed.
+# ---- ITS I-95: only the 2.3 GB RAW source stays out; the extracted _sample IS published ----
+# Owner cleared the extracted sample as public (USDOT JPO CodeHub ITS demonstration data, 2026-07-06):
+# the _sample folder (network + INRIX/RITIS speeds + VDOT sensors + probe) is committed & allow-listed in
+# validate_no_private_data.py. Only the multi-GB raw source below remains local.
 datasets/08_public_ITS_VA_1-95/
-datasets/08_public_ITS_VA_1-95_sample/
 
 # ---- python build artifacts ----
 build/
@@ -70,3 +68,6 @@ docs/p4g_gallery/
 # i17_dashboard.html embeds I-17 CBI data; render_corridor.py reads datasets/06_nvta_am_PRIVATE/ (NVTA/INRIX)
 templates/i17_dashboard.html
 ai-gen/variants/render_corridor.py
+
+# ITS I-95 hub dashboard: generated artifact; hosted copy at docs/portal_demo/i95/, regen via its_datahub.py
+datasets/08_public_ITS_VA_1-95_sample/its_datahub.html

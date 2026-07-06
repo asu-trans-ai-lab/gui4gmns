@@ -28,6 +28,9 @@ def _metric(D):
     Returns (value_fn, label, hot_high) — hot_high=True means high value = red (busy)."""
     if max((L["vol"] for L in D["links"]), default=0) > 0:
         return (lambda L: L["vol"]), "volume (veh)", True
+    sp = [L["speed"] for L in D["links"] if L["speed"] > 0]
+    if sp and max(sp) - min(sp) > 1:                              # observed speed (e.g. INRIX on I-95)
+        return (lambda L: L["speed"]), "observed speed (mph)", False
     return (lambda L: L["ff"]), "free-flow speed (mph)", False
 
 def preview_png(D, out_png, title):
