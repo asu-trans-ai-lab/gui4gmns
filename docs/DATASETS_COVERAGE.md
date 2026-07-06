@@ -4,10 +4,14 @@ The showcase strategy: **one comprehensive network exercising every visualizatio
 several networks that each light up a subset — so a reviewer sees the full range without one giant
 dataset hiding the individual features.
 
+> **What ships publicly:** **Chicago Sketch** is the public showcase (richest shipped coverage). ITS I-95
+> is a **local-only** demo — it fuses INRIX TMC + VDOT sensors + probe data, which are restricted and
+> **never committed** (guarded in `.gitignore`); it is rendered locally for demonstration, not shipped.
+
 | dataset | network | MOE (vol/VC/queue) | time-dep MOE | QVDF/TMC speed | paths / bundle | trajectories | space-time contour | sensors | OD | 3D/KML export |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **ITS I-95 (VA)** ★ FLAGSHIP | ✓ | ✓ | ✓ | ✓ (TMC) | – | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Chicago Sketch | ✓ | ✓ | ✓ | (BPR) | ✓ | ✓ (+auto-synth) | ✓ | – | – | ✓ |
+| **ITS I-95 (VA)** — local demo, **not shipped** | ✓ | ✓ | ✓ | ✓ (TMC) | – | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Chicago Sketch** ★ PUBLIC SHOWCASE | ✓ | ✓ | ✓ | (BPR) | ✓ | ✓ (+auto-synth) | ✓ | – | – | ✓ |
 | ARC Atlanta (145k) | ✓ | ✓ | – | – | – | – | – (static profile) | – | – | ✓ |
 | NVTA I-395 (TMC, local) | ✓ | ✓ | ✓ | ✓ (QVDF+INRIX) | – | (semi-dyn) | ✓ real breakdown | – | – | ✓ |
 | Tucson (I-10) | ✓ | ✓ | – | – | – | – | – (static profile) | – | – | ✓ |
@@ -15,9 +19,13 @@ dataset hiding the individual features.
 | Sioux Falls | ✓ | – | – | – | – | – | – | – | ✓ | – |
 | toy bottleneck/merge/signal | ✓ | ✓ | ✓ | – | – | – | ✓ (teaching) | – | – | – |
 
-★ **ITS I-95 (VA)** is the flagship for **digital-infrastructure demonstration**: one corridor fusing
-GMNS network + INRIX TMC speed + VDOT loop sensors + probe trajectories + GPS waypoints + probe OD —
-the "connect-from-the-DataHub" data hub (`adapters/its_datahub.py`, `its_datahub.html`).
+**ITS I-95 (VA)** is the **local-only** demo for **digital-infrastructure demonstration**: one corridor
+fusing GMNS network + INRIX TMC speed + VDOT loop sensors + probe trajectories + GPS waypoints + probe OD
+— the "connect-from-the-DataHub" data hub (`adapters/its_datahub.py`, `its_datahub.html`). Because the
+speeds/sensors/probes are INRIX/VDOT-restricted, **this dataset and its rendered dashboard are never
+committed** (`datasets/08_public_ITS_VA_1-95_sample/` is git-ignored). It demonstrates the full capability
+locally; the **shipped** public showcase is **Chicago Sketch** (network + MOE + time-dependent flow +
+paths/bundle + trajectories + space-time contour + 3D/KML export).
 
 **NVTA I-395** uses the **TMC-converted GMNS corridor network** (`cases/05_nvta_nb_am/network/`) — small,
 corridor-only — for the real congested space-time speed contour (green free-flow -> red AM breakdown).
