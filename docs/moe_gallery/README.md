@@ -19,6 +19,8 @@ explicitly with `--links`. Time-dependent speed is used directly when present (Q
 from 15-min inflow via BPR(0.15,4) + queue delay — so even flow-only semi-dynamic results give a
 space-time picture. This is the modern replacement for the old gnuplot corridor plots.
 
+**Colors:** intuitive traffic ramp by default — speed **green (fast) -> red (slow)**; density green->red (high=red). Colorblind-safe cividis/blue-red is opt-in via `--cmap cb` (most readers prefer the conventional meaning-first ramp).
+
 Current gallery is Chicago Sketch (public). On a congested corridor (e.g. a QVDF I-395 speed field) the
 space-time plot shows the classic red breakdown band; here it stays green because the sketch path is
 uncongested and its static speed = free-flow.

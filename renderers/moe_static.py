@@ -25,16 +25,16 @@ def fnum(v):
 def hhmm2min(s):
     m = re.match(r"(\d+):(\d+)", s or ""); return int(m[1]) * 60 + int(m[2]) if m else 0
 
-# colorblind-safe by default (TRB AED30 review V1/V2): perceptually-uniform contours + blue->red bands
-# (blue/red is distinguishable under red-green color-vision deficiency; green/red is not).
-STYLE = {"cb": True}
+# DEFAULT = intuitive traffic ramp: speed fast=GREEN, slow=RED (what practitioners read instantly).
+# Colorblind-safe (cividis / blue-red) is an opt-in via --cmap cb, not the default.
+STYLE = {"cb": False}
 def speed_color(ratio):        # ratio = speed/free-flow, 0..1
     r = max(0.0, min(1.0, ratio))
-    if STYLE["cb"]:            # RdYlBu: fast=blue, slow=red
+    if STYLE["cb"]:            # colorblind opt-in: RdYlBu (fast=blue, slow=red)
         c = plt.cm.RdYlBu(r); return (c[0], c[1], c[2])
-    return (1 - r if r < 1 else 0, r, 0.15)   # classic green->red
-def cmap_speed(): return "cividis" if STYLE["cb"] else "RdYlGn"
-def cmap_density(): return "cividis_r" if STYLE["cb"] else "RdYlGn_r"
+    c = plt.cm.RdYlGn(r); return (c[0], c[1], c[2])   # DEFAULT green(fast)->yellow->red(slow)
+def cmap_speed(): return "cividis" if STYLE["cb"] else "RdYlGn"     # speed: low=red, high=green
+def cmap_density(): return "cividis_r" if STYLE["cb"] else "RdYlGn_r"  # density: low=green, high=red
 
 def read(d):
     L = {}
@@ -219,7 +219,7 @@ def main():
     moe = a[a.index("--moe") + 1] if "--moe" in a else "all"
     links = a[a.index("--links") + 1].split(";") if "--links" in a else None
     cname = a[a.index("--corridor-name") + 1] if "--corridor-name" in a else None
-    STYLE["cb"] = (a[a.index("--cmap") + 1] if "--cmap" in a else "cb") != "classic"
+    STYLE["cb"] = ("--cmap" in a and a[a.index("--cmap") + 1] == "cb")   # default green->red; --cmap cb opts in
     os.makedirs(out, exist_ok=True)
     # ready-made corridor space-time from corridor_speed.csv (seq, cum_dist_mi, time, speed[_qvdf/_inrix])
     cs_csv = os.path.join(src, "corridor_speed.csv")
