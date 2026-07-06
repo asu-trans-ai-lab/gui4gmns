@@ -1,0 +1,231 @@
+{
+ "catalog_version": "0.1",
+ "note": "Dataset-first intelligent GUI: user query -> catalog -> geofence/time filter -> QA gate -> template. Humans edit the YAML; the GUI consumes this JSON; entries validate against dataset_manifest.schema.json.",
+ "datasets": [
+  {
+   "dataset_id": "public_ITS_VA_I95",
+   "display_name": "ITS I-95 (VA) \u2014 multi-source data hub (Fredericksburg/Stafford, Aug 2024)",
+   "category": "highway_sensor_timeseries",
+   "template_file": "adapters/its_datahub.py",
+   "adapter": "adapters/its_i95_sample.py",
+   "spatial_scope": "corridor",
+   "time_scope": "day",
+   "data_sources": [
+    "GMNS network",
+    "INRIX TMC speed",
+    "VDOT loop detectors",
+    "probe trip trajectories",
+    "GPS waypoints",
+    "probe OD"
+   ],
+   "primary_entities": [
+    "node",
+    "link",
+    "tmc_segment",
+    "detector_station",
+    "trip",
+    "waypoint",
+    "od_pair"
+   ],
+   "query_facets": [
+    "time_window",
+    "layer",
+    "link_id",
+    "tmc_code",
+    "detector_zone"
+   ],
+   "capabilities": [
+    "layer_toggle",
+    "time_animation",
+    "speed_contour",
+    "sensor_timeseries",
+    "probe_trajectory",
+    "od_desire_lines",
+    "hybrid_basemap"
+   ],
+   "required_files": [
+    "network/node.csv",
+    "network/link.csv",
+    "tmc_speed_15min.csv",
+    "sensor_points.csv",
+    "sensor_15min.csv",
+    "trips.csv",
+    "waypoints.csv",
+    "od.csv"
+   ],
+   "qa_contract": [
+    "link_geometry_present",
+    "tmc_to_link_join",
+    "segment_to_link_join",
+    "sensor_coords_valid",
+    "timestamp_15min_bins",
+    "speed_bounds_0_100"
+   ],
+   "source_size": "2.3 GB",
+   "sample_size": "5.2 MB",
+   "attribution": "VDOT / RITIS / INRIX / probe providers \u2014 public ITS data (research/demonstration use)"
+  },
+  {
+   "dataset_id": "tempe_regional_inventory",
+   "display_name": "Tempe regional / signal inventory",
+   "category": "regional_inventory",
+   "template_file": "gmns_dashboard_01_regional_inventory.html",
+   "required_files": [
+    "node.csv",
+    "link.csv"
+   ],
+   "qa_contract": [
+    "node_link_connectivity",
+    "geometry_units"
+   ]
+  },
+  {
+   "dataset_id": "asu_intersection_cv",
+   "display_name": "ASU intersection CV movement dashboard",
+   "category": "signal_intersection_ops",
+   "template_file": "gmns_dashboard_02_intersection_ops.html",
+   "required_files": [
+    "node.csv",
+    "link.csv",
+    "movement.csv"
+   ],
+   "qa_contract": [
+    "movement_connectivity",
+    "signal_feasibility"
+   ]
+  },
+  {
+   "dataset_id": "apache_corridor_sim",
+   "display_name": "Apache Blvd 3-intersection corridor simulation (College/McAllister/Rural)",
+   "category": "corridor_simulation",
+   "template_file": "apache_traffic_simulation.html",
+   "spatial_scope": "corridor",
+   "time_scope": "scenario_period",
+   "data_sources": [
+    "GMNS network",
+    "UTDF signal cycles/offsets",
+    "turning-movement demand"
+   ],
+   "primary_entities": [
+    "node",
+    "link",
+    "signal_phase",
+    "movement",
+    "queue",
+    "detector"
+   ],
+   "capabilities": [
+    "fifo_physics_sim",
+    "coordinated_vs_independent",
+    "fixed_vs_actuated",
+    "cumulative_arrival_departure",
+    "delay_chart",
+    "5min_RED_test",
+    "detector_animation",
+    "physics_informed_self_checks"
+   ],
+   "required_files": [
+    "node.csv",
+    "link.csv",
+    "movement.csv",
+    "signal_timing.csv"
+   ],
+   "qa_contract": [
+    "SCI_no_vehicle_past_stopbar_on_RED",
+    "SCI_no_overlap_min_headway",
+    "SCI_speed_in_0_vmax",
+    "SCI_CA_ge_CD_every_direction",
+    "SCI_5min_RED_zero_departures",
+    "SCI_actuated_green_in_MinG_MaxG",
+    "SCI_detector_flag_matches_presence"
+   ],
+   "notes": "7 physics-informed self-checks (SCI) = the reference 'physics QA gate'. CAVEAT: uses CDN Leaflet+fonts, so it needs internet (not offline/self-contained like the gui4gmns generator output)."
+  },
+  {
+   "dataset_id": "apache_compare_sim",
+   "display_name": "Apache Blvd \u2014 Fixed-time vs Actuated (side-by-side, shared demand)",
+   "category": "corridor_simulation",
+   "template_file": "apache_compare_simulation.html",
+   "capabilities": [
+    "side_by_side_scenario",
+    "seeded_shared_demand",
+    "avg_delay_divergence_chart",
+    "throughput_compare"
+   ],
+   "required_files": [
+    "node.csv",
+    "link.csv",
+    "movement.csv",
+    "signal_timing.csv"
+   ],
+   "qa_contract": [
+    "SCI_5min_RED_zero_departures",
+    "SCI_CA_ge_CD_every_direction",
+    "seeded_rng_reproducible"
+   ]
+  },
+  {
+   "dataset_id": "gtfs_multimodal_twin",
+   "display_name": "GTFS + road multimodal digital twin",
+   "category": "multimodal_digital_twin",
+   "template_file": "gmns_dashboard_04_integrated_multimodal.html",
+   "required_files": [
+    "node.csv",
+    "link.csv",
+    "stops.txt",
+    "trips.txt",
+    "stop_times.txt"
+   ],
+   "qa_contract": [
+    "gtfs_required_files",
+    "stop_to_network_snap",
+    "service_calendar"
+   ]
+  },
+  {
+   "dataset_id": "odme_calibration",
+   "display_name": "ODME calibration (assignment -> counts -> OD)",
+   "category": "odme_calibration",
+   "template_file": "gmns_dashboard_05_odme_calibration.html",
+   "required_files": [
+    "node.csv",
+    "link.csv",
+    "demand.csv",
+    "measurement.csv"
+   ],
+   "qa_contract": [
+    "count_coverage",
+    "assignment_connectivity",
+    "residual_diagnostics"
+   ]
+  },
+  {
+   "dataset_id": "national_rail",
+   "display_name": "National rail / yard / train network",
+   "category": "rail_freight_network",
+   "template_file": "national_rail_full.html",
+   "required_files": [
+    "node.csv",
+    "link.csv"
+   ],
+   "qa_contract": [
+    "yard_node_match",
+    "train_event_sequence",
+    "milepost_lrs"
+   ]
+  },
+  {
+   "dataset_id": "cee372_problem7",
+   "display_name": "CEE 372 teaching problem dashboard",
+   "category": "teaching_problem",
+   "template_file": "problem7_visual_dashboard.html",
+   "required_files": [
+    "node.csv",
+    "link.csv"
+   ],
+   "qa_contract": [
+    "node_link_connectivity"
+   ]
+  }
+ ]
+}
