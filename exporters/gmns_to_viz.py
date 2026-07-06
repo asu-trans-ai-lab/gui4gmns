@@ -24,11 +24,15 @@ def read_gmns(d, max_traj=500):
     nodes, links = {}, []
     zpts = {}
     nf = os.path.join(d, "node.csv")
+    def xy(r):  # accept x_coord/y_coord (GMNS) or x/y or lon/lat (varies by city)
+        x = r.get("x_coord") or r.get("x") or r.get("lon") or r.get("longitude")
+        y = r.get("y_coord") or r.get("y") or r.get("lat") or r.get("latitude")
+        return fnum(x), fnum(y)
     if os.path.exists(nf):
         for r in csv.DictReader(open(nf, encoding="utf-8-sig")):
-            i = int(fnum(r["node_id"])); nodes[i] = (fnum(r["x_coord"]), fnum(r["y_coord"]))
+            i = int(fnum(r["node_id"])); nodes[i] = xy(r)
             z = (r.get("zone_id") or "").strip()
-            if z: zpts.setdefault(z, []).append((fnum(r["x_coord"]), fnum(r["y_coord"])))
+            if z: zpts.setdefault(z, []).append(xy(r))
     perf = {}
     pf = os.path.join(d, "link_performance.csv")
     if os.path.exists(pf):
