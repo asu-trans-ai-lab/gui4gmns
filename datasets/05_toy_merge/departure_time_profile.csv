@@ -1,0 +1,5 @@
+period_id,time_bin,ratio,confidence,source
+AM,07:00-07:15,0.20,high,observed
+AM,07:15-07:30,0.30,high,observed
+AM,07:30-07:45,0.30,medium,recovered
+AM,07:45-08:00,0.20,medium,recovered

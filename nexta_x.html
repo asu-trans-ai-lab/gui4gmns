@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NeXTA-X — cross-platform AMS viewer (DTALite / TAPLite / ODME / DLSim)</title>
+<style>
+  :root { --bg:#14181d; --panel:#1d232b; --edge:#2c3540; --fg:#d8dee6; --dim:#8a94a3; --acc:#4db8ff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--fg); font:13px/1.45 system-ui,Segoe UI,Arial; height:100vh;
+         display:flex; flex-direction:column; overflow:hidden; }
+  #topbar { display:flex; align-items:center; gap:10px; padding:7px 12px; background:var(--panel);
+            border-bottom:1px solid var(--edge); flex-wrap:wrap; }
+  #topbar b { color:var(--acc); font-size:15px; letter-spacing:.5px; }
+  .grp { display:flex; align-items:center; gap:5px; padding:2px 8px; border-left:1px solid var(--edge); }
+  button, select { background:#28303a; color:var(--fg); border:1px solid var(--edge); border-radius:4px;
+            padding:4px 9px; cursor:pointer; font-size:12px; }
+  button:hover { border-color:var(--acc); }
+  button.on { background:var(--acc); color:#08121c; font-weight:600; }
+  label { color:var(--dim); font-size:12px; user-select:none; cursor:pointer; }
+  input[type=checkbox] { accent-color:var(--acc); }
+  input[type=range] { width:220px; accent-color:var(--acc); }
+  #main { flex:1; display:flex; min-height:0; }
+  #cv { flex:1; display:block; cursor:grab; background:#101418; }
+  #side { width:320px; background:var(--panel); border-left:1px solid var(--edge); overflow-y:auto;
+          padding:10px; }
+  #side h3 { color:var(--acc); font-size:13px; margin:8px 0 5px; border-bottom:1px solid var(--edge);
+             padding-bottom:3px; }
+  table { width:100%; border-collapse:collapse; font-size:11.5px; }
+  td { padding:1.5px 4px; border-bottom:1px solid #232b34; vertical-align:top; }
+  td:first-child { color:var(--dim); white-space:nowrap; }
+  #legend { position:absolute; left:12px; bottom:38px; background:rgba(20,26,32,.88); padding:8px 10px;
+            border:1px solid var(--edge); border-radius:6px; font-size:11px; }
+  #statusbar { padding:3px 12px; background:var(--panel); border-top:1px solid var(--edge);
+               color:var(--dim); font-size:11.5px; display:flex; gap:18px; }
+  #drop { position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+          background:rgba(20,120,220,.15); border:3px dashed var(--acc); font-size:22px; color:var(--acc);
+          pointer-events:none; z-index:5; }
+  #wrap { position:relative; flex:1; display:flex; min-width:0; }
+  .bar { height:9px; background:var(--acc); display:inline-block; }
+  .clk { color:var(--acc); cursor:pointer; }
+  #timeLbl { min-width:52px; display:inline-block; color:var(--acc); font-weight:600; }
+</style>
+</head>
+<body>
+<div id="topbar">
+  <b>NeXTA-X</b><span style="color:var(--dim)">AMS viewer — DTALite · TAPLite · Dynamic ODME · DLSim</span>
+  <div class="grp">
+    <button onclick="document.getElementById('files').click()">Open files…</button>
+    <input id="files" type="file" multiple style="display:none">
+    <button onclick="loadServed('demo')">Load demo</button>
+  </div>
+  <div class="grp">
+    <label><input type="checkbox" id="lyNodes"> nodes</label>
+    <label><input type="checkbox" id="lyLinks" checked> links</label>
+    <label><input type="checkbox" id="lyPaths"> paths</label>
+    <label><input type="checkbox" id="lyTraj" checked> trajectories</label>
+  </div>
+  <div class="grp">
+    <label>MOE</label>
+    <select id="moe">
+      <option value="none">network only</option>
+      <option value="volume" selected>volume (bandwidth)</option>
+      <option value="voc">V/C</option>
+      <option value="queue">max queue</option>
+      <option value="td">time-dependent (animate)</option>
+    </select>
+  </div>
+  <div class="grp">
+    <button id="play" onclick="togglePlay()">▶ Play</button>
+    <input type="range" id="tslider" min="0" max="0" value="0" oninput="setBin(+this.value)">
+    <span id="timeLbl">--:--</span>
+    <select id="speed"><option value="400">1×</option><option value="150" selected>3×</option>
+      <option value="60">8×</option></select>
+  </div>
+  <div class="grp"><button onclick="fitView()">Fit</button></div>
+</div>
+<div id="main">
+  <div id="wrap">
+    <canvas id="cv"></canvas>
+    <div id="legend"></div>
+    <div id="drop">drop GMNS / output files</div>
+  </div>
+  <div id="side">
+    <h3>Summary statistics</h3><div id="stats">load a dataset…</div>
+    <h3>Inspector</h3><div id="insp" style="color:var(--dim)">click a link or node</div>
+    <h3>Top congested links</h3><div id="topq"></div>
+    <h3>Run / gridlock</h3><div id="runinfo" style="color:var(--dim)">–</div>
+  </div>
+</div>
+<div id="statusbar"><span id="sb1">no data</span><span id="sb2"></span><span id="sb3"></span></div>
+
+<script>
+'use strict';
+// ================= model =================
+const M = { nodes:new Map(), links:new Map(), linkArr:[], paths:[], trajs:new Map(),
+            bins:[], td:new Map(),   // link_id -> Map(binIdx -> {inflow,queue})
+            run:null, grid:[], sel:null, maxVol:1, maxQ:1 };
+const view = { s:1, tx:0, ty:0 };
+let anim = { playing:false, bin:0, timer:null };
+
+// ================= csv (quote-aware) =================
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', q=false;
+  for (let i=0;i<text.length;i++){ const c=text[i];
+    if (q){ if (c==='"'){ if (text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if (c==='"') q=true;
+    else if (c===','){ row.push(cur); cur=''; }
+    else if (c==='\n'||c==='\r'){ if (cur!==''||row.length){row.push(cur); rows.push(row); row=[]; cur='';}
+      if (c==='\r'&&text[i+1]==='\n') i++; }
+    else cur+=c; }
+  if (cur!==''||row.length){row.push(cur); rows.push(row);}
+  if (!rows.length) return {header:[],recs:[]};
+  const header=rows[0].map(h=>h.trim());
+  return { header, recs: rows.slice(1).map(r=>{ const o={};
+           header.forEach((h,j)=>o[h]=r[j]!==undefined?r[j]:''); return o; }) };
+}
+const num = v => { const x=parseFloat(v); return isNaN(x)?0:x; };
+const hhmmToMin = s => { const m=/(\d+):(\d+)/.exec(s); return m ? (+m[1])*60+(+m[2]) : 0; };
+const minToHHMM = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.round(m%60)).padStart(2,'0')}`;
+
+// ================= adapters (unified contract) =================
+function addNodes(recs){ recs.forEach(r=>{ const id=+r.node_id;
+  M.nodes.set(id,{id,x:num(r.x_coord),y:num(r.y_coord),zone:(r.zone_id||'').trim(),attrs:r}); }); }
+
+function addLinks(recs){ recs.forEach(r=>{ const id=+r.link_id;
+  let poly=null;
+  if (r.geometry && r.geometry.includes('LINESTRING')){
+    poly=[...r.geometry.matchAll(/(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g)].map(m=>[+m[1],+m[2]]);
+    if (poly.length<2) poly=null;
+  }
+  M.links.set(id,{id,from:+r.from_node_id,to:+r.to_node_id,poly,attrs:r,
+    lanes:num(r.lanes)||1,cap:num(r.capacity)||1800,len:num(r.vdf_length_mi)||num(r.length)||1,
+    vol:0,voc:0,queue:0,speed:num(r.free_speed)||0}); });
+  M.linkArr=[...M.links.values()];
+}
+function resolveGeometry(){ M.linkArr.forEach(L=>{ if(!L.poly){
+  const a=M.nodes.get(L.from), b=M.nodes.get(L.to);
+  if (a&&b) L.poly=[[a.x,a.y],[b.x,b.y]]; } });
+  M.linkArr=M.linkArr.filter(L=>L.poly); }
+
+function addLinkPerf(recs, header){
+  const volCol = header.includes('cum_departure')?'cum_departure'
+               : header.includes('volume')?'volume':null;
+  recs.forEach(r=>{ const L=M.links.get(+r.link_id); if(!L) return;
+    if (volCol) L.vol=num(r[volCol]);
+    L.queue=num(r.max_queue_exb)||num(r.queue)||L.queue;
+    if (r.speed) L.speed=num(r.speed);
+    const hrs=8; L.voc = L.cap*L.lanes>0 ? L.vol/(L.cap*L.lanes*hrs) : 0; });
+  M.maxVol=Math.max(1,...M.linkArr.map(L=>L.vol));
+  M.maxQ=Math.max(1,...M.linkArr.map(L=>L.queue));
+}
+function addTD(recs){ const binSet=new Set(recs.map(r=>r.time_bin_start));
+  M.bins=[...binSet].sort((a,b)=>hhmmToMin(a)-hhmmToMin(b));
+  const idx=new Map(M.bins.map((b,i)=>[b,i]));
+  recs.forEach(r=>{ const id=+r.link_id; if(!M.td.has(id)) M.td.set(id,new Map());
+    M.td.get(id).set(idx.get(r.time_bin_start),
+      {inflow:num(r.inflow_veh),queue:num(r.queue_exb)||num(r.exb_queue_at_bin_start)}); });
+  const sl=document.getElementById('tslider'); sl.max=Math.max(0,M.bins.length-1);
+}
+function addPaths(recs){ recs.forEach(r=>{
+  const ids=(r.link_ids||'').split(';').map(s=>+s).filter(x=>x>0);
+  if (ids.length) M.paths.push({o:r.o_zone_id,d:r.d_zone_id,vol:num(r.base_volume)||num(r.volume),
+    share:num(r.route_share)||1, links:ids}); });
+  M.paths.sort((a,b)=>b.vol*b.share-a.vol*a.share); }
+function addTraj(recs){ recs.forEach(r=>{ const a=+r.agent_id;
+  if (!M.trajs.has(a)) M.trajs.set(a,[]);
+  M.trajs.get(a).push({link:+r.link_id,t:num(r.time_min),buf:r.buffer,state:r.traffic_state}); });
+  M.trajs.forEach(ev=>ev.sort((x,y)=>x.t-y.t)); }
+
+function routeFile(name, text){
+  const n=name.toLowerCase();
+  if (n.endsWith('.json')){ try{ M.run=JSON.parse(text);}catch(e){} return 'run_summary'; }
+  const {header,recs}=parseCSV(text);
+  if (n.includes('node')&&header.includes('x_coord')){ addNodes(recs); return `nodes ×${recs.length}`; }
+  if (header.includes('from_node_id')&&header.includes('link_id')&&
+      (header.includes('capacity')||header.includes('geometry')) && !n.includes('performance')){
+    addLinks(recs); return `links ×${recs.length}`; }
+  if (n.includes('15min')||header.includes('time_bin_start')){ addTD(recs); return `TD bins ×${recs.length}`; }
+  if (n.includes('performance')||header.includes('cum_departure')){ addLinkPerf(recs,header); return `link MOE ×${recs.length}`; }
+  if (header.includes('link_ids')){ addPaths(recs); return `paths ×${recs.length}`; }
+  if (n.includes('trajector')||header.includes('agent_id')){ addTraj(recs); return `trajectory events ×${recs.length}`; }
+  if (n.includes('gridlock')){ M.grid=recs; return `gridlock events ×${recs.length}`; }
+  if (n.includes('measurement')){ M.meas=recs; return `measurements ×${recs.length}`; }
+  return `ignored ${name}`;
+}
+
+// ================= loading =================
+async function loadServed(dir){
+  const names=['node.csv','link.csv','link_performance.csv','link_performance_15min.csv',
+    'path_flow.csv','agent_trajectory.csv','run_summary.json','gridlock_events.csv','measurement.csv'];
+  const log=[];
+  for (const f of names){
+    try{ const r=await fetch(dir+'/'+f); if(!r.ok) continue; log.push(routeFile(f,await r.text())); }
+    catch(e){}
+  }
+  finishLoad(log);
+}
+document.getElementById('files').addEventListener('change', async e=>{
+  const files=[...e.target.files];
+  files.sort((a,b)=>(a.name.includes('node')?0:1)-(b.name.includes('node')?0:1));  // nodes first
+  const log=[];
+  for (const f of files) log.push(routeFile(f.name, await f.text()));
+  finishLoad(log);
+});
+const wrap=document.getElementById('wrap'), drop=document.getElementById('drop');
+wrap.addEventListener('dragover',e=>{e.preventDefault();drop.style.display='flex';});
+wrap.addEventListener('dragleave',()=>drop.style.display='none');
+wrap.addEventListener('drop',async e=>{ e.preventDefault(); drop.style.display='none';
+  const files=[...e.dataTransfer.files];
+  files.sort((a,b)=>(a.name.includes('node')?0:1)-(b.name.includes('node')?0:1));
+  const log=[]; for (const f of files) log.push(routeFile(f.name, await f.text()));
+  finishLoad(log); });
+
+function finishLoad(log){
+  resize();                       // canvas may have been sized before first layout
+  resolveGeometry(); fitView(); renderStats();
+  document.getElementById('sb1').textContent=log.join(' · ');
+  draw();
+}
+
+// ================= view / projection =================
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+function resize(){ cv.width=wrap.clientWidth; cv.height=wrap.clientHeight; draw(); }
+window.addEventListener('resize',resize);
+function fitView(){
+  if (!M.linkArr.length && !M.nodes.size) return;
+  let x0=1e18,y0=1e18,x1=-1e18,y1=-1e18;
+  const upd=(x,y)=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);};
+  M.linkArr.forEach(L=>L.poly.forEach(p=>upd(p[0],p[1])));
+  if (x1<=x0) M.nodes.forEach(n=>upd(n.x,n.y));
+  const pad=30, w=cv.width-2*pad, h=cv.height-2*pad;
+  view.s=Math.min(w/(x1-x0||1), h/(y1-y0||1));
+  view.tx=pad-x0*view.s+(w-(x1-x0)*view.s)/2;
+  view.ty=cv.height-pad+y0*view.s-(h-(y1-y0)*view.s)/2;
+  draw();
+}
+const W2S=(x,y)=>[x*view.s+view.tx, -y*view.s+view.ty];
+let drag=null;
+cv.addEventListener('mousedown',e=>{drag={x:e.offsetX,y:e.offsetY,moved:false};cv.style.cursor='grabbing';});
+cv.addEventListener('mousemove',e=>{ if(!drag) return;
+  const dx=e.offsetX-drag.x, dy=e.offsetY-drag.y;
+  if (Math.abs(dx)+Math.abs(dy)>3) drag.moved=true;
+  view.tx+=dx; view.ty+=dy; drag.x=e.offsetX; drag.y=e.offsetY; draw(); });
+window.addEventListener('mouseup',e=>{ if(drag&&!drag.moved) pick(drag.x,drag.y);
+  drag=null; cv.style.cursor='grab'; });
+cv.addEventListener('wheel',e=>{ e.preventDefault();
+  const f=e.deltaY<0?1.25:0.8;
+  view.tx=e.offsetX-(e.offsetX-view.tx)*f; view.ty=e.offsetY-(e.offsetY-view.ty)*f; view.s*=f; draw(); },
+  {passive:false});
+
+// ================= picking / inspector =================
+function distToSeg(px,py,ax,ay,bx,by){ const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;
+  let t=l2? ((px-ax)*dx+(py-ay)*dy)/l2 :0; t=Math.max(0,Math.min(1,t));
+  const qx=ax+t*dx,qy=ay+t*dy; return Math.hypot(px-qx,py-qy); }
+function pick(mx,my){
+  let best=null,bd=8;
+  M.linkArr.forEach(L=>{ for(let i=0;i+1<L.poly.length;i++){
+    const [ax,ay]=W2S(L.poly[i][0],L.poly[i][1]), [bx,by]=W2S(L.poly[i+1][0],L.poly[i+1][1]);
+    const d=distToSeg(mx,my,ax,ay,bx,by); if (d<bd){bd=d;best=L;} }});
+  M.sel=best; renderInspector(); draw();
+}
+function renderInspector(){
+  const el=document.getElementById('insp');
+  if (!M.sel){ el.innerHTML='<span style="color:var(--dim)">click a link</span>'; return; }
+  const L=M.sel, td=M.td.get(L.id);
+  let rows=`<tr><td>link</td><td><b>${L.id}</b> (${L.from} → ${L.to})</td></tr>
+    <tr><td>volume</td><td>${L.vol.toLocaleString()}</td></tr>
+    <tr><td>V/C (est)</td><td>${L.voc.toFixed(2)}</td></tr>
+    <tr><td>max queue</td><td>${L.queue}</td></tr>`;
+  ['lanes','capacity','free_speed','length','vdf_length_mi','link_type','discharge_model']
+    .forEach(k=>{ if (L.attrs[k]!==undefined&&L.attrs[k]!=='') rows+=`<tr><td>${k}</td><td>${L.attrs[k]}</td></tr>`; });
+  if (td && M.bins.length){ const b=td.get(anim.bin);
+    rows+=`<tr><td>bin ${M.bins[anim.bin]||''}</td><td>${b?`inflow ${b.inflow}, queue ${b.queue}`:'0'}</td></tr>`; }
+  el.innerHTML=`<table>${rows}</table>`;
+}
+
+// ================= color ramps =================
+function ramp(v){ // 0..1 -> green→yellow→red
+  const t=Math.max(0,Math.min(1,v));
+  const r=t<0.5? Math.round(510*t):255, g=t<0.5?255:Math.round(255-(t-0.5)*510);
+  return `rgb(${r},${g},60)`; }
+
+// ================= draw =================
+function moeValue(L){
+  const m=document.getElementById('moe').value;
+  if (m==='volume') return {v:L.vol/M.maxVol, w:1+7*L.vol/M.maxVol};
+  if (m==='voc')    return {v:Math.min(1,L.voc), w:1+6*Math.min(1.4,L.voc)};
+  if (m==='queue')  return {v:L.queue/M.maxQ, w:1+7*L.queue/M.maxQ};
+  if (m==='td'){ const b=M.td.get(L.id)?.get(anim.bin);
+    const inf=b?b.inflow:0, q=b?b.queue:0;
+    return {v:Math.min(1,q>0? 0.55+0.45*Math.min(1,q/60) : inf*4/(L.cap*L.lanes||1800)), w:1+6*Math.min(1,inf/450)}; }
+  return {v:-1,w:1};
+}
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const showN=lyNodes.checked, showL=lyLinks.checked, showP=lyPaths.checked, showT=lyTraj.checked;
+  if (showL) M.linkArr.forEach(L=>{
+    const {v,w}=moeValue(L);
+    ctx.strokeStyle = L===M.sel ? '#4db8ff' : (v<0?'#3d4854':ramp(v));
+    ctx.lineWidth = L===M.sel ? w+2 : w;
+    ctx.beginPath();
+    L.poly.forEach((p,i)=>{ const [x,y]=W2S(p[0],p[1]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.stroke(); });
+  if (showP){ const K=Math.min(30,M.paths.length);
+    for (let i=0;i<K;i++){ const P=M.paths[i];
+      ctx.strokeStyle=`hsla(${(i*47)%360},85%,65%,.8)`; ctx.lineWidth=2.5;
+      ctx.beginPath(); let started=false;
+      P.links.forEach(id=>{ const L=M.links.get(id); if(!L) return;
+        L.poly.forEach(p=>{ const [x,y]=W2S(p[0],p[1]);
+          started?ctx.lineTo(x,y):(ctx.moveTo(x,y),started=true); }); });
+      ctx.stroke(); } }
+  if (showN) M.nodes.forEach(n=>{ const [x,y]=W2S(n.x,n.y);
+    ctx.fillStyle=n.zone? '#ffd257':'#5b6b7d';
+    ctx.fillRect(x-(n.zone?2.5:1.5),y-(n.zone?2.5:1.5),n.zone?5:3,n.zone?5:3); });
+  if (showT && M.bins.length) drawAgents();
+  drawLegend();
+}
+function posOnLink(L,f){ // fraction 0..1 along polyline
+  let tot=0; const seg=[];
+  for (let i=0;i+1<L.poly.length;i++){ const d=Math.hypot(L.poly[i+1][0]-L.poly[i][0],
+    L.poly[i+1][1]-L.poly[i][1]); seg.push(d); tot+=d; }
+  let target=f*tot;
+  for (let i=0;i<seg.length;i++){ if (target<=seg[i]||i===seg.length-1){
+    const t=seg[i]? target/seg[i] :0;
+    return [L.poly[i][0]+(L.poly[i+1][0]-L.poly[i][0])*t,
+            L.poly[i][1]+(L.poly[i+1][1]-L.poly[i][1])*t]; }
+    target-=seg[i]; }
+  return L.poly[0];
+}
+function drawAgents(){
+  const T=hhmmToMin(M.bins[anim.bin]||'07:00')+7.5;   // mid-bin
+  M.trajs.forEach(ev=>{
+    if (!ev.length || T<ev[0].t || T>ev[ev.length-1].t) return;
+    let i=0; while (i+1<ev.length && ev[i+1].t<=T) i++;
+    const e=ev[i], n=ev[i+1];
+    const L=M.links.get(e.link); if(!L) return;
+    let f=1, col='#ff5f5f';
+    if (e.buf==='ENB' && n && n.link===e.link && n.t>e.t){ f=(T-e.t)/(n.t-e.t); col='#57d977'; }
+    else if (e.state==='completed') return;
+    const [wx,wy]=posOnLink(L,Math.max(0,Math.min(1,f)));
+    const [x,y]=W2S(wx,wy);
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,3,0,6.283); ctx.fill(); });
+}
+function drawLegend(){
+  const m=document.getElementById('moe').value, el=document.getElementById('legend');
+  if (m==='none'){ el.style.display='none'; return; }
+  el.style.display='block';
+  const lab={volume:'link volume (veh)',voc:'V/C',queue:'max queue (veh)',
+             td:`bin ${M.bins[anim.bin]||''} — inflow width, congestion color`}[m];
+  let sw=''; for (let i=0;i<=10;i++) sw+=`<span style="display:inline-block;width:14px;height:9px;background:${ramp(i/10)}"></span>`;
+  el.innerHTML=`${lab}<br>${sw}<br><span style="color:var(--dim)">green = free · red = congested</span>
+    ${lyTraj.checked&&M.trajs.size? '<br><span style="color:#57d977">●</span> moving <span style="color:#ff5f5f">●</span> queued':''}`;
+}
+
+// ================= animation =================
+function setBin(b){ anim.bin=Math.max(0,Math.min(M.bins.length-1,b));
+  document.getElementById('tslider').value=anim.bin;
+  document.getElementById('timeLbl').textContent=M.bins[anim.bin]||'--:--';
+  if (document.getElementById('moe').value!=='td' && M.trajs.size===0) return;
+  renderInspector(); draw(); }
+function togglePlay(){
+  anim.playing=!anim.playing;
+  const btn=document.getElementById('play');
+  btn.textContent=anim.playing?'❚❚ Pause':'▶ Play'; btn.classList.toggle('on',anim.playing);
+  if (anim.playing){ if (document.getElementById('moe').value!=='td'&&M.trajs.size===0)
+      document.getElementById('moe').value='td';
+    step(); } else clearTimeout(anim.timer); }
+function step(){ if (!anim.playing) return;
+  setBin(anim.bin+1>=M.bins.length?0:anim.bin+1);
+  anim.timer=setTimeout(step,+document.getElementById('speed').value); }
+document.getElementById('moe').addEventListener('change',()=>{renderInspector();draw();});
+['lyNodes','lyLinks','lyPaths','lyTraj'].forEach(id=>document.getElementById(id)
+  .addEventListener('change',draw));
+
+// ================= stats =================
+function renderStats(){
+  const zones=[...M.nodes.values()].filter(n=>n.zone).length;
+  const vmt=M.linkArr.reduce((s,L)=>s+L.vol*L.len,0);
+  const totVol=M.linkArr.reduce((s,L)=>s+L.vol,0);
+  // volume histogram (8 buckets)
+  const H=new Array(8).fill(0);
+  M.linkArr.forEach(L=>{ if (L.vol>0) H[Math.min(7,Math.floor(8*L.vol/(M.maxVol+1)))]++; });
+  const hmax=Math.max(1,...H);
+  let hist=''; H.forEach((h,i)=>{ hist+=`<div><span style="color:var(--dim);font-size:10px">
+    ${Math.round(i*M.maxVol/8/1000)}k</span> <span class="bar" style="width:${90*h/hmax}px"></span> ${h}</div>`; });
+  document.getElementById('stats').innerHTML=`<table>
+    <tr><td>nodes / zones</td><td>${M.nodes.size.toLocaleString()} / ${zones}</td></tr>
+    <tr><td>links</td><td>${M.linkArr.length.toLocaleString()}</td></tr>
+    <tr><td>Σ link volume</td><td>${Math.round(totVol).toLocaleString()}</td></tr>
+    <tr><td>VMT (veh·mi)</td><td>${Math.round(vmt).toLocaleString()}</td></tr>
+    <tr><td>paths / agents</td><td>${M.paths.length} / ${M.trajs.size}</td></tr>
+    <tr><td>TD bins</td><td>${M.bins.length}${M.bins.length?` (${M.bins[0]}–${M.bins[M.bins.length-1]})`:''}</td></tr>
+    </table><div style="margin-top:5px">${hist}</div>`;
+  // top congested
+  const top=[...M.linkArr].sort((a,b)=>b.queue-a.queue).slice(0,10).filter(L=>L.queue>0);
+  document.getElementById('topq').innerHTML='<table>'+top.map(L=>
+    `<tr><td class="clk" onclick="selectLink(${L.id})">link ${L.id}</td>
+     <td>queue ${L.queue} · vol ${Math.round(L.vol).toLocaleString()}</td></tr>`).join('')+'</table>';
+  // run + gridlock
+  let ri='';
+  if (M.run){ const g=M.run.gridlock||{};
+    ri+=`<table><tr><td>engine</td><td>${M.run.engine||''}</td></tr>
+      <tr><td>agents</td><td>${(M.run.agents||0).toLocaleString()} (${M.run.conserved?'conserved':'NOT conserved'})</td></tr>
+      <tr><td>VMT / VHT</td><td>${(M.run.vmt_veh_mi||0).toLocaleString()} / ${(M.run.vht_veh_hr||0).toLocaleString()}</td></tr>
+      <tr><td>oversaturated</td><td>${g.oversaturated?'<span style="color:#ff8b5f">YES</span>':'no'}</td></tr>
+      <tr><td>first warning</td><td>${g.first_warning||'–'}</td></tr>
+      <tr><td>cycles / bypasses</td><td>${g.deadlock_cycles_detected||0} / ${g.storage_bypass_moves||0}</td></tr></table>`; }
+  if (M.grid.length){ ri+=`<div style="margin-top:4px;color:var(--dim)">gridlock events (${M.grid.length}):</div><table>`+
+    M.grid.slice(0,8).map(e=>`<tr><td>${e.time}</td><td>${e.type}${+e.link_id>0?` @${e.link_id}`:''}</td></tr>`).join('')+'</table>'; }
+  document.getElementById('runinfo').innerHTML=ri||'–';
+  document.getElementById('sb2').textContent=
+    `${M.linkArr.length} links · ${M.nodes.size} nodes · ${M.trajs.size} trajectories`;
+}
+function selectLink(id){ M.sel=M.links.get(id); renderInspector(); draw(); }
+
+// boot
+resize();
+requestAnimationFrame(()=>{ resize(); fitView(); });   // re-run after first layout
+const q=new URLSearchParams(location.search);
+if (q.get('data')) loadServed(q.get('data'));
+</script>
+</body>
+</html>

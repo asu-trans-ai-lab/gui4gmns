@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NeXTA-X GL — GPU AMS animation (DTALite / TAPLite / ODME / DLSim)</title>
+<style>
+  :root { --bg:#14181d; --panel:#1d232b; --edge:#2c3540; --fg:#d8dee6; --dim:#8a94a3; --acc:#4db8ff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--fg); font:13px/1.45 system-ui,Segoe UI,Arial; height:100vh;
+         display:flex; flex-direction:column; overflow:hidden; }
+  #topbar { display:flex; align-items:center; gap:10px; padding:7px 12px; background:var(--panel);
+            border-bottom:1px solid var(--edge); flex-wrap:wrap; }
+  #topbar b { color:var(--acc); font-size:15px; }
+  .grp { display:flex; align-items:center; gap:5px; padding:2px 8px; border-left:1px solid var(--edge); }
+  button, select { background:#28303a; color:var(--fg); border:1px solid var(--edge); border-radius:4px;
+            padding:4px 9px; cursor:pointer; font-size:12px; }
+  button.on { background:var(--acc); color:#08121c; font-weight:600; }
+  label { color:var(--dim); font-size:12px; }
+  input[type=checkbox] { accent-color:var(--acc); }
+  input[type=range] { width:260px; accent-color:var(--acc); }
+  #main { flex:1; display:flex; min-height:0; }
+  #wrap { position:relative; flex:1; min-width:0; }
+  #cv { position:absolute; inset:0; cursor:grab; }
+  #side { width:300px; background:var(--panel); border-left:1px solid var(--edge); overflow-y:auto; padding:10px; }
+  #side h3 { color:var(--acc); font-size:13px; margin:8px 0 5px; border-bottom:1px solid var(--edge); }
+  table { width:100%; border-collapse:collapse; font-size:11.5px; }
+  td { padding:1.5px 4px; border-bottom:1px solid #232b34; }
+  td:first-child { color:var(--dim); white-space:nowrap; }
+  #hud { position:absolute; left:12px; bottom:12px; background:rgba(20,26,32,.88); padding:8px 10px;
+         border:1px solid var(--edge); border-radius:6px; font-size:11px; }
+  #clock { font-size:22px; color:var(--acc); font-weight:700; }
+  #statusbar { padding:3px 12px; background:var(--panel); border-top:1px solid var(--edge);
+               color:var(--dim); font-size:11.5px; }
+  #live { color:#57d977; display:none; }
+</style>
+</head>
+<body>
+<div id="topbar">
+  <b>NeXTA-X GL</b><span style="color:var(--dim)">GPU animation · regional scale · live-follow</span>
+  <div class="grp">
+    <button onclick="document.getElementById('files').click()">Open files…</button>
+    <input id="files" type="file" multiple style="display:none">
+    <button onclick="loadServed(dataDir||'../demo')">Load demo</button>
+    <label><input type="checkbox" id="liveCb" onchange="toggleLive(this.checked)"> live-follow</label>
+    <span id="live">● LIVE</span>
+  </div>
+  <div class="grp">
+    <label><input type="checkbox" id="lyLinks" checked> links</label>
+    <label><input type="checkbox" id="lyTraj" checked> vehicles</label>
+    <select id="moe"><option value="volume">volume</option><option value="voc">V/C</option>
+      <option value="queue">queue</option><option value="td" selected>time-dependent</option></select>
+  </div>
+  <div class="grp">
+    <button id="play" onclick="togglePlay()">▶ Play</button>
+    <input type="range" id="tslider" min="0" max="1440" value="420" oninput="setClock(+this.value)">
+    <select id="speed"><option value="2">2 min/s</option><option value="10" selected>10 min/s</option>
+      <option value="30">30 min/s</option><option value="120">2 h/s</option></select>
+  </div>
+  <div class="grp"><button onclick="fitView()">Fit</button></div>
+</div>
+<div id="main">
+  <div id="wrap"><canvas id="cv"></canvas>
+    <div id="hud"><span id="clock">--:--</span><br><span id="hud2" style="color:var(--dim)"></span></div>
+  </div>
+  <div id="side">
+    <h3>Summary</h3><div id="stats">load a dataset…</div>
+    <h3>Inspector</h3><div id="insp" style="color:var(--dim)">click a link</div>
+    <h3>Run / gridlock</h3><div id="runinfo" style="color:var(--dim)">–</div>
+  </div>
+</div>
+<div id="statusbar"><span id="sb1">no data</span></div>
+
+<script>
+'use strict';
+// ============ model (contract §1) ============
+const M = { nodes:new Map(), links:new Map(), linkArr:[], trajSegs:0, run:null,
+            bins:[], td:new Map(), tmin:420, tmax:480, sel:null, maxVol:1, maxQ:1 };
+const view = { s:1, tx:0, ty:0 };   // world->clip handled in shader via uniforms
+let clockMin=420, playing=false, dataDir=null, liveTimer=null, fileSizes={};
+
+// ---- csv (quote-aware) + helpers (identical to web-lite) ----
+function parseCSV(text){ const rows=[]; let row=[],cur='',q=false;
+  for (let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if(c==='"')q=true; else if(c===','){row.push(cur);cur='';}
+    else if(c==='\n'||c==='\r'){ if(cur!==''||row.length){row.push(cur);rows.push(row);row=[];cur='';}
+      if(c==='\r'&&text[i+1]==='\n')i++; } else cur+=c; }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  if(!rows.length)return{header:[],recs:[]};
+  const header=rows[0].map(h=>h.trim());
+  return {header, recs:rows.slice(1).map(r=>{const o={};header.forEach((h,j)=>o[h]=r[j]??'');return o;})};
+}
+const num=v=>{const x=parseFloat(v);return isNaN(x)?0:x;};
+const hhmmToMin=s=>{const m=/(\d+):(\d+)/.exec(s);return m?+m[1]*60+ +m[2]:0;};
+const minToHHMM=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;
+
+// ============ adapters ============
+let trajRecs=[];   // kept raw; GPU buffers rebuilt after load
+function addNodes(recs){recs.forEach(r=>M.nodes.set(+r.node_id,
+  {id:+r.node_id,x:num(r.x_coord),y:num(r.y_coord),zone:(r.zone_id||'').trim(),attrs:r}));}
+function addLinks(recs){recs.forEach(r=>{ const id=+r.link_id; let poly=null;
+  if(r.geometry&&r.geometry.includes('LINESTRING')){
+    poly=[...r.geometry.matchAll(/(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g)].map(m=>[+m[1],+m[2]]);
+    if(poly.length<2)poly=null; }
+  M.links.set(id,{id,from:+r.from_node_id,to:+r.to_node_id,poly,attrs:r,
+    lanes:num(r.lanes)||1,cap:num(r.capacity)||1800,len:num(r.vdf_length_mi)||num(r.length)||1,
+    vol:0,voc:0,queue:0}); });
+  M.linkArr=[...M.links.values()]; }
+function addLinkPerf(recs,header){ const volCol=header.includes('cum_departure')?'cum_departure':'volume';
+  recs.forEach(r=>{const L=M.links.get(+r.link_id);if(!L)return;
+    L.vol=num(r[volCol]); L.queue=num(r.max_queue_exb)||num(r.queue)||L.queue;
+    L.voc=L.cap*L.lanes>0?L.vol/(L.cap*L.lanes*8):0;});
+  M.maxVol=Math.max(1,...M.linkArr.map(L=>L.vol)); M.maxQ=Math.max(1,...M.linkArr.map(L=>L.queue)); }
+function addTD(recs){ const set=new Set(recs.map(r=>r.time_bin_start));
+  M.bins=[...set].sort((a,b)=>hhmmToMin(a)-hhmmToMin(b));
+  const idx=new Map(M.bins.map((b,i)=>[b,i]));
+  recs.forEach(r=>{const id=+r.link_id; if(!M.td.has(id))M.td.set(id,new Map());
+    M.td.get(id).set(idx.get(r.time_bin_start),{inflow:num(r.inflow_veh),queue:num(r.queue_exb)});});}
+function routeFile(name,text){ const n=name.toLowerCase();
+  if(n.endsWith('.json')){try{M.run=JSON.parse(text);}catch(e){} return 'run';}
+  const {header,recs}=parseCSV(text);
+  if(n.includes('node')&&header.includes('x_coord')){addNodes(recs);return `nodes ×${recs.length}`;}
+  if(header.includes('from_node_id')&&header.includes('link_id')&&!n.includes('performance')&&
+     (header.includes('capacity')||header.includes('geometry'))){addLinks(recs);return `links ×${recs.length}`;}
+  if(n.includes('15min')||header.includes('time_bin_start')){addTD(recs);return `TD ×${recs.length}`;}
+  if(n.includes('performance')||header.includes('cum_departure')){addLinkPerf(recs,header);return `MOE ×${recs.length}`;}
+  if(n.includes('trajector')||header.includes('agent_id')){trajRecs=trajRecs.concat(recs);return `traj ×${recs.length}`;}
+  return `ignored ${name}`; }
+
+// ============ WebGL2 ============
+const cv=document.getElementById('cv');
+const gl=cv.getContext('webgl2',{antialias:true});
+function mkProg(vs,fs){ const c=(t,s)=>{const h=gl.createShader(t);gl.shaderSource(h,s);gl.compileShader(h);
+  if(!gl.getShaderParameter(h,gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(h); return h;};
+  const p=gl.createProgram(); gl.attachShader(p,c(gl.VERTEX_SHADER,vs));
+  gl.attachShader(p,c(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw gl.getProgramInfoLog(p); return p; }
+
+// --- link layer: quads expanded along segment normal (bandwidth in pixels) ---
+const linkVS=`#version 300 es
+layout(location=0) in vec2 p; layout(location=1) in vec2 nrm; layout(location=2) in float side;
+layout(location=3) in float wpx; layout(location=4) in vec3 col;
+uniform vec4 u_vt;      // sx, sy, tx, ty  (world->clip)
+uniform vec2 u_px;      // 2/canvasW, 2/canvasH (pixel->clip)
+out vec3 v_col;
+void main(){ vec2 clip=vec2(p.x*u_vt.x+u_vt.z, p.y*u_vt.y+u_vt.w);
+  vec2 off=normalize(vec2(nrm.x*u_vt.x, nrm.y*u_vt.y))*side*wpx;
+  gl_Position=vec4(clip+off*u_px,0.,1.); v_col=col; }`;
+const linkFS=`#version 300 es
+precision mediump float; in vec3 v_col; out vec4 o; void main(){ o=vec4(v_col,0.92); }`;
+
+// --- trips layer: one point per segment, shader-interpolated by u_time (deck.gl TripsLayer idea) ---
+const tripVS=`#version 300 es
+layout(location=0) in vec4 seg;    // x0,y0,x1,y1
+layout(location=1) in vec2 tt;     // t0,t1 (minutes)
+layout(location=2) in float qflag; // 1 = queued
+uniform vec4 u_vt; uniform float u_time; uniform float u_ps;
+out vec3 v_col; out float v_on;
+void main(){ float on=step(tt.x,u_time)*step(u_time,tt.y);
+  float f=clamp((u_time-tt.x)/max(tt.y-tt.x,1e-4),0.,1.);
+  vec2 w=mix(seg.xy,seg.zw,f);
+  gl_Position=vec4(w.x*u_vt.x+u_vt.z, w.y*u_vt.y+u_vt.w, 0., 1.);
+  gl_PointSize=u_ps*on;
+  v_on=on; v_col=qflag>0.5?vec3(1.,.37,.37):vec3(.34,.85,.47); }`;
+const tripFS=`#version 300 es
+precision mediump float; in vec3 v_col; in float v_on; out vec4 o;
+void main(){ if(v_on<0.5) discard;
+  vec2 d=gl_PointCoord-vec2(.5); if(dot(d,d)>0.25) discard; o=vec4(v_col,0.95); }`;
+
+let progLink, progTrip, vaoLink=null, vaoTrip=null, nLinkVerts=0, nTripPts=0, linkColBuf=null, linkColArr=null;
+function initGL(){ progLink=mkProg(linkVS,linkFS); progTrip=mkProg(tripVS,tripFS);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA); }
+
+// ---- build link quad buffers ----
+function ramp(t){ t=Math.max(0,Math.min(1,t));
+  return t<.5?[510*t/255,1,.23]:[1,(255-(t-.5)*510)/255,.23]; }
+function linkMoe(L,bin){ const m=document.getElementById('moe').value;
+  if(m==='volume')return{v:L.vol/M.maxVol,w:1+5*L.vol/M.maxVol};
+  if(m==='voc')return{v:Math.min(1,L.voc),w:1+4*Math.min(1.4,L.voc)};
+  if(m==='queue')return{v:L.queue/M.maxQ,w:1+5*L.queue/M.maxQ};
+  const b=M.td.get(L.id)?.get(bin); const inf=b?b.inflow:0,q=b?b.queue:0;
+  return{v:Math.min(1,q>0?0.55+0.45*Math.min(1,q/60):inf*4/(L.cap*L.lanes||1800)),
+         w:1+4*Math.min(1,inf/450)}; }
+function buildLinkBuffers(){
+  const pos=[],nrm=[],side=[],wq=[],segOf=[];   // per vertex
+  M.linkArr.forEach((L,li)=>{ if(!L.poly)return;
+    for(let i=0;i+1<L.poly.length;i++){ const a=L.poly[i],b=L.poly[i+1];
+      let dx=b[0]-a[0],dy=b[1]-a[1]; const len=Math.hypot(dx,dy)||1; dx/=len;dy/=len;
+      const nx=-dy,ny=dx;
+      // two triangles: a-,a+,b-  b-,a+,b+
+      const V=[[a,-1],[a,1],[b,-1],[b,-1],[a,1],[b,1]];
+      V.forEach(([p,s])=>{pos.push(p[0],p[1]);nrm.push(nx,ny);side.push(s);wq.push(li);segOf.push(li);});
+    }});
+  nLinkVerts=side.length;
+  vaoLink=gl.createVertexArray(); gl.bindVertexArray(vaoLink);
+  const bind=(loc,arr,size)=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(arr),gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,0,0);return b;};
+  bind(0,pos,2); bind(1,nrm,2); bind(2,side,1);
+  // width + color are dynamic (per MOE/bin): allocate, fill via refreshLinkStyle
+  linkWidthBuf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,linkWidthBuf);
+  gl.bufferData(gl.ARRAY_BUFFER,nLinkVerts*4,gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3,1,gl.FLOAT,false,0,0);
+  linkColBuf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,linkColBuf);
+  gl.bufferData(gl.ARRAY_BUFFER,nLinkVerts*12,gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(4); gl.vertexAttribPointer(4,3,gl.FLOAT,false,0,0);
+  gl.bindVertexArray(null);
+  linkVertLink=segOf;   // vertex -> linkArr index
+  linkColArr=new Float32Array(nLinkVerts*3); linkWArr=new Float32Array(nLinkVerts);
+}
+let linkWidthBuf=null,linkVertLink=[],linkWArr=null,lastBin=-1;
+function refreshLinkStyle(){
+  const bin=binOf(clockMin);
+  const styles=M.linkArr.map(L=>{const {v,w}=linkMoe(L,bin);
+    const c=(M.sel===L)?[0.30,0.72,1.0]:ramp(v); return {c,w};});
+  for(let i=0;i<nLinkVerts;i++){const s=styles[linkVertLink[i]];
+    linkColArr[i*3]=s.c[0];linkColArr[i*3+1]=s.c[1];linkColArr[i*3+2]=s.c[2];linkWArr[i]=s.w;}
+  gl.bindBuffer(gl.ARRAY_BUFFER,linkColBuf);gl.bufferSubData(gl.ARRAY_BUFFER,0,linkColArr);
+  gl.bindBuffer(gl.ARRAY_BUFFER,linkWidthBuf);gl.bufferSubData(gl.ARRAY_BUFFER,0,linkWArr);
+  lastBin=bin;
+}
+function binOf(t){ if(!M.bins.length)return 0;
+  let lo=0; for(let i=0;i<M.bins.length;i++){ if(hhmmToMin(M.bins[i])<=t) lo=i; else break; } return lo; }
+
+// ---- build trip segment buffer from event lists ----
+function buildTripBuffers(){
+  const byAgent=new Map();
+  trajRecs.forEach(r=>{const a=+r.agent_id;
+    (byAgent.get(a)||byAgent.set(a,[]).get(a)).push(r);});
+  const seg=[],tt=[],qf=[];
+  let t0=1e9,t1=-1e9;
+  byAgent.forEach(ev=>{ ev.sort((x,y)=>num(x.time_min)-num(y.time_min));
+    for(let i=0;i+1<ev.length;i++){ const e=ev[i],n=ev[i+1];
+      const L=M.links.get(+e.link_id); if(!L||!L.poly)continue;
+      const A=L.poly[0],B=L.poly[L.poly.length-1];
+      const ta=num(e.time_min),tb=num(n.time_min);
+      if(tb<=ta)continue;
+      if(e.buffer==='ENB'&&+n.link_id===+e.link_id){ seg.push(A[0],A[1],B[0],B[1]);tt.push(ta,tb);qf.push(0);}
+      else { seg.push(B[0],B[1],B[0],B[1]);tt.push(ta,tb);qf.push(1);}     // waiting at link end
+      t0=Math.min(t0,ta); t1=Math.max(t1,tb); } });
+  nTripPts=qf.length; M.trajSegs=nTripPts;
+  if(t0<t1){ M.tmin=Math.floor(t0); M.tmax=Math.ceil(t1); }
+  else if(M.bins.length){ M.tmin=hhmmToMin(M.bins[0]); M.tmax=hhmmToMin(M.bins[M.bins.length-1])+15; }
+  const sl=document.getElementById('tslider'); sl.min=M.tmin; sl.max=M.tmax; sl.value=M.tmin;
+  clockMin=M.tmin;
+  if(!nTripPts)return;
+  vaoTrip=gl.createVertexArray(); gl.bindVertexArray(vaoTrip);
+  const bind=(loc,arr,size)=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(arr),gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,0,0);};
+  bind(0,seg,4); bind(1,tt,2); bind(2,qf,1);
+  gl.bindVertexArray(null);
+}
+
+// ============ view / render loop ============
+let bbox=null;
+function fitView(){ if(!M.linkArr.length)return;
+  let x0=1e18,y0=1e18,x1=-1e18,y1=-1e18;
+  M.linkArr.forEach(L=>L.poly&&L.poly.forEach(p=>{x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);
+    x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1]);}));
+  bbox=[x0,y0,x1,y1]; zoom=1; panx=0; pany=0; }
+let zoom=1,panx=0,pany=0;
+function worldToClip(){ // simpler: precompute scale factors used by both programs + picking
+  const w=cv.clientWidth||1,h=cv.clientHeight||1, ar=w/h;
+  const span=Math.max(bbox[2]-bbox[0],(bbox[3]-bbox[1])*ar)||1;
+  const s=2/span*0.92*zoom;
+  const cx=(bbox[0]+bbox[2])/2, cy=(bbox[1]+bbox[3])/2;
+  return {sx:s, sy:s*ar, tx:panx-cx*s, ty:pany-cy*s*ar};
+}
+function render(){
+  const w=wrapEl.clientWidth,h=wrapEl.clientHeight;
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;gl.viewport(0,0,w,h);}
+  gl.clearColor(0.063,0.078,0.094,1); gl.clear(gl.COLOR_BUFFER_BIT);
+  if(!bbox){requestAnimationFrame(render);return;}
+  const vt=worldToClip();
+  if(document.getElementById('lyLinks').checked&&vaoLink){
+    if(binOf(clockMin)!==lastBin||styleDirty){refreshLinkStyle();styleDirty=false;}
+    gl.useProgram(progLink); gl.bindVertexArray(vaoLink);
+    gl.uniform4f(gl.getUniformLocation(progLink,'u_vt'),vt.sx,vt.sy,vt.tx,vt.ty);
+    gl.uniform2f(gl.getUniformLocation(progLink,'u_px'),2/w,2/h);
+    gl.drawArrays(gl.TRIANGLES,0,nLinkVerts); }
+  if(document.getElementById('lyTraj').checked&&vaoTrip){
+    gl.useProgram(progTrip); gl.bindVertexArray(vaoTrip);
+    gl.uniform4f(gl.getUniformLocation(progTrip,'u_vt'),vt.sx,vt.sy,vt.tx,vt.ty);
+    gl.uniform1f(gl.getUniformLocation(progTrip,'u_time'),clockMin);
+    gl.uniform1f(gl.getUniformLocation(progTrip,'u_ps'),Math.max(3,4*Math.sqrt(zoom)));
+    gl.drawArrays(gl.POINTS,0,nTripPts); }
+  if(playing){ clockMin+= (+document.getElementById('speed').value)/60;
+    if(clockMin>M.tmax)clockMin=M.tmin;
+    document.getElementById('tslider').value=clockMin; }
+  document.getElementById('clock').textContent=minToHHMM(clockMin);
+  requestAnimationFrame(render);
+}
+let styleDirty=true;
+const wrapEl=document.getElementById('wrap');
+
+// ---- interaction ----
+let drag=null;
+cv.addEventListener('mousedown',e=>{drag={x:e.offsetX,y:e.offsetY,moved:false};});
+cv.addEventListener('mousemove',e=>{ if(!drag)return;
+  const w=cv.clientWidth,h=cv.clientHeight;
+  panx+=(e.offsetX-drag.x)*2/w; pany-=(e.offsetY-drag.y)*2/h;
+  if(Math.abs(e.offsetX-drag.x)+Math.abs(e.offsetY-drag.y)>3)drag.moved=true;
+  drag.x=e.offsetX;drag.y=e.offsetY; });
+window.addEventListener('mouseup',e=>{ if(drag&&!drag.moved)pick(drag.x,drag.y); drag=null; });
+cv.addEventListener('wheel',e=>{e.preventDefault(); zoom*=e.deltaY<0?1.25:0.8;},{passive:false});
+function clipToWorld(mx,my){ const vt=worldToClip(),w=cv.clientWidth,h=cv.clientHeight;
+  const cxx=mx/w*2-1, cyy=1-my/h*2;
+  return [(cxx-vt.tx)/vt.sx,(cyy-vt.ty)/vt.sy]; }
+function pick(mx,my){ const [wx,wy]=clipToWorld(mx,my);
+  const vt=worldToClip(); const tolW=8/( vt.sx*cv.clientWidth/2 );   // ~8px in world units
+  let best=null,bd=tolW;
+  M.linkArr.forEach(L=>{ if(!L.poly)return;
+    for(let i=0;i+1<L.poly.length;i++){ const a=L.poly[i],b=L.poly[i+1];
+      const dx=b[0]-a[0],dy=b[1]-a[1],l2=dx*dx+dy*dy;
+      let t=l2?((wx-a[0])*dx+(wy-a[1])*dy)/l2:0; t=Math.max(0,Math.min(1,t));
+      const d=Math.hypot(wx-(a[0]+t*dx),wy-(a[1]+t*dy));
+      if(d<bd){bd=d;best=L;} }});
+  M.sel=best; styleDirty=true; renderInspector(); }
+function renderInspector(){ const el=document.getElementById('insp');
+  if(!M.sel){el.innerHTML='<span style="color:var(--dim)">click a link</span>';return;}
+  const L=M.sel,b=M.td.get(L.id)?.get(binOf(clockMin));
+  let rows=`<tr><td>link</td><td><b>${L.id}</b> (${L.from}→${L.to})</td></tr>
+    <tr><td>volume</td><td>${L.vol.toLocaleString()}</td></tr>
+    <tr><td>V/C</td><td>${L.voc.toFixed(2)}</td></tr><tr><td>max queue</td><td>${L.queue}</td></tr>
+    <tr><td>bin now</td><td>${b?`inflow ${b.inflow}, queue ${b.queue}`:'–'}</td></tr>`;
+  ['lanes','capacity','free_speed','length','link_type'].forEach(k=>{
+    if(L.attrs[k])rows+=`<tr><td>${k}</td><td>${L.attrs[k]}</td></tr>`;});
+  el.innerHTML=`<table>${rows}</table>`; }
+
+// ---- clock / play ----
+function setClock(m){ clockMin=m; }
+function togglePlay(){ playing=!playing; const b=document.getElementById('play');
+  b.textContent=playing?'❚❚ Pause':'▶ Play'; b.classList.toggle('on',playing); }
+
+// ---- stats ----
+function renderStats(){
+  const zones=[...M.nodes.values()].filter(n=>n.zone).length;
+  const vmt=M.linkArr.reduce((s,L)=>s+L.vol*L.len,0);
+  document.getElementById('stats').innerHTML=`<table>
+    <tr><td>nodes / zones</td><td>${M.nodes.size.toLocaleString()} / ${zones}</td></tr>
+    <tr><td>links</td><td>${M.linkArr.length.toLocaleString()}</td></tr>
+    <tr><td>VMT (veh·mi)</td><td>${Math.round(vmt).toLocaleString()}</td></tr>
+    <tr><td>trip segments (GPU)</td><td>${M.trajSegs.toLocaleString()}</td></tr>
+    <tr><td>TD bins</td><td>${M.bins.length}</td></tr>
+    <tr><td>clock range</td><td>${minToHHMM(M.tmin)}–${minToHHMM(M.tmax)}</td></tr></table>`;
+  let ri='';
+  if(M.run){const g=M.run.gridlock||{};
+    ri=`<table><tr><td>engine</td><td>${M.run.engine||''}</td></tr>
+    <tr><td>agents</td><td>${(M.run.agents||0).toLocaleString()} (${M.run.conserved?'conserved':'NOT conserved'})</td></tr>
+    <tr><td>oversaturated</td><td>${g.oversaturated?'<span style="color:#ff8b5f">YES</span>':'no'}</td></tr>
+    <tr><td>first warning</td><td>${g.first_warning||'–'}</td></tr></table>`;}
+  document.getElementById('runinfo').innerHTML=ri||'–';
+  document.getElementById('hud2').textContent=
+    `${M.linkArr.length.toLocaleString()} links · ${M.trajSegs.toLocaleString()} GPU segments`;
+}
+
+// ---- loading ----
+async function loadServed(dir){ dataDir=dir;
+  const names=['node.csv','link.csv','link_performance.csv','link_performance_15min.csv',
+    'agent_trajectory.csv','run_summary.json','gridlock_events.csv'];
+  const log=[];
+  for(const f of names){ try{ const r=await fetch(dir+'/'+f+'?v='+Date.now());
+    if(!r.ok)continue;
+    const txt=await r.text(); fileSizes[f]=txt.length; log.push(routeFile(f,txt)); }catch(e){} }
+  finishLoad(log); }
+document.getElementById('files').addEventListener('change',async e=>{
+  const fs=[...e.target.files]; fs.sort((a,b)=>(a.name.includes('node')?0:1)-(b.name.includes('node')?0:1));
+  const log=[]; for(const f of fs)log.push(routeFile(f.name,await f.text())); finishLoad(log); });
+function finishLoad(log){
+  M.linkArr.forEach(L=>{ if(!L.poly){ const a=M.nodes.get(L.from),b=M.nodes.get(L.to);
+    if(a&&b)L.poly=[[a.x,a.y],[b.x,b.y]]; }});
+  M.linkArr=M.linkArr.filter(L=>L.poly);
+  buildLinkBuffers(); buildTripBuffers(); fitView(); styleDirty=true;
+  renderStats(); document.getElementById('sb1').textContent=log.join(' · '); }
+
+// ---- live-follow: poll the served folder; refetch grown files (works with plain http.server) ----
+function toggleLive(on){ document.getElementById('live').style.display=on?'inline':'none';
+  if(liveTimer){clearInterval(liveTimer);liveTimer=null;}
+  if(on&&dataDir) liveTimer=setInterval(async()=>{
+    let changed=false;
+    for(const f of ['link_performance_15min.csv','agent_trajectory.csv','link_performance.csv','run_summary.json']){
+      try{ const r=await fetch(dataDir+'/'+f+'?v='+Date.now()); if(!r.ok)continue;
+        const txt=await r.text();
+        if(txt.length!==fileSizes[f]){ fileSizes[f]=txt.length;
+          if(f.includes('trajector'))trajRecs=[];
+          routeFile(f,txt); changed=true; } }catch(e){} }
+    if(changed){ buildTripBuffers(); styleDirty=true; renderStats();
+      document.getElementById('sb1').textContent='live update '+new Date().toLocaleTimeString(); }
+  },5000); }
+
+// boot
+initGL();
+const q=new URLSearchParams(location.search);
+requestAnimationFrame(render);
+if(q.get('data')) loadServed(q.get('data'));
+</script>
+</body>
+</html>

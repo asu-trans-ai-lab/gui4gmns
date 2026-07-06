@@ -1,0 +1,5 @@
+time,type,link_id,value
+07:11,network_congestion_warning,-1,0.333333
+07:11,origin_metering_on,-1,0.333333
+07:12,network_congestion_warning,-1,0.333333
+07:13,origin_metering_off,-1,0

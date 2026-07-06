@@ -1,0 +1,37 @@
+# ---- PRIVACY: agency data must NEVER be committed (NVTA / VDOT / INRIX / CBI / QVDF-corridor) ----
+*PRIVATE*
+*private*
+**/06_nvta_am_PRIVATE/
+**/*nvta*
+**/*NVTA*
+ai-gen/variants/nvta_corridor_contour.png
+datasets/06_*/
+
+# ---- generated / regenerable artifacts (users run the generator) ----
+**/dashboard.html
+**/dashboard_*.html
+**/dashboard_layers/
+desktop-qt/snapshots/
+desktop-qt/tile_cache/
+demo/
+web-gl/demo_regional/
+
+# ---- large public networks: reference asu-trans-ai-lab/dynamic-odme-lab instead of duplicating ----
+datasets/03_chicago_regional/
+datasets/04_arc_atlanta/
+
+# ---- reference-only material (other projects; different provenance/licensing) ----
+html_examples/
+
+# ---- engine binaries (source is versioned in engine/DLSim_STE; build with build.sh) ----
+engine/bin/
+*.exe
+engine/DLSim_STE/testdata/*/out/
+engine/DLSim_STE/testdata/*/out_*.csv
+
+# ---- python / editor cruft ----
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+.DS_Store

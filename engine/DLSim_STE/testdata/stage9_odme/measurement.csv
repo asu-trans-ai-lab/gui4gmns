@@ -1,0 +1,11 @@
+sensor_id,link_id,time_bin,count,quality,privacy_level
+100,1,07:00-07:15,179,observed,2
+100,1,07:15-07:30,420,observed,2
+100,1,07:30-07:45,420,observed,2
+100,1,07:45-08:00,180,observed,2
+100,1,08:00-08:15,1,observed,2
+101,3,07:00-07:15,240,observed,2
+101,3,07:15-07:30,591,observed,2
+101,3,07:30-07:45,630,observed,2
+101,3,07:45-08:00,309,observed,2
+101,3,08:00-08:15,30,observed,2

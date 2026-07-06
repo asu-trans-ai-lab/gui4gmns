@@ -1,0 +1,23 @@
+{
+  "engine": "DLSim_STE",
+  "scenario": "testdata/stage6_chicago_full",
+  "threads": 16,
+  "agents": 1128857,
+  "completed": 1128857,
+  "conserved": true,
+  "last_completion": "13:16",
+  "vmt_veh_mi": 11955167,
+  "vht_veh_hr": 287646,
+  "cpu_ms": { "load_route": 986, "simulate": 5187 },
+  "determinism_checksum": "12412479294505757398",
+  "odme_enabled": false,
+  "gridlock": {
+    "oversaturated": false,
+    "peak_blocked_share": 0.00229779,
+    "deadlock_cycles_detected": 0,
+    "storage_bypass_moves": 0,
+    "origin_metered_min": 0,
+    "first_warning": "09:56",
+    "events": 5
+  }
+}

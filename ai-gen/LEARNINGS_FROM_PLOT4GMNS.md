@@ -1,0 +1,43 @@
+# What NeXTA-X AI-Gen learned from plot4gmns
+
+[plot4gmns](https://github.com/jiawlu/plot4gmns) (ASU-Trans-AI-Lab) is a clean, pip-installable GMNS
+visualization package: `import plot4gmns as pg; mnet = pg.generate_multi_network_from_csv(dir)` then a
+family of `pg.show_*` verbs (matplotlib + kepler.gl). We studied its API and gallery and adopted the
+capabilities NeXTA-X was missing.
+
+## API comparison
+| plot4gmns (`pg.show_*`) | NeXTA-X status |
+|---|---|
+| `show_gmns_nodes / links / zones / geometries` | ✅ had (network map) |
+| `show_network_by_link_free_speed / lanes / length / types` (attribute filter) | partial — had tier LOD + min-vol; **now + distributions** |
+| `show_network_by_link_{capacity,free_speed,lane}_distribution` (histograms) | ❌ → ✅ **ADOPTED** (distributions panel) |
+| `show_network_demand_matrix_heatmap` | ❌ → ✅ **ADOPTED** (demand heatmap, top-24 zones) |
+| `show_network_by_demand_OD` (desire lines) | ❌ → ✅ **ADOPTED** (OD desire-line layer) |
+| `show_gmns_poi / location / movements / lanes` | ❌ not yet (see "next") |
+| `generate_visualization_map_using_keplergl` | different path — NeXTA-X embeds its own canvas + OSM/satellite tiles |
+
+## Adopted now (verified on Sioux Falls, 2026-07-04)
+1. **Demand OD desire lines** — `demand.csv` (`o_zone_id,d_zone_id,volume`) aggregated to zone centroids
+   (mean of a zone's nodes), top-400 desire lines drawn centroid→centroid, width + red by volume.
+   Toggle: "demand OD". Verified: 528 OD pairs, 360,600 veh, 4,629 desire-line px over the network.
+2. **Demand matrix heatmap** — busiest 24 zones as an O×D grid (green→red by volume), in the
+   "distributions" panel. Direct analogue of `show_network_demand_matrix_heatmap`.
+3. **Attribute distributions** — capacity / free-speed / lanes / volume histograms in the
+   "▦ distributions" panel. Direct analogue of plot4gmns's `*_distribution` verbs.
+
+All three ride the split-layer architecture: a new lightweight `demand.js` sidecar; the audit footer
+now reports `demand: N OD pairs, total V veh (learned from plot4gmns)`.
+
+## What made plot4gmns worth copying (design lessons)
+- **Verb API discoverability**: one `generate_*` loader + many small `show_*` views. NeXTA-X's
+  equivalent is one `gui4gmns` preprocess + composable layers; we mirror the *catalog* in
+  `VIZ_SCHEMA.md` §2 so an AI can pick views the same way a user picks `pg.show_*`.
+- **Distributions are cheap QC gold**: a histogram of capacity/speed instantly exposes coding errors
+  (e.g. the ARC 99,999 capacity sentinel we already flag). Now every dashboard carries them.
+- **Demand is a first-class object**: AMS = demand + supply + assignment. NeXTA-X had supply
+  (network/MOE) and assignment (paths/trajectories) but not **demand** — this closes that gap.
+
+## Next (plot4gmns features still worth porting)
+- POI / activity-location layer (`show_gmns_poi`), zone polygons (we draw centroids only).
+- Intersection **movements** layer (`show_gmns_movements`) — the classic NEXTA turning-movement view.
+- Modal filtering (`show_network_by_modes`) for multimodal GMNS.
