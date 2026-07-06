@@ -44,3 +44,7 @@ datasets/08_public_ITS_VA_1-95/
 build/
 dist/
 *.egg-info/
+
+# ---- archives + oversized artifacts (keep raw/large data out of the repo) ----
+*.zip
+templates/dashboard_cbi.html

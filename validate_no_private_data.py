@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Pre-commit privacy gate for gui4gmns. Fails if any git-tracked file looks like agency data.
 Run:  python validate_no_private_data.py    (exit 0 = clean, 1 = private data staged)"""
-import subprocess, sys, re
+import os, subprocess, sys, re
 
 BLOCK_NAME = re.compile(r"(private|nvta|vdot|inrix|cbi|tmc|p4p|ritis|screenline)", re.I)
 BLOCK_PATH = ["06_nvta", "data_private", "dashboard_layers"]
+SIZE_WARN_MB = 5.0   # roadmap B4 size gate: flag any tracked file larger than this
 
 def tracked():
     try:
@@ -19,7 +20,12 @@ def main():
     files = tracked()
     bad = [f for f in files
            if f not in SELF_OK and (BLOCK_NAME.search(f) or any(b in f for b in BLOCK_PATH))]
+    big = [(f, os.path.getsize(f) / 1e6) for f in files
+           if os.path.exists(f) and os.path.getsize(f) > SIZE_WARN_MB * 1e6]
     print(f"tracked files: {len(files)}")
+    if big:
+        print(f"\n(size gate) {len(big)} tracked file(s) > {SIZE_WARN_MB:.0f} MB — keep raw/large data out of the repo:")
+        for f, mb in sorted(big, key=lambda x: -x[1]): print(f"    {mb:6.1f} MB  {f}")
     if bad:
         print(f"\n!! {len(bad)} PRIVATE-looking file(s) tracked — DO NOT COMMIT/PUSH:")
         for f in bad: print("   ", f)
