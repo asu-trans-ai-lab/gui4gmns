@@ -100,5 +100,5 @@ Same five steps, any city. The **data hub** (I-95) is the fully-fused example; t
 
 ---
 *This file is the shippable skill. To use it as a Claude Code skill, drop a copy at
-`.claude/skills/gmns-to-dashboard/SKILL.md`. Restricted templates (I-17 CBI, NVTA) are intentionally excluded
+`.claude/skills/gmns-to-dashboard/SKILL.md`. Restricted templates (I-17/CBI, NVTA) are intentionally excluded
 from the public gallery — see `docs/DATASETS_COVERAGE.md`.*
