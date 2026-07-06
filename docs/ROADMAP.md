@@ -53,6 +53,7 @@ what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper n
 - [ ] **D2 NGSIM I-80/US-101** trajectory template (`highway_vehicle_trajectory`) — lane-change / car-following / FD sampling.
 - [ ] **D3 GTFS multimodal** real dataset behind `gmns_dashboard_04`.
 - [x] **Global data-store coverage montage** (DONE) — `renderers/city_montage.py`: many GMNS city networks in one figure (15 TransportationNetworks cities, 76-34k links, ~5s). `docs/moe_gallery/global_city_coverage.png`.
+- [x] **E15 Bottleneck & congestion analytics (PeMS / RITIS design)** (DONE) — `renderers/bottleneck_pems.py`: Congestion Scan (space-time speed) + Bottleneck Ranking (locations by total delay + active-congested duration), CSV ranking table. Follows Caltrans PeMS + UMD CATT-Lab RITIS PDA. Verified on NVTA I-395 (worst bottleneck postmile 8.9).
 - [ ] **E14 Scenario A/B comparison** (stakeholder ask) — build-vs-no-build side-by-side dashboard.
 - [ ] **D5 AZ subarea tool** — Maricopa/MAG (or Tucson) subarea cut + corridor MOE (I-10) automation; and NVTA-style subarea corridor extraction as a reusable step.
 - [ ] **D4 ITS DataHub geofence query** template (`its_open_data_geofence_query`).
