@@ -30,6 +30,7 @@ def main():
         p = os.path.join(dd, name)
         if not (os.path.isdir(p) and os.path.exists(os.path.join(p, "link.csv"))): continue
         if "PRIVATE" in name.upper(): continue                     # never bundle private data
+        if "toy" in name.lower(): continue                         # toys are abstract stubs — not gallery-readable
         target = os.path.join(out, name + ".html")
         try:
             gen.generate(p, out=target, split=False, figures=False)  # single-file, self-contained

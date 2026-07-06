@@ -11,16 +11,17 @@
  .desc{color:#555;margin:-4px 0 12px}
  .ai{background:linear-gradient(135deg,#eef3ff,#e3ecff);border:1px solid #cdd9f5;border-left:4px solid #2563eb;
    border-radius:8px;padding:12px 16px;margin:14px 0;color:#26324a}
- .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
- figure{margin:0;background:#fff;border:1px solid #e5e5e5;border-radius:8px;overflow:hidden}
- figure img{width:100%;display:block;background:#fff}
+ .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+ figure{margin:0;background:#fff;border:1px solid #e5e5e5;border-radius:8px;overflow:hidden;transition:box-shadow .15s}
+ figure:hover{box-shadow:0 3px 12px rgba(0,0,0,.10)}
+ figure img{width:100%;display:block;background:#f6f7f9}
  figure.db a{text-decoration:none}
- .dbthumb{height:132px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
-   font-size:42px;color:#2563eb;background:linear-gradient(135deg,#eef3ff,#dfe8ff);border-bottom:1px solid #d6e0f5}
- .dbthumb span{font-size:12px;color:#2563eb;font-weight:600}
- .dbthumb.cor{color:#b8562a;background:linear-gradient(135deg,#fff3ec,#ffe6d6);border-bottom:1px solid #f3d3bf}
- .dbthumb.cor span{color:#b8562a}
- figcaption{padding:6px 8px;font-size:11.5px;color:#444;border-top:1px solid #eee}
+ figcaption{padding:8px 10px;border-top:1px solid #eee}
+ figcaption b{font-size:13px;color:#1d232b} figcaption .meta{font-size:11px;color:#2563eb;margin:2px 0}
+ figcaption .d{font-size:11.5px;color:#555} figcaption.fig{font-size:11.5px;color:#444}
+ .dbthumb{height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+   font-size:38px;color:#b8562a;background:linear-gradient(135deg,#fff3ec,#ffe6d6);border-bottom:1px solid #f3d3bf}
+ .dbthumb span{font-size:12px;color:#b8562a;font-weight:600}
  .views a{display:inline-block;margin-right:10px;font-size:12.5px}
  .legend{font-size:12px;color:#666} .legend b{color:#333}
  ul{line-height:1.9} code{background:#eef;padding:1px 5px;border-radius:3px;font-size:12px}
@@ -32,8 +33,8 @@
 <section><h2>Network dashboards &mdash; the base <span class="tag">HTML</span></h2>
 <p class="desc">Self-contained offline dashboards (network + basemap embedded): layers, MOE modes, trajectory
 animation. gui4gmns's primary output. Large networks (ARC, Chicago Regional) are generate-on-demand.</p>
-<div class="grid"><figure class="db"><a href="01_sioux_falls.html" target="_blank"><div class="dbthumb ">&#128506;<span>open</span></div></a><figcaption>Sioux Falls (classic test network)</figcaption></figure><figure class="db"><a href="02_chicago_sketch.html" target="_blank"><div class="dbthumb ">&#128506;<span>open</span></div></a><figcaption>Chicago Sketch (regional demand)</figcaption></figure><figure class="db"><a href="05_toy_bottleneck.html" target="_blank"><div class="dbthumb ">&#128506;<span>open</span></div></a><figcaption>Toy — bottleneck</figcaption></figure><figure class="db"><a href="05_toy_merge.html" target="_blank"><div class="dbthumb ">&#128506;<span>open</span></div></a><figcaption>Toy — merge</figcaption></figure><figure class="db"><a href="05_toy_signal.html" target="_blank"><div class="dbthumb ">&#128506;<span>open</span></div></a><figcaption>Toy — signal</figcaption></figure><figure class="db"><a href="07_west_jordan.html" target="_blank"><div class="dbthumb ">&#128506;<span>open</span></div></a><figcaption>West Jordan, UT (real corridor)</figcaption></figure></div></section>
-<section><h2>Corridor state-views <span class="tag">HTML</span></h2><p class="desc">Per corridor: <b>calendar</b> (whole year by day/year) &middot; <b>network</b> (corridor map by mean speed) &middot; <b>space-time</b> (milepost&times;time speed heatmap). Following the NeXTA-AI-Gen <code>&lt;view&gt;_&lt;corridor&gt;_&lt;date&gt;</code> convention.</p><div class="grid"><figure class="db"><div class="dbthumb cor">&#128506;<span>I210E</span></div><figcaption><b>I210E</b><div class="views"><a href="I210E_calendar.html" target="_blank">calendar</a> <a href="I210E_network_2026-06-19.html" target="_blank">network</a> <a href="I210E_spacetime_2026-06-19.html" target="_blank">space-time</a></div></figcaption></figure></div></section>
+<div class="grid"><figure class="db"><a href="01_sioux_falls.html" target="_blank"><img src="thumbs/01_sioux_falls.svg" loading="lazy" alt="Sioux Falls network"></a><figcaption><b>Sioux Falls</b><div class="meta">76 links &middot; 24 nodes &middot; 24 zones &middot; by lanes</div><div class="d">Classic transportation test network — the standard TAP benchmark.</div></figcaption></figure><figure class="db"><a href="02_chicago_sketch.html" target="_blank"><img src="thumbs/02_chicago_sketch.svg" loading="lazy" alt="Chicago Sketch network"></a><figcaption><b>Chicago Sketch</b><div class="meta">2,950 links &middot; 933 nodes &middot; 387 zones &middot; by free-flow speed</div><div class="d">Regional sketch network with demand, assignment and link performance.</div></figcaption></figure><figure class="db"><a href="07_west_jordan.html" target="_blank"><img src="thumbs/07_west_jordan.svg" loading="lazy" alt="West Jordan, UT network"></a><figcaption><b>West Jordan, UT</b><div class="meta">378 links &middot; 149 nodes &middot; 41 zones &middot; by mean observed speed</div><div class="d">Real signalized corridor; links colored by observed mean speed.</div></figcaption></figure></div></section>
+<section><h2>Corridor state-views <span class="tag">HTML</span></h2><p class="desc">Per corridor: <b>calendar</b> (whole year by day/year) &middot; <b>network</b> (corridor map by mean speed) &middot; <b>space-time</b> (milepost&times;time speed heatmap). NeXTA-AI-Gen <code>&lt;view&gt;_&lt;corridor&gt;_&lt;date&gt;</code> convention.</p><div class="grid"><figure class="db"><div class="dbthumb">&#128506;<span>I210E</span></div><figcaption><b>I210E corridor</b><div class="views"><a href="I210E_calendar.html" target="_blank">calendar</a> <a href="I210E_network_2026-06-19.html" target="_blank">network</a> <a href="I210E_spacetime_2026-06-19.html" target="_blank">space-time</a></div></figcaption></figure></div></section>
 <section class="legend"><b>Speed colors:</b> intuitive <b style="color:#2ca02c">green = free-flow</b> &rarr;
 <b style="color:#d62728">red = jammed</b> (colorblind-safe palette available with <code>--cmap cb</code>).
 &nbsp;·&nbsp; Full index incl. static figures: <a href="../gallery.html">gallery.html</a></section>
