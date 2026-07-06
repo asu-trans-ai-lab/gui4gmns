@@ -5,9 +5,9 @@ workspace first, then turn the catalog spec into an engine, then grow coverage. 
 concrete done-test so "done" is not a matter of opinion.
 
 ## Phase A — stabilize (do first; addresses Sev-1)
-- [ ] **A1 Consolidate to one dev + one release folder.** Pick `gui4gmns_dev` (superset) + `gui4gmns_release_github` (public) as canonical; delete `gui4gmns/github_dev`, `gui4gmns/github_release`, the locked `guiagent4gmns`, and the `gui4gmns/` intermediate once locks clear.
-  *Done-test:* exactly two gui4gmns repo folders on disk; `git remote` set only on the release one.
-- [ ] **A2 Move raw sources out of the repo.** Relocate `datasets/08_public_ITS_VA_1-95/` (2.3 GB) to a sibling `_raw_sources/` outside any git tree; adapters take an explicit source path.
+- [x] **A1 Consolidate to one dev + one release folder.** DONE 2026-07: canonical = `gui4gmns/github_dev` (dev, superset, 5 commits) + `gui4gmns/github_release` (public, cloned from dev, remote → `asu-trans-ai-lab/gui4gmns`). Deleted the 4 redundant copies (`gui4gmns_dev`, `gui4gmns_release_github`, old `gui4gmns/github_release`, locked `guiagent4gmns`).
+  *Done-test met:* two repo folders (`gui4gmns/github_dev`, `gui4gmns/github_release`); remote set only on release. See `../../WORKSPACE.md`.
+- [x] **A2 Move raw sources out of the repo.** Relocate `datasets/08_public_ITS_VA_1-95/` (2.3 GB) to a sibling `_raw_sources/` outside any git tree; adapters take an explicit source path.
   *Done-test:* repo working tree < 250 MB; `git ls-files | xargs du` unchanged; adapters still regenerate the sample.
 - [ ] **A3 One generator, synced by build not by hand.** The release folder's generator is produced from dev by a script/CI, never `cp` by hand.
   *Done-test:* `make release` (or a 5-line script) rebuilds the release tree; no manual copy step.
