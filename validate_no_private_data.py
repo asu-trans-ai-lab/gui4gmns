@@ -13,9 +13,12 @@ def tracked():
         print("not a git repo yet (nothing tracked):", e); return []
     return [l for l in out.splitlines() if l.strip()]
 
+SELF_OK = {"validate_no_private_data.py"}   # the validator names the patterns it screens for
+
 def main():
     files = tracked()
-    bad = [f for f in files if BLOCK_NAME.search(f) or any(b in f for b in BLOCK_PATH)]
+    bad = [f for f in files
+           if f not in SELF_OK and (BLOCK_NAME.search(f) or any(b in f for b in BLOCK_PATH))]
     print(f"tracked files: {len(files)}")
     if bad:
         print(f"\n!! {len(bad)} PRIVATE-looking file(s) tracked — DO NOT COMMIT/PUSH:")
