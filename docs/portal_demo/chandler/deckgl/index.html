@@ -8,7 +8,7 @@ fetch('data.json').then(r=>r.json()).then(D=>{
  const {DeckGL,PathLayer,TripsLayer,ArcLayer}=deck;
  let t=0;const T=Math.max(1,...D.trips.flatMap(x=>x.timestamps.length?[x.timestamps[x.timestamps.length-1]]:[0]));
  const deckgl=new DeckGL({container:'c',mapStyle:null,
-  initialViewState:{longitude:-111.87487,latitude:33.28767,zoom:11,pitch:45,bearing:0},controller:true,
+  initialViewState:{longitude:-111.80665,latitude:33.24449,zoom:11,pitch:45,bearing:0},controller:true,
   layers:[]});
  function render(){t=(t+30)%T;deckgl.setProps({layers:[
    new PathLayer({id:'net',data:D.paths,getPath:d=>d.path,getColor:d=>d.color,getWidth:d=>d.width,widthMinPixels:1}),
