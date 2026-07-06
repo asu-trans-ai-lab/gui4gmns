@@ -91,8 +91,8 @@
     </figure>
     <figure>
       <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/phoenix/map.kepler.json" target="_blank"><img src="portal_demo/phoenix/preview.png" alt="Phoenix MAG regional network colored by free-flow speed"></a>
-      <figcaption><b>Phoenix — MAG regional (ADOT)</b> — a 57,459-link metro network; top 6,000 by free-flow
-        speed draws the freeway skeleton (I-10 · I-17 · Loop 101/202 · US-60). City by city, same process.<br>
+      <figcaption><b>Phoenix, AZ (ADOT / MAG)</b> — clipped to the real <b>OSM city boundary</b>, top 6,000 by
+        free-flow speed (I-10 · I-17 · Loop 101/202 · US-60). Source stamped on every map.<br>
         <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/phoenix/map.kepler.json" target="_blank">▶ Kepler.gl</a> ·
         <a href="portal_demo/phoenix/deckgl/">deck.gl</a> ·
         <a href="portal_demo/phoenix/gmns.kml">Google Earth</a> ·
@@ -118,9 +118,9 @@
   </div>
 
   <h2 class="see">Arizona — PHX metro, city by city</h2>
-  <p class="tag" style="margin:0 0 10px">The transferable process run across the Phoenix metro: each city geofenced
-  from the MAG regional network, colored by free-flow speed. Plus the raw <b>osm2gmns "big map"</b> — step 1 on
-  its own, every OSM street.</p>
+  <p class="tag" style="margin:0 0 10px">The transferable process across the Phoenix metro — each city clipped to its
+  real <b>OpenStreetMap city boundary</b> (not a bounding box, drawn in blue), colored by free-flow speed; the raw
+  <b>osm2gmns "big map"</b> is step 1 on its own. <b>Every map is stamped with its data source.</b></p>
   <div class="shots">
     <figure>
       <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/osm_bigmap/map.kepler.json" target="_blank"><img src="portal_demo/osm_bigmap/preview.png" alt="osm2gmns raw big map, all OSM streets, Tempe AZ"></a>

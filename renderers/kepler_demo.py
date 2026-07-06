@@ -23,6 +23,28 @@ def reproject(D, epsg):
     D["geo"] = True
     return D
 
+def load_polys(path):
+    """Outer rings of a boundary GeoJSON (Polygon or MultiPolygon); holes ignored for a fast clip."""
+    g = json.load(open(path, encoding="utf-8"))
+    g = g.get("geometry", g)
+    if g["type"] == "Polygon":
+        return [g["coordinates"][0]]
+    if g["type"] == "MultiPolygon":
+        return [poly[0] for poly in g["coordinates"]]
+    return []
+
+def in_polys(x, y, rings):
+    for ring in rings:
+        inside = False; n = len(ring); j = n - 1
+        for i in range(n):
+            xi, yi = ring[i][0], ring[i][1]; xj, yj = ring[j][0], ring[j][1]
+            if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi + 1e-12) + xi:
+                inside = not inside
+            j = i
+        if inside:
+            return True
+    return False
+
 def _metric(D):
     """Pick the field that actually varies: volume (network loading) if present, else free-flow speed.
     Returns (value_fn, label, hot_high) — hot_high=True means high value = red (busy)."""
@@ -37,7 +59,7 @@ def _metric(D):
         return (lambda L: L["speed"]), ("observed speed (mph)" if observed else "free-flow speed (mph)"), False
     return (lambda L: L["ff"]), "free-flow speed (mph)", False
 
-def preview_png(D, out_png, title):
+def preview_png(D, out_png, title, source="", boundary=None):
     import matplotlib; matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import matplotlib.colors as mc
@@ -56,8 +78,13 @@ def preview_png(D, out_png, title):
     fig, ax = plt.subplots(figsize=(10, 7), dpi=100)
     fig.patch.set_facecolor("#0e1116"); ax.set_facecolor("#0e1116")
     ax.add_collection(LineCollection(segs, colors=cols, linewidths=widths))
+    if boundary:
+        for ring in boundary:
+            ax.plot([p[0] for p in ring], [p[1] for p in ring], color="#58a6ff", lw=1.3, alpha=0.65)
     ax.autoscale(); ax.set_aspect("equal"); ax.axis("off")
     ax.set_title(f"{title}   ·   colored by {label}", color="#e6edf3", fontsize=14, pad=10)
+    if source:
+        fig.text(0.5, 0.012, "Source: " + source, ha="center", va="bottom", color="#8a94a3", fontsize=9)
     fig.savefig(out_png, dpi=100, facecolor="#0e1116", bbox_inches="tight"); plt.close(fig)
 
 def kepler_map(D, label, zoom):
@@ -115,6 +142,15 @@ def main():
             return xs and x0 <= sum(xs) / len(xs) <= x1 and y0 <= sum(ys) / len(ys) <= y1
         D["links"] = [L for L in D["links"] if _inb(L)]
         print(f"geofenced to bbox -> {len(D['links'])} links")
+    boundary = None
+    if "--poly" in a:  # clip to a real city boundary polygon (point-in-polygon on the link midpoint)
+        boundary = load_polys(a[a.index("--poly") + 1])
+        def _inp(L):
+            xs = [p[0] for p in L["poly"]]; ys = [p[1] for p in L["poly"]]
+            return xs and in_polys(sum(xs) / len(xs), sum(ys) / len(ys), boundary)
+        D["links"] = [L for L in D["links"] if _inp(L)]
+        print(f"clipped to city polygon -> {len(D['links'])} links")
+    source = a[a.index("--source") + 1] if "--source" in a else ""
     # for big networks, keep the top-N most important links (by whatever field varies: volume, else
     # free-flow speed = the freeway/arterial skeleton, else lanes) so the live map loads fast
     if top and len(D["links"]) > top:
@@ -125,9 +161,13 @@ def main():
     gv.export_kml(D, out)                                       # Google Earth KML
     if "--no-deck" not in a:
         gv.export_deckgl(D, os.path.join(out, "deckgl"))       # standalone deck.gl page
-    preview_png(D, os.path.join(out, "preview.png"), f"{label} · {len(D['links']):,} links")
+    preview_png(D, os.path.join(out, "preview.png"), f"{label} · {len(D['links']):,} links",
+                source=source, boundary=boundary)
+    if source:
+        open(os.path.join(out, "SOURCE.txt"), "w", encoding="utf-8").write(source + "\n")
     if "--no-map" not in a and D["geo"]:
-        json.dump(kepler_map(D, label, zoom), open(os.path.join(out, "map.kepler.json"), "w"))
+        m = kepler_map(D, label, zoom); m["info"]["source"] = source
+        json.dump(m, open(os.path.join(out, "map.kepler.json"), "w"))
     mb = sum(os.path.getsize(os.path.join(out, f)) for f in os.listdir(out) if os.path.isfile(os.path.join(out, f))) / 1e6
     print(f"portal demo -> {out}/  ({len(D['links']):,} links, geo={D['geo']}, {mb:.1f} MB)")
 
