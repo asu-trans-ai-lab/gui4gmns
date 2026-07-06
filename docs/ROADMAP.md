@@ -39,6 +39,7 @@ what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper n
 - [ ] **E5 `dashboard.yaml` dashboards-as-code** (SimWrapper model) — declare panels/layers in YAML; ties directly to the catalog engine (B2). The manifest *is* the dashboard spec.
 - [ ] **E6 Optional deck.gl GPU backend** — keep zero-dep canvas default; allow a deck.gl path for regional-scale animation (raw-WebGL2 already covers most).
 - [x] **E7 GUI-X exporters** (DONE) — `exporters/gmns_to_viz.py`: GMNS -> kepler.gl (GeoJSON+Trip+arcs+config), deck.gl (TripsLayer page), QGIS (GeoJSON+.qml+PyQGIS loader), Google Earth KML (3D volume bars + time slider). gui4gmns feeds external tools so users add their own layers + get 3D/fly free.
+- [x] **E8 Semi-dynamic trajectory synthesis** (DONE) — `adapters/semidynamic_trajectories.py`: propagate vehicles along paths using time-dependent LINK travel time (speed, or BPR/queue when only flow given) -> animatable `agent_trajectory.csv`, even with no micro-sim. Verified on Chicago Sketch (2,000 vehicles from path_flow + TD flow/queue).
 
 ## Phase D — coverage (grow the catalog)
 - [ ] **D1 Caltrans PeMS** highway detector template (`highway_sensor_timeseries`) — the corridor-detector counterpart to the trajectory-rich ITS I-95 hub.
