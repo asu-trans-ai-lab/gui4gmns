@@ -29,8 +29,10 @@ def _metric(D):
     if max((L["vol"] for L in D["links"]), default=0) > 0:
         return (lambda L: L["vol"]), "volume (veh)", True
     sp = [L["speed"] for L in D["links"] if L["speed"] > 0]
-    if sp and max(sp) - min(sp) > 1:                              # observed speed (e.g. INRIX on I-95)
-        return (lambda L: L["speed"]), "observed speed (mph)", False
+    if sp and max(sp) - min(sp) > 1:
+        # read_gmns puts observed speed in L["speed"] when link_performance exists, else free_speed.
+        observed = any(abs(L["speed"] - L["ff"]) > 0.5 for L in D["links"])
+        return (lambda L: L["speed"]), ("observed speed (mph)" if observed else "free-flow speed (mph)"), False
     return (lambda L: L["ff"]), "free-flow speed (mph)", False
 
 def preview_png(D, out_png, title):
@@ -102,10 +104,12 @@ def main():
         epsg = open(os.path.join(src, "crs.txt")).read().strip()
     if epsg and not D["geo"]:
         reproject(D, epsg); print(f"reprojected {epsg} -> lon/lat")
-    # for big networks, keep the top-N links by volume so the live map loads fast
+    # for big networks, keep the top-N most important links (by whatever field varies: volume, else
+    # free-flow speed = the freeway/arterial skeleton, else lanes) so the live map loads fast
     if top and len(D["links"]) > top:
-        D["links"] = sorted(D["links"], key=lambda L: -L["vol"])[:top]
-        label = f"{label} — top {top:,} by volume"
+        val, mlabel, _ = _metric(D)
+        D["links"] = sorted(D["links"], key=lambda L: -(val(L) or 0))[:top]
+        label = f"{label} — top {top:,} by {mlabel.split(' (')[0]}"
     gv.export_kepler(D, out)                                    # drag-drop geojson set
     gv.export_kml(D, out)                                       # Google Earth KML
     if "--no-deck" not in a:
