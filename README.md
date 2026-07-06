@@ -1,14 +1,14 @@
 # gui4gmns
 
-*(the NeXTA-X generator — in the `*4gmns` family alongside plot4gmns / path4gmns / osm2gmns)*
+*(in the `*4gmns` family alongside plot4gmns / path4gmns / osm2gmns)*
 
 **AI-guided dashboards for GMNS: DTALite · TAPLite · Dynamic ODME · DLSim.**
 GMNS run folder in → one self-contained, offline-capable `dashboard.html` out. No install to view,
 no editing to learn — the legacy NEXTA GUI stays the editor; this is the modern viewer + generator.
 
-**NeXTA-X** is the product/viewer brand; **gui4gmns** is the pip-installable generator core.
-The cross-platform successor of the Windows-only MFC NEXTA GUI, rebuilt on one shared data contract
-with an AI-guided generator at its core.
+**gui4gmns** is the project name — the pip-installable generator core plus its viewers. It is the
+cross-platform successor of the Windows-only MFC NEXTA GUI (formerly branded *gui4gmns*), rebuilt on
+one shared data contract with an AI-guided generator at its core. See `NAMING.md`.
 
 ## Quickstart
 ```bash
@@ -46,7 +46,7 @@ datasets/              public samples: 01 Sioux Falls · 02 Chicago Sketch · 05
 docs/                  Users Guide (md + pdf)
 SHARED_CONTRACT.md     the one data contract every branch implements
 ```
-Provenance: consolidated 2026-07 from the `dtalite/` (NeXTA-X, DLSim_STE), the DTALite/TAPLite C++
+Provenance: consolidated 2026-07 from the `dtalite/` (gui4gmns, DLSim_STE), the DTALite/TAPLite C++
 kernel workspace, and `dynamic_ODME/` sample sets, so releases happen in ONE place. Heavy kernels stay
 in their dev homes: DTALite/TAPLite C++ → `dtalite_with_taplite_Cpp_kernel/` · large networks →
 `asu-trans-ai-lab/dynamic-odme-lab`.
@@ -70,5 +70,5 @@ Sample-data attribution: Sioux Falls / Chicago from bstabler/TransportationNetwo
 OpenStreetMap contributors and Imagery © Esri, Maxar, Earthstar Geographics (embedded per their terms).
 
 ## Docs
-`docs/NeXTA-X_Users_Guide.md` · `SHARED_CONTRACT.md` · `REFACTOR_PLAN.md` ·
+`docs/gui4gmns_Users_Guide.md` · `SHARED_CONTRACT.md` · `REFACTOR_PLAN.md` ·
 `ai-gen/VIZ_SCHEMA.md` (build your own dashboard, AI-guided) · `ai-gen/LEARNINGS_FROM_PLOT4GMNS.md`.

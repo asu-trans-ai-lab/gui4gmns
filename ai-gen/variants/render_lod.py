@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """render_lod.py — LEVEL-OF-DETAIL + FILTER LAYERS + DATA-CHECK overlay prototype
-for the 145,971-link ARC Atlanta network (NeXTA-X).
+for the 145,971-link ARC Atlanta network (gui4gmns).
 
 Produces 1600x1000 PNGs next to this script:
   arc_lod_overview.png  zoom-out LOD: only tier-1 links (top 15% capacity*lanes,

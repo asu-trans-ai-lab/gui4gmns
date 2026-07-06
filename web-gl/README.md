@@ -1,4 +1,4 @@
-# NeXTA-X / web-gl — GPU animation + live-follow (NEXT UP)
+# gui4gmns / web-gl — GPU animation + live-follow (NEXT UP)
 Stack: WebGL (deck.gl-class TripsLayer, bundled offline, no CDN) + tiny Python run-server that tails a
 run folder (websocket push of new 15-min bins / trajectory chunks while DLSim or DTALite runs).
 Unique: per-vehicle animation at regional/NGSIM scale; live-follow; basemap. Conformance: contract §4.

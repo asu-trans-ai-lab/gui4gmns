@@ -42,7 +42,7 @@ for (o, d), v in sorted(top, key=lambda kv: kv[1]):
 for z, (x, y) in zc.items():
     px, py = P(x, y); p.fillRect(int(px) - 3, int(py) - 3, 6, 6, QColor(255, 210, 87))
 p.setPen(QColor(140, 150, 163)); p.setFont(QFont("Arial", 12))
-p.drawText(pad, 22, "NeXTA-X demand OD desire lines (learned from plot4gmns) - Sioux Falls")
+p.drawText(pad, 22, "gui4gmns demand OD desire lines (learned from plot4gmns) - Sioux Falls")
 p.setFont(QFont("Arial", 9)); p.setPen(QColor(120, 130, 143))
 p.drawText(pad, H - 10, f"{len(od)} OD pairs  total {sum(od.values()):.0f} veh  top 400 desire lines  "
                         f"gold=zone centroids  width/red=volume")

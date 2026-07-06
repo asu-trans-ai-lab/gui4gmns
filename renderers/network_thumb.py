@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compact network thumbnail (inline SVG) for a GMNS folder — the gallery card preview.
 
-Mirrors the NeXTA-AI-Gen sample network view: links drawn between node coords, colored green(fast)->
+Mirrors the gui4gmns sample network view: links drawn between node coords, colored green(fast)->
 red(slow), width by lanes, faint node dots, a small speed legend. Aspect-ratio preserved. Pure stdlib.
 
     from network_thumb import render

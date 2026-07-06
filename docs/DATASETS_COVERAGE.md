@@ -23,7 +23,7 @@ the "connect-from-the-DataHub" data hub (`adapters/its_datahub.py`, `its_datahub
 corridor-only — for the real congested space-time speed contour (green free-flow -> red AM breakdown).
 Kept local (INRIX-derived speeds are restricted); rendered for review, not committed.
 
-**I-210E corridor state-views** (`docs/dashboards/I210E_*.html`) are NeXTA-AI-Gen samples that demonstrate
+**I-210E corridor state-views** (`docs/dashboards/I210E_*.html`) are gui4gmns samples that demonstrate
 the corridor time-series capability: **calendar** (whole year by day/year), **network** (corridor map by
 mean speed), **space-time** (milepost×time speed heatmap). Corridor speeds derive from **Caltrans PeMS**
 (public agency data), packaged in the released **TrafficFlowBench-CA** benchmark. **Cleared for public

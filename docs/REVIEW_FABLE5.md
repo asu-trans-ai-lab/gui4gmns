@@ -24,7 +24,7 @@ honestly at the end so the plan doesn't throw them away.
 |---|---|---|
 | 8 | **The generator is a 35 KB monolith** with a ~10 KB HTML template as an inline string. Editing the template means editing a Python string literal. | Split: `gui4gmns/core.py` (load/preprocess) + `gui4gmns/template.html` (read at build). Package it as `src/gui4gmns/` with the template as package data. |
 | 9 | **CDN dependencies in some templates** (`apache_traffic_simulation.html` pulls Leaflet + Google Fonts). Breaks the offline/self-contained promise; fails under a strict CSP. | Inline Leaflet + fonts, or port the physics panel onto the gui4gmns canvas (already partly done via the SCI port). Mark CDN templates clearly in the catalog (done). |
-| 10 | **Two brand names** (NeXTA-X product / gui4gmns package). Fine, but state it once, everywhere. | One line in README (present); keep it consistent. |
+| 10 | **Two brand names** (gui4gmns product / gui4gmns package). Fine, but state it once, everywhere. | One line in README (present); keep it consistent. |
 | 11 | **No dependency/version pinning, no CHANGELOG.** | Add `CHANGELOG.md`; pin optional deps to major versions (done in pyproject: `pyproj>=3`, `PySide6>=6`). |
 
 ## Strengths (keep these — the plan must not regress them)

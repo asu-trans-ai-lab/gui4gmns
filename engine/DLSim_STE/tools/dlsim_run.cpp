@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
         ft << "o_zone_id,d_zone_id,theta\n";
         for (auto& [od, th] : odme.theta) ft << od.first << "," << od.second << "," << th << "\n";
     }
-    // ---- link_performance_15min.csv (time-dependent MOE for the NeXTA-X animation) ----
+    // ---- link_performance_15min.csv (time-dependent MOE for the gui4gmns animation) ----
     if (S.minute_stats) {
         std::ofstream f(outdir + "/link_performance_15min.csv");
         f << "link_id,time_bin_start,inflow_veh,queue_exb\n";

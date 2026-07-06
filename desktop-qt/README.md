@@ -1,4 +1,4 @@
-# NeXTA-X / desktop-qt — Qt desktop viewer (v1: PySide6; C++ port follows same design)
+# gui4gmns / desktop-qt — Qt desktop viewer (v1: PySide6; C++ port follows same design)
 `nexta_qt.py` — QMainWindow with the classic NEXTA structure: Layer Control Panel dock, MOE toolbar,
 Animation View (time slider + play), inspector, summary statistics, engine-log dock.
 Unique to this branch: **Run engine** (QProcess -> dlsim_run.exe on the open folder, log tail, auto

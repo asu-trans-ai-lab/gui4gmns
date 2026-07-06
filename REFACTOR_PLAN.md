@@ -1,4 +1,4 @@
-# NeXTA-X — cross-platform refactor of the NEXTA GUI for DTALite / TAPLite / Dynamic ODME / DLSim
+# gui4gmns — cross-platform refactor of the NEXTA GUI for DTALite / TAPLite / Dynamic ODME / DLSim
 
 ## Why refactor
 The archived NEXTA (`nexta_source-archive`, `NGSIM-NEXTA_GUI`) is **Windows-only MFC** Document/View
@@ -9,7 +9,7 @@ engine grew its own file dialect.
 
 ## Architecture: one viewer, one contract, N engines
 ```text
-NeXTA-X (single self-contained HTML/JS app — runs in any browser on Windows/macOS/Linux, no install)
+gui4gmns (single self-contained HTML/JS app — runs in any browser on Windows/macOS/Linux, no install)
 ├── io/        GMNS reader (CSV, drag-drop or served-folder fetch), WKT geometry parser
 ├── adapters/  engine output mapping -> one internal model
 │   ├── DTALite   link_performance.csv, route_assignment.csv, agent.csv
@@ -35,8 +35,8 @@ NeXTA-X (single self-contained HTML/JS app — runs in any browser on Windows/ma
 | calibration | `od_adjustment_with_sensor_coverage.csv`, `measurement.csv` | θ, sensor coverage, obs-vs-sim |
 | run meta | `run_summary.json`, `gridlock_events.csv` | totals, conservation, warnings |
 
-## NEXTA feature → NeXTA-X mapping
-| NEXTA (MFC) | NeXTA-X |
+## NEXTA feature → gui4gmns mapping
+| NEXTA (MFC) | gui4gmns |
 |---|---|
 | network display, pan/zoom (GDI) | canvas renderer, wheel-zoom / drag-pan |
 | link MOE color & bandwidth (`output_LinkMOE`) | color+width by volume / VOC / speed / queue, legend |
@@ -54,7 +54,7 @@ browser. Same file doubles as a desktop app via any webview shell later. Data lo
 1. **Drag-drop / file picker** (pure client-side, private by default), or
 2. **served-folder mode** (`?data=<relative-dir>` when hosted by `python -m http.server`) for automation.
 
-## DECISION (2026-07-02): NeXTA-X is a FAMILY — all four branches, one contract
+## DECISION (2026-07-02): gui4gmns is a FAMILY — all four branches, one contract
 Not one executable for all purposes. Every branch implements `SHARED_CONTRACT.md` (same GMNS readers,
 same MOE semantics, same statistics), then serves its own audience:
 

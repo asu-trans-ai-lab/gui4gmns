@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "gui4gmns"
 version = "0.1.0"
-description = "gui4gmns (NeXTA-X) — AI-guided dashboards for GMNS: DTALite / TAPLite / Dynamic ODME / DLSim, GMNS folder in, self-contained dashboard out"
+description = "gui4gmns — AI-guided dashboards for GMNS: DTALite / TAPLite / Dynamic ODME / DLSim, GMNS folder in, self-contained dashboard out"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }

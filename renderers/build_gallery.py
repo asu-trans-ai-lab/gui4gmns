@@ -3,7 +3,7 @@
 
 Interactive HTML dashboards are the BASE product; plot4gmns/MOE static figures are ADDITIONAL. Each base
 dashboard card carries a real network thumbnail (network_thumb) + stats + description, following the
-NeXTA-AI-Gen sample (rich per-network info, not a generic icon). Corridor state-views (calendar / network /
+gui4gmns sample (rich per-network info, not a generic icon). Corridor state-views (calendar / network /
 space-time) follow the <view>_<corridor>_<date>.html convention.
 Usage: python build_gallery.py
 """
@@ -135,9 +135,9 @@ def corridor_section(corr, prefix=""):
     return (f'<section><h2>Corridor state-views <span class="tag">HTML</span></h2>'
             f'<p class="desc">Per corridor: <b>calendar</b> (whole year by day/year) &middot; <b>network</b> '
             f'(corridor map by mean speed) &middot; <b>space-time</b> (milepost&times;time speed heatmap). '
-            f'NeXTA-AI-Gen <code>&lt;view&gt;_&lt;corridor&gt;_&lt;date&gt;</code> convention.</p>'
+            f'gui4gmns <code>&lt;view&gt;_&lt;corridor&gt;_&lt;date&gt;</code> convention.</p>'
             f'<div class="grid">{blocks}</div>'
-            f'<p class="legend" style="margin-top:8px">Corridor samples: <b>NeXTA-AI-Gen</b> / '
+            f'<p class="legend" style="margin-top:8px">Corridor samples: <b>gui4gmns</b> / '
             f'<b>TrafficFlowBench-CA</b> benchmark; corridor speeds derived from <b>Caltrans PeMS</b> '
             f'(public agency data). Released for public use.</p></section>')
 

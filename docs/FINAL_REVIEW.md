@@ -11,13 +11,13 @@ public `github_release` is a clone with zero private data.
 | **Offline** | ✅ GO | data + OSM/satellite tiles embedded as data-URIs; opens with no network |
 | **PyPI package** | ✅ GO | `python -m build` -> wheel + sdist; **`twine check` PASSED**; `pip install` -> `import gui4gmns 0.1.0`, CLI on PATH |
 | **Figures auto-export** | ✅ GO | generator writes `figures/` (15 native plot4gmns-style PNGs) alongside every dashboard; `--no-figures` to skip; skips gracefully w/o matplotlib |
-| **Dashboard gallery (one folder)** | ✅ GO | all dashboards in `docs/dashboards/` w/ a browsable `index.html` (base = network dashboards; + corridor state-views); 6 self-contained dashboards shipped, each <5 MB, zero external refs |
+| **Dashboard gallery (one folder)** | ✅ GO | all dashboards in `docs/dashboards/` w/ a browsable `index.html` (base = network dashboards w/ rich thumbnail+stats cards; + corridor state-views); 3 network + 3 corridor HTML shipped, each <5 MB, zero external refs |
 | **Gallery index** | ✅ GO | `docs/gallery.html` — dashboards (base) + 22 additional static figures, 9 datasets, all load |
 | **AI-generation note** | ✅ GO | gallery states users can ask the AI to regenerate views for more data (ITS I-95 corridors, other years) — the capability, surfaced |
 | **Real networks** | ✅ GO | ARC 145k links (~5 s), Tucson I-10, Chicago, ITS I-95 hub, global 15-city montage |
 | **Reviews attached** | ✅ GO | Fable-5, TRB-viz (AED30), stakeholder (7-audience), viz-landscape |
 | **License / provenance** | ✅ GO | MIT; sample data attributed (TransportationNetworks, OSM, Esri); ARC = converted research copy w/ disclaimer |
-| **Corridor sample provenance** | ✅ GO | `docs/dashboards/I210E_*.html` (calendar/network/space-time) — **approved for public release** (user decision, 2026-07-06). NeXTA-AI-Gen samples from the *TrafficFlowBench-CA* benchmark; corridor speeds derive from **Caltrans PeMS** (public agency data). Attributed in the gallery corridor section + `DATASETS_COVERAGE.md` + page footers. |
+| **Corridor sample provenance** | ✅ GO | `docs/dashboards/I210E_*.html` (calendar/network/space-time) — **approved for public release** (user decision, 2026-07-06). gui4gmns samples from the *TrafficFlowBench-CA* benchmark; corridor speeds derive from **Caltrans PeMS** (public agency data). Attributed in the gallery corridor section + `DATASETS_COVERAGE.md` + page footers. |
 | **Tests / CI** | ⚠️ NOT YET | roadmap B1 — no automated tests; verification is manual. Recommend before a v1.0 tag. |
 | **Size** | ⚠️ WATCH | a few tracked figures/templates > 5 MB (size gate warns); trim before heavy public traffic |
 
@@ -27,10 +27,11 @@ are cleared to ship (attributed to Caltrans PeMS / TrafficFlowBench-CA).
 
 ## Dashboard gallery — one folder, HTML is the base
 `docs/dashboards/` is the single browsable folder (open `index.html` or any card):
-- **Network dashboards (the base)** — 6 self-contained gui4gmns dashboards: Sioux Falls, Chicago Sketch,
-  3 toys, West Jordan. Rebuild with `python renderers/build_dashboards.py` (ARC / Chicago-Regional are
+- **Network dashboards (the base)** — 3 self-contained gui4gmns dashboards with rich cards (real network
+  thumbnail + stats): Sioux Falls, Chicago Sketch, West Jordan (toys excluded — abstract stubs, not
+  gallery-readable). Rebuild with `python renderers/build_dashboards.py` (ARC / Chicago-Regional are
   generate-on-demand, >6 MB single-file). **HTML dashboards are the primary output.**
-- **Corridor state-views** — per corridor, the NeXTA-AI-Gen trio (`<view>_<corridor>_<date>.html`):
+- **Corridor state-views** — per corridor, the gui4gmns trio (`<view>_<corridor>_<date>.html`):
   *calendar* (whole year by day/year), *network* (map by mean speed), *space-time* (milepost×time heatmap).
 - **plot4gmns / MOE figures are *additional*** static images (in `p4g_native_gallery/`, `moe_gallery/`).
 

@@ -1,12 +1,12 @@
-# What NeXTA-X AI-Gen learned from plot4gmns
+# What gui4gmns AI-Gen learned from plot4gmns
 
 [plot4gmns](https://github.com/jiawlu/plot4gmns) (ASU-Trans-AI-Lab) is a clean, pip-installable GMNS
 visualization package: `import plot4gmns as pg; mnet = pg.generate_multi_network_from_csv(dir)` then a
 family of `pg.show_*` verbs (matplotlib + kepler.gl). We studied its API and gallery and adopted the
-capabilities NeXTA-X was missing.
+capabilities gui4gmns was missing.
 
 ## API comparison
-| plot4gmns (`pg.show_*`) | NeXTA-X status |
+| plot4gmns (`pg.show_*`) | gui4gmns status |
 |---|---|
 | `show_gmns_nodes / links / zones / geometries` | ✅ had (network map) |
 | `show_network_by_link_free_speed / lanes / length / types` (attribute filter) | partial — had tier LOD + min-vol; **now + distributions** |
@@ -14,7 +14,7 @@ capabilities NeXTA-X was missing.
 | `show_network_demand_matrix_heatmap` | ❌ → ✅ **ADOPTED** (demand heatmap, top-24 zones) |
 | `show_network_by_demand_OD` (desire lines) | ❌ → ✅ **ADOPTED** (OD desire-line layer) |
 | `show_gmns_poi / location / movements / lanes` | ❌ not yet (see "next") |
-| `generate_visualization_map_using_keplergl` | different path — NeXTA-X embeds its own canvas + OSM/satellite tiles |
+| `generate_visualization_map_using_keplergl` | different path — gui4gmns embeds its own canvas + OSM/satellite tiles |
 
 ## Adopted now (verified on Sioux Falls, 2026-07-04)
 1. **Demand OD desire lines** — `demand.csv` (`o_zone_id,d_zone_id,volume`) aggregated to zone centroids
@@ -29,12 +29,12 @@ All three ride the split-layer architecture: a new lightweight `demand.js` sidec
 now reports `demand: N OD pairs, total V veh (learned from plot4gmns)`.
 
 ## What made plot4gmns worth copying (design lessons)
-- **Verb API discoverability**: one `generate_*` loader + many small `show_*` views. NeXTA-X's
+- **Verb API discoverability**: one `generate_*` loader + many small `show_*` views. gui4gmns's
   equivalent is one `gui4gmns` preprocess + composable layers; we mirror the *catalog* in
   `VIZ_SCHEMA.md` §2 so an AI can pick views the same way a user picks `pg.show_*`.
 - **Distributions are cheap QC gold**: a histogram of capacity/speed instantly exposes coding errors
   (e.g. the ARC 99,999 capacity sentinel we already flag). Now every dashboard carries them.
-- **Demand is a first-class object**: AMS = demand + supply + assignment. NeXTA-X had supply
+- **Demand is a first-class object**: AMS = demand + supply + assignment. gui4gmns had supply
   (network/MOE) and assignment (paths/trajectories) but not **demand** — this closes that gap.
 
 ## Next (plot4gmns features still worth porting)

@@ -1,4 +1,4 @@
-# NeXTA-X AI-Gen — the visualization schema (build your own dashboard engine)
+# gui4gmns AI-Gen — the visualization schema (build your own dashboard engine)
 
 **The master flow:** keep ONE GMNS master package per scenario/run. Never "open files in a viewer" —
 run the generator (or ask an AI to) and get a double-clickable, self-contained `dashboard.html` with the
@@ -48,7 +48,7 @@ To have an AI build a **custom** dashboard (comparison views, teaching cases, ph
 Apache Blvd examples), give it this prompt skeleton:
 
 > You are generating a self-contained HTML dashboard. The data is embedded as `const DATA = {...}`
-> following the schema in NeXTA-X `ai-gen/VIZ_SCHEMA.md` (paste §1). Style: dark theme, KPI cards,
+> following the schema in gui4gmns `ai-gen/VIZ_SCHEMA.md` (paste §1). Style: dark theme, KPI cards,
 > canvas map with green→yellow→red MOE ramp, OSM tiles when `meta.geo`, animation slider, and always
 > render `meta.checks` as a data-audit footer. Build me: [DESCRIBE THE VIEW — e.g. "a side-by-side
 > before/after ODME comparison with a screenline obs-vs-sim bar chart", "a signal-timing teaching case

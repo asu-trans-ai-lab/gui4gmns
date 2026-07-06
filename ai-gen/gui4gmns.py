@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gui4gmns — the NeXTA-X master generator: GMNS run folder in -> self-contained dashboard.html out.
+"""gui4gmns — the master generator: GMNS run folder in -> self-contained dashboard.html out.
 
 The user never opens files in a viewer: this engine PREPROCESSES the package (slim, subsample, quality-
 check) and EMBEDS the data into one double-clickable HTML (works offline; OSM basemap appears when
@@ -251,7 +251,7 @@ def load(folder, max_traj=2000, basemap="osm"):
                            f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/"
                            f"MapServer/tile/{z}/{ty}/{tx}")                    # satellite = z/y/x
                     try:
-                        req = urllib.request.Request(url, headers={"User-Agent": "NeXTA-X/1.0 (research)"})
+                        req = urllib.request.Request(url, headers={"User-Agent": "gui4gmns/1.0 (research)"})
                         open(p, "wb").write(urllib.request.urlopen(req, timeout=15).read())
                     except Exception: continue
                 mime = "png" if p.endswith("png") else "jpeg"
@@ -286,7 +286,7 @@ def load(folder, max_traj=2000, basemap="osm"):
     if not D["bins"]: ck.append("note: no 15-min file -> static MOE only")
     return D
 
-TEMPLATE = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>NeXTA-X dashboard — __NAME__</title>
+TEMPLATE = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>gui4gmns dashboard — __NAME__</title>
 <style>
 body{margin:0;background:#14181d;color:#d8dee6;font:13px system-ui}
 #bar{display:flex;gap:14px;align-items:center;padding:8px 14px;background:#1d232b;border-bottom:1px solid #2c3540;flex-wrap:wrap}
@@ -301,7 +301,7 @@ button,select{background:#28303a;color:#d8dee6;border:1px solid #2c3540;border-r
 .warn{color:#ffb45f}
 input[type=range]{width:260px;accent-color:#4db8ff}
 </style></head><body>
-<div id="bar"><b>NeXTA-X</b><span style="color:#8a94a3">__NAME__ · generated __DATE__</span>
+<div id="bar"><b>gui4gmns</b><span style="color:#8a94a3">__NAME__ · generated __DATE__</span>
 <span id="kpis" style="display:flex;gap:8px"></span>
 <select id="moe"><option value="volume">volume</option><option value="voc">V/C</option><option value="queue">queue</option><option value="td">time-dependent flow</option><option value="speed">t-dep speed (QVDF)</option><option value="bundle">path bundle</option></select>
 <label style="color:#8a94a3"><input type="checkbox" id="trails" checked onchange="draw()"> trails</label>
@@ -587,7 +587,7 @@ def _export_figures(folder):
         print(f"  (figures skipped — {type(e).__name__})")
 
 def generate(folder, out=None, basemap="osm", max_traj=2000, split=True, figures=True):
-    """The NeXTA-X AI-Gen core: GMNS run folder -> self-contained dashboard.html.
+    """The gui4gmns AI-Gen core: GMNS run folder -> self-contained dashboard.html.
     Importable like plot4gmns:  from gui4gmns import generate; generate('datasets/01_sioux_falls').
     figures=True also writes a static PNG figure set to <folder>/figures/. Returns the dashboard path."""
     out = out or os.path.join(folder, "dashboard.html")

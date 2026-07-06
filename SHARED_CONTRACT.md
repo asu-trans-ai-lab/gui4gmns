@@ -1,6 +1,6 @@
-# NeXTA-X Shared Contract — one data model + one presentation language for all branches
+# gui4gmns Shared Contract — one data model + one presentation language for all branches
 
-Every NeXTA-X branch (web-lite, web-gl, qgis-plugin, desktop-qt, python-lab) MUST implement this
+Every gui4gmns branch (web-lite, web-gl, qgis-plugin, desktop-qt, python-lab) MUST implement this
 contract, so users can move between branches without relearning anything and engines never special-case
 a GUI. **This file is the single source of truth; branches conform to it, never the reverse.**
 

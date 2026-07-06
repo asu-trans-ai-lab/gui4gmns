@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NeXTA-X desktop (Qt) — cross-platform desktop viewer for DTALite / TAPLite / ODME / DLSim.
+"""gui4gmns desktop (Qt) — cross-platform desktop viewer for DTALite / TAPLite / ODME / DLSim.
 
 Implements SHARED_CONTRACT.md with classic-NEXTA UI structure (Users Guide terms):
 Layer Control Panel (dock) · MOE Toolbar · Animation View (time slider + play) · Inspector ·
@@ -164,7 +164,7 @@ class Canvas(QWidget):
                     try:
                         req=urllib.request.Request(
                             f"https://tile.openstreetmap.org/{z}/{tx}/{ty}.png",
-                            headers={"User-Agent":"NeXTA-X/1.0 (research; ASU trans+AI lab)"})
+                            headers={"User-Agent":"gui4gmns/1.0 (research; ASU trans+AI lab)"})
                         open(p,"wb").write(urllib.request.urlopen(req,timeout=15).read())
                     except Exception: continue
                 img=QImage(p)
@@ -275,7 +275,7 @@ class Canvas(QWidget):
 # ---------------- main window ----------------
 class Win(QMainWindow):
     def __init__(self):
-        super().__init__(); self.setWindowTitle("NeXTA-X desktop (Qt) — AMS viewer")
+        super().__init__(); self.setWindowTitle("gui4gmns desktop (Qt) — AMS viewer")
         self.M=Model(); self.canvas=Canvas(self.M,self); self.setCentralWidget(self.canvas)
         self.resize(1280,780); self.folder=None; self.proc=None; self.sizes={}
         tb=QToolBar("MOE Toolbar"); self.addToolBar(tb)

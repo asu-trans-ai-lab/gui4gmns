@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """render_contrast.py — COLOR SCIENCE variant test for the 145,971-link ARC Atlanta
-network over real map backgrounds (NeXTA-X).
+network over real map backgrounds (gui4gmns).
 
 Problem: thin green 1px lines vanish over OSM/satellite imagery, and linear
 volume normalization (v = vol/max, max = outlier) makes every link green.
@@ -36,7 +36,7 @@ DATA = os.path.normpath(os.path.join(HERE, "..", "..", "datasets", "04_arc_atlan
 OSM_CACHE = os.path.normpath(os.path.join(HERE, "..", "..", "desktop-qt", "tile_cache"))
 SAT_CACHE = os.path.join(HERE, "sat_cache")
 W, H = 1600, 1000
-UA = {"User-Agent": "NeXTA-X/1.0 (research; ASU trans+AI lab)"}
+UA = {"User-Agent": "gui4gmns/1.0 (research; ASU trans+AI lab)"}
 
 # tuned-style parameters under test
 DIM_PLAIN = 0.40          # 40% dim (blend toward black)
