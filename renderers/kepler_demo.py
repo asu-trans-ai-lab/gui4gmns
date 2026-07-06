@@ -31,7 +31,9 @@ def _metric(D):
     sp = [L["speed"] for L in D["links"] if L["speed"] > 0]
     if sp and max(sp) - min(sp) > 1:
         # read_gmns puts observed speed in L["speed"] when link_performance exists, else free_speed.
-        observed = any(abs(L["speed"] - L["ff"]) > 0.5 for L in D["links"])
+        # "observed" only if a real fraction of links differ from free_speed (not just a few defaults).
+        n_diff = sum(1 for L in D["links"] if abs(L["speed"] - L["ff"]) > 0.5)
+        observed = n_diff > 0.2 * max(1, len(D["links"]))
         return (lambda L: L["speed"]), ("observed speed (mph)" if observed else "free-flow speed (mph)"), False
     return (lambda L: L["ff"]), "free-flow speed (mph)", False
 
@@ -104,6 +106,14 @@ def main():
         epsg = open(os.path.join(src, "crs.txt")).read().strip()
     if epsg and not D["geo"]:
         reproject(D, epsg); print(f"reprojected {epsg} -> lon/lat")
+    # geofence to a city bbox (minlon,minlat,maxlon,maxlat) — clip a subarea out of a regional network
+    if "--bbox" in a:
+        x0, y0, x1, y1 = map(float, a[a.index("--bbox") + 1].split(","))
+        def _inb(L):
+            xs = [p[0] for p in L["poly"]]; ys = [p[1] for p in L["poly"]]
+            return xs and x0 <= sum(xs) / len(xs) <= x1 and y0 <= sum(ys) / len(ys) <= y1
+        D["links"] = [L for L in D["links"] if _inb(L)]
+        print(f"geofenced to bbox -> {len(D['links'])} links")
     # for big networks, keep the top-N most important links (by whatever field varies: volume, else
     # free-flow speed = the freeway/arterial skeleton, else lanes) so the live map loads fast
     if top and len(D["links"]) > top:
