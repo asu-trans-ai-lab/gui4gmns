@@ -38,6 +38,25 @@ python exporters/gmns_to_viz.py datasets/02_chicago_sketch --target all -o out/c
 # -> out/chicago_viz/{kepler,deckgl,qgis,kml}/  each with a README telling you exactly what to open
 ```
 
+## Kepler.gl — live, from real data (not a blank drag-drop)
+
+Two real networks, exported and rendered so you can *see* them before you click:
+
+![Chicago Sketch in Kepler.gl](portal_demo/kepler/preview.png)
+
+- **Chicago Sketch** (2,950 links, colored by volume) —
+  **[▶ open live in Kepler.gl](https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/kepler/map.kepler.json)**
+  (loads directly via `?mapUrl=`, no drag-drop), or [download the files](https://github.com/asu-trans-ai-lab/gui4gmns/tree/main/docs/portal_demo/kepler) to drop in yourself.
+
+![ARC Atlanta regional in Kepler.gl](portal_demo/kepler/arc_preview.png)
+
+- **ARC Atlanta regional** (145,971 links) — the whole metro; the freeway spokes (I-75/85/20 + the I-285
+  perimeter) load red out of downtown. Same one-folder pipeline, just a bigger network.
+
+Make one for any GMNS folder: `python renderers/kepler_demo.py <folder> "<label>" -o out/kepler` (writes a
+`map.kepler.json` for the live link, a `preview.png`, and the drag-drop files). **ITS I-95** renders
+identically — but its INRIX/VDOT data is restricted, so it stays **local only, never published**.
+
 ## Online *and* offline — the point
 
 - **No internet at all?** The gui4gmns dashboard, web-lite, web-gl, desktop-qt, QGIS, Google Earth Pro, and

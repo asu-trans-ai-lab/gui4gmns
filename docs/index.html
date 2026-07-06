@@ -28,6 +28,12 @@
  .cta{border-left-color:#2f9e5e} .cta b{color:#1c6b3f}
  code{background:#eef;padding:1px 6px;border-radius:3px;font-size:13px}
  p.tag{color:#5a6472}
+ h2.see{font-size:17px;margin:24px 0 10px;border-bottom:1px solid #e5e5e5;padding-bottom:6px}
+ .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin:8px 0 18px}
+ .shots figure{margin:0;background:#0e1116;border:1px solid #22272e;border-radius:10px;overflow:hidden}
+ .shots img{width:100%;display:block}
+ .shots figcaption{padding:10px 13px;font-size:12.5px;color:#c3ccd8}
+ .shots a{color:#58a6ff;text-decoration:none;font-weight:600} .shots a:hover{text-decoration:underline}
 </style></head><body>
 <header>
   <h1><span>gui4gmns</span> — AI-guided dashboards for GMNS</h1>
@@ -50,6 +56,22 @@
       <span>Code, datasets, <code>pip install gui4gmns</code></span></a>
     <a class="card" href="DATASETS_COVERAGE.md"><b>Datasets</b>
       <span>What each demo network exercises</span></a>
+  </div>
+
+  <h2 class="see">See it — real networks in real portals</h2>
+  <div class="shots">
+    <figure>
+      <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/kepler/map.kepler.json" target="_blank"><img src="portal_demo/kepler/preview.png" alt="Chicago Sketch network colored by volume"></a>
+      <figcaption><b>Chicago Sketch</b> — 2,950 links, colored by volume.
+        <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/kepler/map.kepler.json" target="_blank">▶ open live in Kepler.gl</a> ·
+        <a href="portal_demo/">deck.gl</a> ·
+        <a href="https://github.com/asu-trans-ai-lab/gui4gmns/tree/main/docs/portal_demo/kepler">download files</a></figcaption>
+    </figure>
+    <figure>
+      <img src="portal_demo/kepler/arc_preview.png" alt="ARC Atlanta regional network, 145,971 links, colored by volume">
+      <figcaption><b>ARC Atlanta regional</b> — 145,971 links, colored by volume. The freeway spokes
+        (I-75/85/20 + the I-285 perimeter) load red out of downtown. Generated the same way, from one folder.</figcaption>
+    </figure>
   </div>
 
   <p class="tag">Offline by default (open the dashboard with no internet); online portals — Kepler.gl,
