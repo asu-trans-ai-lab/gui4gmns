@@ -53,3 +53,16 @@ lane/capacity/free-speed **distributions**, POI types + attraction/production di
 lookalike — so the network-attribute + distribution views are best done by plot4gmns; gui4gmns keeps
 its own renderers only for what plot4gmns doesn't do (space-time contours, bottleneck ranking PeMS/RITIS,
 the offline embedded dashboard, global multi-city montage).
+
+
+## Tight integration (2026-07): native rewrite `renderers/gmns_figures.py`
+The external-call path (`p4g_export_all.py`, keplergl-stubbed) proved the figures but is fragile (heavy
+deps, hardcoded save dir, a `ZoneStyle.edgecolors` crash on demand-OD). So the plot4gmns catalog is now
+**reimplemented natively** in gui4gmns: pure matplotlib + the same WKT reader the rest of the codebase
+uses — **no pandas / Shapely / keplergl**, no hardcoded paths, the demand-OD bug fixed, one automatable
+`export_all()`. It keeps plot4gmns's visual language (violet links, orange/blue zones, yellow POI, blue
+demand desire lines, 'jet' OD heatmap) and, unlike the original, runs on **any** GMNS folder (Berlin
+demo AND our West Jordan/Chicago/etc.) with graceful skips for missing layers. 13 figures:
+links, nodes, zones, POI, by-link-type/free-speed/lanes/length, capacity/free-speed/lanes distributions,
+demand matrix heatmap, demand-OD. Gallery: `docs/p4g_native_gallery/`. `p4g_export_all.py` stays as the
+optional "exact plot4gmns output" path.

@@ -52,3 +52,4 @@ templates/dashboard_cbi.html
 # ---- vendored plot4gmns (external package; pip install plot4gmns, or keep locally) ----
 plot4gmns-main/
 p4g_fig_results/
+docs/p4g_gallery/    # heavy external-call output; use renderers/gmns_figures.py (native, integrated)
