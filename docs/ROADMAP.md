@@ -41,6 +41,13 @@ what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper n
 - [x] **E7 GUI-X exporters** (DONE) — `exporters/gmns_to_viz.py`: GMNS -> kepler.gl (GeoJSON+Trip+arcs+config), deck.gl (TripsLayer page), QGIS (GeoJSON+.qml+PyQGIS loader), Google Earth KML (3D volume bars + time slider). gui4gmns feeds external tools so users add their own layers + get 3D/fly free.
 - [x] **E8 Semi-dynamic trajectory synthesis** (DONE) — `adapters/semidynamic_trajectories.py`: propagate vehicles along paths using time-dependent LINK travel time (speed, or BPR/queue when only flow given) -> animatable `agent_trajectory.csv`, even with no micro-sim. Verified on Chicago Sketch (2,000 vehicles from path_flow + TD flow/queue); `--window HH:MM-HH:MM` + peaked departure profile give a realistic AM build-up (14→168→79 concurrent).
 
+
+- [ ] **E9 Colorblind-safe + perceptual colormaps** (TRB V1/V2/V7) — cividis/viridis default; red-green opt-in; redundant width encoding; dashboard colorbar + toggle.
+- [ ] **E10 Publication furniture** (TRB V3/V5) — provenance stamp (scenario/period/version/source), scale bar, north arrow, split width/color legends on static PNGs.
+- [ ] **E11 Corridor auto-ranking** (TRB V8) — rank busiest/most-congested sorted-link chains; space-time picker.
+- [x] **E12 Static MOE PNG renderer** (DONE) — `renderers/moe_static.py`: traffic-speed bandwidth + space-time SPEED & DENSITY contours (matplotlib, report-ready), gnuplot replacement. Gallery in `docs/moe_gallery/`.
+- [x] **E13 Auto sim2trajectory in the generator** (DONE) — dataset with paths + TD performance but no trajectories -> dashboard auto-synthesizes + animates 1,500 vehicles (peaked window). One step, semi-dynamic -> moving picture.
+
 ## Phase D — coverage (grow the catalog)
 - [ ] **D1 Caltrans PeMS** highway detector template (`highway_sensor_timeseries`) — the corridor-detector counterpart to the trajectory-rich ITS I-95 hub.
 - [ ] **D2 NGSIM I-80/US-101** trajectory template (`highway_vehicle_trajectory`) — lane-change / car-following / FD sampling.

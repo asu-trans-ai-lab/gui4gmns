@@ -57,7 +57,7 @@ def load(folder, max_traj=2000, basemap="osm"):
     if perf:
         any_r = next(iter(perf.values()))
         volcol = "cum_departure" if "cum_departure" in any_r else "volume"
-    miss_geom = 0
+    miss_geom = 0; lmeta = {}
     for r in l:
         lid = int(fnum(r["link_id"])); poly = None
         g = r.get("geometry") or ""
@@ -71,9 +71,11 @@ def load(folder, max_traj=2000, basemap="osm"):
         p = perf.get(str(lid)) or perf.get(r["link_id"]) or {}
         vol = fnum(p.get(volcol)) if p else 0.0
         q = fnum(p.get("max_queue_exb") or p.get("queue") or 0)
-        cap = fnum(r.get("capacity") or 1800) * max(1, fnum(r.get("lanes") or 1))
-        D["links"].append([lid, poly, round(vol, 1), round(q, 1), round(cap, 0),
-                           round(fnum(r.get("vdf_length_mi") or 0) or fnum(r.get("length") or 1), 3)])
+        lanes = max(1, fnum(r.get("lanes") or 1))
+        cap = fnum(r.get("capacity") or 1800) * lanes
+        length = round(fnum(r.get("vdf_length_mi") or 0) or fnum(r.get("length") or 1), 3)
+        D["links"].append([lid, poly, round(vol, 1), round(q, 1), round(cap, 0), length])
+        lmeta[lid] = (length, cap, lanes, fnum(r.get("free_speed") or 30) or 30)   # for auto-synth
     if miss_geom: ck.append(f"WARN {miss_geom} links without resolvable geometry (skipped)")
     # geographic?
     xs = [pt[0] for L in D["links"] for pt in L[1]]; ys = [pt[1] for L in D["links"] for pt in L[1]]
@@ -101,10 +103,46 @@ def load(folder, max_traj=2000, basemap="osm"):
         for ev in D["trajs"].values(): ev.sort()
         ck.append(f"trajectories subsampled to {len(D['trajs'])} agents (--max-traj)")
     pf = rd("path_flow.csv")
+    all_paths = []
     if pf:
-        for r in pf[:60]:
+        for r in pf:
             ids = [int(x) for x in (r.get("link_ids") or "").split(";") if x.strip().isdigit()]
-            if ids: D["paths"].append([fnum(r.get("base_volume") or 1), ids])
+            if ids:
+                pv = fnum(r.get("base_volume") or 1) * fnum(r.get("route_share") or 1)
+                all_paths.append((pv, ids))
+                if len(D["paths"]) < 60: D["paths"].append([fnum(r.get("base_volume") or 1), ids])
+    # ---- auto sim2trajectory: no trajectories but paths + time-dependent link performance? synthesize ----
+    if not D["trajs"] and all_paths and D["td"] and D["bins"]:
+        bmins = [int(b[:2]) * 60 + int(b[3:5]) for b in D["bins"]]
+        def tt_at(lid, t):
+            m = lmeta.get(lid)
+            if not m: return 1.0
+            length, cap, lanes, fs = m; fftt = length / fs * 60 if fs else 1.0
+            series = D["td"].get(str(lid)) or D["td"].get(lid)
+            if not series: return max(0.05, fftt)
+            bi = 0
+            for i, bm in enumerate(bmins):
+                if bm <= t: bi = i
+            v = series.get(bi) or series.get(str(bi))
+            if not v: return max(0.05, fftt)
+            if len(v) >= 4 and v[2] > 0: return max(0.05, length / v[2] * 60)   # speed
+            vc = v[0] * 4 / max(cap, 1)                                          # inflow -> BPR
+            return max(0.05, fftt * (1 + 0.15 * vc ** 4) + (v[1] / (cap / 60) if cap else 0))
+        t0, t1 = min(bmins), max(bmins) + 15
+        NV = min(max_traj, 1500); tot = sum(v for v, _ in all_paths) or 1; aid = 0
+        shape = lambda f: (f * 0.5) ** 0.5 if f <= 0.5 else 1 - ((1 - f) * 0.5) ** 0.5   # peaked
+        for vol, ids in all_paths:
+            k = max(1, round(NV * vol / tot))
+            for j in range(k):
+                if aid >= NV: break
+                t = t0 + shape((j + 0.5) / k) * (t1 - t0) + ((aid * 7) % 11 - 5) * 0.3
+                ev = []
+                for lid in ids:
+                    tt = tt_at(lid, t)
+                    ev.append([round(t, 2), lid, "ENB"]); ev.append([round(t + tt, 2), lid, "EXB"]); t += tt
+                if ev: D["trajs"][aid] = ev; aid += 1
+            if aid >= NV: break
+        if aid: ck.append(f"auto-synthesized {aid} vehicles from paths + time-dependent link performance (semi-dynamic)")
     rj = os.path.join(folder, "run_summary.json")
     if os.path.exists(rj): D["run"] = json.load(open(rj))
     # ---- corridor speed profile: INRIX-observed vs QVDF-model space-time contour + validation ----
@@ -265,7 +303,9 @@ input[type=range]{width:260px;accent-color:#4db8ff}
 </style></head><body>
 <div id="bar"><b>NeXTA-X</b><span style="color:#8a94a3">__NAME__ · generated __DATE__</span>
 <span id="kpis" style="display:flex;gap:8px"></span>
-<select id="moe"><option value="volume">volume</option><option value="voc">V/C</option><option value="queue">queue</option><option value="td">time-dependent flow</option><option value="speed">t-dep speed (QVDF)</option></select>
+<select id="moe"><option value="volume">volume</option><option value="voc">V/C</option><option value="queue">queue</option><option value="td">time-dependent flow</option><option value="speed">t-dep speed (QVDF)</option><option value="bundle">path bundle</option></select>
+<label style="color:#8a94a3"><input type="checkbox" id="trails" checked onchange="draw()"> trails</label>
+<label style="color:#8a94a3"><input type="checkbox" id="tilt3d" onchange="draw()"> 3D</label>
 <button id="play" onclick="togglePlay()">▶ Play</button><input type="range" id="ts" oninput="clock=+this.value">
 <label style="color:#8a94a3"><input type="checkbox" id="base" checked onchange="draw()"> basemap</label>
 <label style="color:#8a94a3"><input type="checkbox" id="checks"> checks</label>
@@ -315,7 +355,13 @@ if(M.geo){M.links.forEach(L=>L[1]=L[1].map(p=>[p[0],my(p[1])]));
 M.links.sort((a,b)=>a[2]-b[2]);                       // hot links stroke last (on top)
 const VS=DATA.meta.vstats||{p25:1,p99:1000},l1p=Math.log1p;
 const vscale=v=>Math.max(0,Math.min(1,(l1p(v)-l1p(VS.p25))/((l1p(VS.p99)-l1p(VS.p25))||1)));
+// E1 — flow-bundle: sum path volume traversing each link -> widening bands (Visum-style)
+const BUNDLE={}; let maxBundle=1;
+(DATA.paths||[]).forEach(([vol,ids])=>ids.forEach(id=>{BUNDLE[id]=(BUNDLE[id]||0)+vol;}));
+for(const k in BUNDLE) maxBundle=Math.max(maxBundle,BUNDLE[k]);
 function styleOf(L,mode,b){const t=L[6]||3;
+ if(mode==='bundle'){const bv=BUNDLE[L[0]]||0;if(bv<=0)return[-1,t===1?1.2:0.5];
+  const v=Math.sqrt(bv/maxBundle);return[Math.min(1,0.15+0.85*v),1+9*v];}   // width & warmth ∝ bundled flow
  if(mode==='speed'){const d=(M.td[L[0]]||{})[b];
   if(!d||d.length<4||!d[3])return[-1,t===1?1.4:0.6];             // no speed data -> dim gray
   const r=d[2]/d[3];                                             // speed / free-flow
@@ -347,7 +393,10 @@ const ramp=t=>{t=Math.max(0,Math.min(1,t));const r=t<.5?510*t:255,g=t<.5?255:255
 function binOf(){let b=0;M.bins.forEach((t,i)=>{if(+t.slice(0,2)*60+ +t.slice(3,5)<=clock)b=i;});return b;}
 function draw(){cv.width=cv.clientWidth;cv.height=cv.clientHeight;if(!bbox)return;
  ctx.fillStyle='#101418';ctx.fillRect(0,0,cv.width,cv.height);const T=vt();
- const W=(x,y)=>[x*T.s+T.tx,-y*T.s+T.ty];
+ // W(): top-down, or CityPhi-style oblique 3D when 'tilt3d' — same transform for tiles+network so they stay aligned
+ const t3=document.getElementById('tilt3d').checked, HZ=cv.height*0.30;
+ const W=(x,y,lift)=>{let sx=x*T.s+T.tx,sy=-y*T.s+T.ty;
+  if(t3){sy=HZ+(sy-HZ)*0.55;sy-=(lift||0)*4;}else sy-=(lift||0);return[sx,sy];};
  if(document.getElementById('base').checked){
   const set=(zoom>=2.2&&satTiles.length)?satTiles:tiles;   // OSM network-wide -> satellite in detail
   try{ctx.filter='saturate(40%)';}catch(e){}
@@ -372,12 +421,21 @@ function draw(){cv.width=cv.clientWidth;cv.height=cv.clientHeight;if(!bbox)retur
    ctx.strokeStyle=`rgba(255,${(180-120*v)|0},${(80-60*v)|0},${0.25+0.5*v})`;ctx.lineWidth=0.5+3.5*v;
    ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();});}
  const lk={};M.links.forEach(L=>lk[L[0]]=L);
+ // world position of an agent's event list at time t (or null)
+ const posAt=(ev,t)=>{if(t<ev[0][0]||t>ev[ev.length-1][0])return null;
+  let i=0;while(i+1<ev.length&&ev[i+1][0]<=t)i++;const L=lk[ev[i][1]];if(!L)return null;let f=1;
+  if(ev[i][2]==='ENB'&&i+1<ev.length&&ev[i+1][1]===ev[i][1]&&ev[i+1][0]>ev[i][0])f=(t-ev[i][0])/(ev[i+1][0]-ev[i][0]);
+  const A=L[1][0],B=L[1][L[1].length-1];return[A[0]+(B[0]-A[0])*f,A[1]+(B[1]-A[1])*f,ev[i][2]==='ENB'];};
+ const trails=document.getElementById('trails').checked, TN=6, DT=1.3;   // E3: fading comet trails
+ ctx.lineCap='round';
  for(const a in M.trajs){const ev=M.trajs[a];if(!ev.length||clock<ev[0][0]||clock>ev[ev.length-1][0])continue;
-  let i=0;while(i+1<ev.length&&ev[i+1][0]<=clock)i++;
-  const L=lk[ev[i][1]];if(!L)continue;let f=1,c='#ff5f5f';
-  if(ev[i][2]==='ENB'&&i+1<ev.length&&ev[i+1][1]===ev[i][1]&&ev[i+1][0]>ev[i][0]){f=(clock-ev[i][0])/(ev[i+1][0]-ev[i][0]);c='#57d977';}
-  const A=L[1][0],B=L[1][L[1].length-1],s=W(A[0]+(B[0]-A[0])*f,A[1]+(B[1]-A[1])*f);
-  ctx.fillStyle=c;ctx.beginPath();ctx.arc(s[0],s[1],3,0,6.29);ctx.fill();}
+  const head=posAt(ev,clock);if(!head)continue;const moving=head[2];
+  if(trails){for(let k=0;k<TN;k++){const p0=posAt(ev,clock-k*DT),p1=posAt(ev,clock-(k+1)*DT);if(!p0||!p1)break;
+    const s0=W(p0[0],p0[1],5),s1=W(p1[0],p1[1],5),al=(1-k/TN)*0.85;
+    ctx.strokeStyle=moving?`rgba(87,217,140,${al})`:`rgba(255,120,95,${al})`;ctx.lineWidth=(moving?2.4:2)*(1-k/TN*0.6);
+    ctx.beginPath();ctx.moveTo(s0[0],s0[1]);ctx.lineTo(s1[0],s1[1]);ctx.stroke();}}
+  const s=W(head[0],head[1],5);ctx.fillStyle=moving?'#7dffb0':'#ff8b6b';
+  ctx.beginPath();ctx.arc(s[0],s[1],trails?2.6:3,0,6.29);ctx.fill();}
  document.getElementById('clock').textContent=`${String(Math.floor(clock/60)%24).padStart(2,'0')}:${String(Math.floor(clock%60)).padStart(2,'0')}`;
  if(playing){clock+=0.35;if(clock>+document.getElementById('ts').max)clock=+document.getElementById('ts').min;document.getElementById('ts').value=clock;}
  requestAnimationFrame(draw);}
