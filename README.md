@@ -1,5 +1,10 @@
 # gui4gmns
 
+[![▶ live demo](https://img.shields.io/badge/%E2%96%B6_live_demo-online-2563eb)](https://asu-trans-ai-lab.github.io/gui4gmns/)
+[![gallery](https://img.shields.io/badge/gallery-open-2f9e5e)](https://asu-trans-ai-lab.github.io/gui4gmns/gallery.html)
+[![license](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.9%2B-3776ab)](pyproject.toml)
+
 *(in the `*4gmns` family alongside plot4gmns / path4gmns / osm2gmns)*
 
 **AI-guided dashboards for GMNS: DTALite · TAPLite · Dynamic ODME · DLSim.**
