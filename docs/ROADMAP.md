@@ -38,6 +38,7 @@ what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper n
 - [ ] **E4 MOE small-multiples** (Core 3) — speed | volume | queue space-time contours side-by-side for a corridor.
 - [ ] **E5 `dashboard.yaml` dashboards-as-code** (SimWrapper model) — declare panels/layers in YAML; ties directly to the catalog engine (B2). The manifest *is* the dashboard spec.
 - [ ] **E6 Optional deck.gl GPU backend** — keep zero-dep canvas default; allow a deck.gl path for regional-scale animation (raw-WebGL2 already covers most).
+- [x] **E7 GUI-X exporters** (DONE) — `exporters/gmns_to_viz.py`: GMNS -> kepler.gl (GeoJSON+Trip+arcs+config), deck.gl (TripsLayer page), QGIS (GeoJSON+.qml+PyQGIS loader), Google Earth KML (3D volume bars + time slider). gui4gmns feeds external tools so users add their own layers + get 3D/fly free.
 
 ## Phase D — coverage (grow the catalog)
 - [ ] **D1 Caltrans PeMS** highway detector template (`highway_sensor_timeseries`) — the corridor-detector counterpart to the trajectory-rich ITS I-95 hub.
