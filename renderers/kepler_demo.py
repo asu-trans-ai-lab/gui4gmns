@@ -61,33 +61,34 @@ def preview_png(D, out_png, title):
     fig.savefig(out_png, dpi=100, facecolor="#0e1116", bbox_inches="tight"); plt.close(fig)
 
 def kepler_map(D, label, zoom):
-    feats = [{"type": "Feature",
-              "properties": {"volume": round(L["vol"], 1), "speed": round(L["speed"], 1)},
-              "geometry": {"type": "LineString", "coordinates": [[round(x, 6), round(y, 6)] for x, y in L["poly"]]}}
-             for L in D["links"] if len(L["poly"]) >= 2]
-    xs = [c[0] for f in feats for c in f["geometry"]["coordinates"]]
-    ys = [c[1] for f in feats for c in f["geometry"]["coordinates"]]
-    lon, lat = sum(xs) / len(xs), sum(ys) / len(ys)
-    rows = [[f, f["properties"]["volume"], f["properties"]["speed"]] for f in feats]
-    fields = [{"name": "_geojson", "type": "geojson", "format": "", "analyzerType": "GEOMETRY"},
-              {"name": "volume", "type": "real", "format": "", "analyzerType": "FLOAT"},
-              {"name": "speed", "type": "real", "format": "", "analyzerType": "FLOAT"}]
+    # A Kepler LINE layer (from->to segments) — numeric lat/lng columns render reliably, unlike a
+    # hand-built geojson layer (which Kepler silently drops to a blank Point layer).
+    val, mlabel, hot_high = _metric(D)
+    xs, ys, rows = [], [], []
+    for L in D["links"]:
+        p = L["poly"]
+        if len(p) < 2:
+            continue
+        v = round(val(L) or 0, 2)
+        for i in range(len(p) - 1):
+            (x0, y0), (x1, y1) = p[i], p[i + 1]
+            rows.append([round(x0, 5), round(y0, 5), round(x1, 5), round(y1, 5), v])
+            xs += [x0, x1]; ys += [y0, y1]
+    lon, lat = (sum(xs) / len(xs), sum(ys) / len(ys)) if xs else (0, 0)
+    fields = [{"name": n, "type": "real", "format": "", "analyzerType": "FLOAT"}
+              for n in ("lng0", "lat0", "lng1", "lat1", "value")]
     ds = {"version": "v1", "data": {"id": "network", "label": label, "color": [30, 150, 190],
                                     "allData": rows, "fields": fields}}
-    # color by the field that varies (volume if present, else speed); low->high = green->red for volume
-    color_field = "volume" if any(r[1] for r in rows) else "speed"
-    ramp = ["#2f9e5e", "#f5ce34", "#e6541e", "#a60d0a"] if color_field == "volume" else ["#a60d0a", "#e6541e", "#f5ce34", "#2f9e5e"]
-    layer = {"id": "net", "type": "geojson",
-             "config": {"dataId": "network", "label": label, "columns": {"geojson": "_geojson"},
+    ramp = ["#2f9e5e", "#f5ce34", "#e6541e", "#a60d0a"] if hot_high else ["#a60d0a", "#e6541e", "#f5ce34", "#2f9e5e"]
+    layer = {"id": "net", "type": "line",
+             "config": {"dataId": "network", "label": mlabel,
+                        "columns": {"lat0": "lat0", "lng0": "lng0", "lat1": "lat1", "lng1": "lng1"},
                         "isVisible": True,
-                        "visConfig": {"opacity": 0.85, "thickness": 1.2, "stroked": True,
-                                      "colorRange": {"name": color_field, "type": "sequential", "category": "custom",
-                                                     "colors": ramp}}},
-             "visualChannels": {"colorField": {"name": color_field, "type": "real"}, "colorScale": "quantile"}}
+                        "visConfig": {"opacity": 0.85, "thickness": 2.0, "colorRange":
+                                      {"name": "gui4gmns", "type": "sequential", "category": "custom", "colors": ramp}}},
+             "visualChannels": {"colorField": {"name": "value", "type": "real"}, "colorScale": "quantile"}}
     cfg = {"version": "v1", "config": {
-        "visState": {"layers": [layer], "filters": [],
-                     "interactionConfig": {"tooltip": {"enabled": True,
-                        "fieldsToShow": {"network": [{"name": "volume"}, {"name": "speed"}]}}}},
+        "visState": {"layers": [layer], "filters": [], "interactionConfig": {}},
         "mapState": {"latitude": lat, "longitude": lon, "zoom": zoom, "pitch": 0, "bearing": 0},
         "mapStyle": {"styleType": "dark"}}}
     return {"datasets": [ds], "config": cfg, "info": {"app": "kepler.gl", "source": "gui4gmns"}}
