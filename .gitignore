@@ -1,6 +1,7 @@
 # ---- PRIVACY: agency data must NEVER be committed (NVTA / VDOT / INRIX / CBI / QVDF-corridor) ----
 *PRIVATE*
 *private*
+!validate_no_private_data.py
 **/06_nvta_am_PRIVATE/
 **/*nvta*
 **/*NVTA*
