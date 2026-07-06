@@ -25,6 +25,17 @@ def fnum(v):
 def hhmm2min(s):
     m = re.match(r"(\d+):(\d+)", s or ""); return int(m[1]) * 60 + int(m[2]) if m else 0
 
+# colorblind-safe by default (TRB AED30 review V1/V2): perceptually-uniform contours + blue->red bands
+# (blue/red is distinguishable under red-green color-vision deficiency; green/red is not).
+STYLE = {"cb": True}
+def speed_color(ratio):        # ratio = speed/free-flow, 0..1
+    r = max(0.0, min(1.0, ratio))
+    if STYLE["cb"]:            # RdYlBu: fast=blue, slow=red
+        c = plt.cm.RdYlBu(r); return (c[0], c[1], c[2])
+    return (1 - r if r < 1 else 0, r, 0.15)   # classic green->red
+def cmap_speed(): return "cividis" if STYLE["cb"] else "RdYlGn"
+def cmap_density(): return "cividis_r" if STYLE["cb"] else "RdYlGn_r"
+
 def read(d):
     L = {}
     for r in csv.DictReader(open(os.path.join(d, "link.csv"), encoding="utf-8-sig")):
@@ -43,8 +54,13 @@ def read(d):
         for r in csv.DictReader(open(pf, encoding="utf-8-sig")):
             lid = str(int(fnum(r["link_id"]))); x = L.get(lid)
             if not x: continue
-            x["vol"] = fnum(r.get("volume") or r.get("cum_departure"))
-            if r.get("speed"): x["spd"] = fnum(r["speed"])
+            # standard GMNS, or DTALite schema (vehicle_volume / speed_mph / travel_time)
+            x["vol"] = fnum(r.get("volume") or r.get("cum_departure") or r.get("vehicle_volume"))
+            sp = fnum(r.get("speed") or r.get("speed_mph") or 0)
+            if sp <= 0:
+                tt = fnum(r.get("travel_time") or r.get("avg_travel_time_in_min") or 0)
+                if tt > 0 and x["len"] > 0: sp = x["len"] / (tt / 60)
+            if sp > 0: x["spd"] = sp
     # TD table
     TD = {}; bins = []
     tf = os.path.join(d, "link_performance_15min.csv")
@@ -76,17 +92,16 @@ def bandwidth_png(d, L, out):
     for x in links:
         p = x["poly"]; segs.append(p)
         ws.append(0.3 + 4 * x["vol"] / mv)
-        r = max(0, min(1, x["spd"] / (x["fs"] or 60)))          # speed ratio
-        cs.append((1 - r if r < 1 else 0, r, 0.15))             # red slow -> green fast
+        cs.append(speed_color(x["spd"] / (x["fs"] or 60)))       # colorblind-safe speed color
     fig, ax = plt.subplots(figsize=(11, 9), dpi=130)
     ax.add_collection(LineCollection(segs, linewidths=ws, colors=cs))
     ax.autoscale(); ax.set_aspect("equal"); ax.set_facecolor("#0e1116")
     ax.set_title("Traffic Speed — bandwidth = link volume/hr, color = speed / free-flow", color="#333")
     ax.set_xticks([]); ax.set_yticks([])
     import matplotlib.lines as ml
-    leg = [ml.Line2D([], [], color=(0, 1, .15), lw=3, label="free-flow (100%)"),
-           ml.Line2D([], [], color=(.5, .5, .15), lw=3, label="~50% of free-flow"),
-           ml.Line2D([], [], color=(1, 0, .15), lw=3, label="congested (<33%)")]
+    leg = [ml.Line2D([], [], color=speed_color(1.0), lw=3, label="free-flow (100%)"),
+           ml.Line2D([], [], color=speed_color(0.5), lw=3, label="~50% of free-flow"),
+           ml.Line2D([], [], color=speed_color(0.2), lw=3, label="congested (<33%)")]
     ax.legend(handles=leg, loc="upper left", fontsize=8, framealpha=.9)
     p = os.path.join(out, "moe_traffic_speed_bandwidth.png"); fig.savefig(p, bbox_inches="tight"); plt.close(fig)
     print("  ", p)
@@ -161,8 +176,8 @@ def spacetime_png(d, L, TD, bins, out, links=None):
             SP[i, b] = spd; KD[i, b] = flow / spd if spd > 0 else np.nan
     t = [b / 60 for b in bins]
     for arr, ttl, cmap, unit, fname in [
-        (SP, "Space-time SPEED contour", "RdYlGn", "mph", "moe_spacetime_speed.png"),
-        (KD, "Space-time DENSITY contour", "RdYlGn_r", "veh/mi/lane", "moe_spacetime_density.png")]:
+        (SP, "Space-time SPEED contour", cmap_speed(), "mph", "moe_spacetime_speed.png"),
+        (KD, "Space-time DENSITY contour", cmap_density(), "veh/mi/lane", "moe_spacetime_density.png")]:
         fig, ax = plt.subplots(figsize=(9, 6), dpi=130)
         m = ax.pcolormesh(t, dist, arr, cmap=cmap, shading="nearest",
                           vmin=0, vmax=(70 if unit == "mph" else np.nanpercentile(arr, 95) or 1))
@@ -172,6 +187,30 @@ def spacetime_png(d, L, TD, bins, out, links=None):
         p = os.path.join(out, fname); fig.savefig(p, bbox_inches="tight"); plt.close(fig)
         print("  ", p)
 
+def spacetime_from_csv(path, out):
+    """space-time SPEED contour straight from a corridor_speed.csv (per (seq,time) speed)."""
+    rows = list(csv.DictReader(open(path, encoding="utf-8-sig")))
+    if not rows: print("corridor_speed.csv empty"); return
+    name = (rows[0].get("corridor") or "corridor")
+    spcol = "speed_qvdf" if "speed_qvdf" in rows[0] else ("speed" if "speed" in rows[0] else "speed_inrix")
+    seqs = sorted({int(fnum(r["seq"])) for r in rows})
+    times = sorted({r["time"] for r in rows}, key=hhmm2min)
+    dist = {int(fnum(r["seq"])): fnum(r.get("cum_dist_mi") or 0) for r in rows}
+    cell = {(int(fnum(r["seq"])), r["time"]): fnum(r[spcol]) for r in rows}
+    arr = np.full((len(seqs), len(times)), np.nan)
+    for i, s in enumerate(seqs):
+        for j, t in enumerate(times):
+            v = cell.get((s, t))
+            if v and v > 0: arr[i, j] = v
+    y = [dist[s] for s in seqs]; x = [hhmm2min(t) / 60 for t in times]
+    fig, ax = plt.subplots(figsize=(9, 6), dpi=130)
+    m = ax.pcolormesh(x, y, arr, cmap=cmap_speed(), shading="nearest", vmin=0, vmax=max(70, np.nanmax(arr)))
+    ax.set_xlabel("time of day (h)"); ax.set_ylabel("distance along corridor (mi)")
+    ax.set_title(f"Space-time SPEED contour — {name} ({spcol})")
+    fig.colorbar(m, ax=ax, label="mph")
+    p = os.path.join(out, f"moe_spacetime_speed_{re.sub(r'[^A-Za-z0-9]+','_',name)}.png")
+    fig.savefig(p, bbox_inches="tight"); plt.close(fig); print("  ", p)
+
 def main():
     a = sys.argv[1:]
     if not a: sys.exit(__doc__)
@@ -180,9 +219,15 @@ def main():
     moe = a[a.index("--moe") + 1] if "--moe" in a else "all"
     links = a[a.index("--links") + 1].split(";") if "--links" in a else None
     cname = a[a.index("--corridor-name") + 1] if "--corridor-name" in a else None
+    STYLE["cb"] = (a[a.index("--cmap") + 1] if "--cmap" in a else "cb") != "classic"
     os.makedirs(out, exist_ok=True)
+    # ready-made corridor space-time from corridor_speed.csv (seq, cum_dist_mi, time, speed[_qvdf/_inrix])
+    cs_csv = os.path.join(src, "corridor_speed.csv")
+    if os.path.exists(cs_csv) and moe in ("spacetime", "all", "corridor"):
+        spacetime_from_csv(cs_csv, out)
+        if moe != "all": return
     L, TD, bins = read(src)
-    print(f"read {len(L)} links, {len(TD)} with TD, {len(bins)} bins -> {out}/")
+    print(f"read {len(L)} links, {len(TD)} with TD, {len(bins)} bins -> {out}/ (cmap={'colorblind' if STYLE['cb'] else 'classic'})")
     if moe in ("bandwidth", "all"): bandwidth_png(src, L, out)
     if cname:
         seq = corridor_by_name(L, cname)

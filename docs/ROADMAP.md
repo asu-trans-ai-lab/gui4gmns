@@ -42,7 +42,7 @@ what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper n
 - [x] **E8 Semi-dynamic trajectory synthesis** (DONE) — `adapters/semidynamic_trajectories.py`: propagate vehicles along paths using time-dependent LINK travel time (speed, or BPR/queue when only flow given) -> animatable `agent_trajectory.csv`, even with no micro-sim. Verified on Chicago Sketch (2,000 vehicles from path_flow + TD flow/queue); `--window HH:MM-HH:MM` + peaked departure profile give a realistic AM build-up (14→168→79 concurrent).
 
 
-- [ ] **E9 Colorblind-safe + perceptual colormaps** (TRB V1/V2/V7) — cividis/viridis default; red-green opt-in; redundant width encoding; dashboard colorbar + toggle.
+- [x] **E9 Colorblind-safe + perceptual colormaps** (DONE) — MOE PNGs default to blue->red bands (RdYlBu) + cividis contours (no green/red); `--cmap classic` opt-out. Verified: ARC/Tucson bandwidth, NVTA I-395 space-time contour.
 - [ ] **E10 Publication furniture** (TRB V3/V5) — provenance stamp (scenario/period/version/source), scale bar, north arrow, split width/color legends on static PNGs.
 - [ ] **E11 Corridor auto-ranking** (TRB V8) — rank busiest/most-congested sorted-link chains; space-time picker.
 - [x] **E12 Static MOE PNG renderer** (DONE) — `renderers/moe_static.py`: traffic-speed bandwidth + space-time SPEED & DENSITY contours (matplotlib, report-ready), gnuplot replacement. Gallery in `docs/moe_gallery/`.
@@ -52,6 +52,7 @@ what gui4gmns already has, keeping the self-contained-offline edge (SimWrapper n
 - [ ] **D1 Caltrans PeMS** highway detector template (`highway_sensor_timeseries`) — the corridor-detector counterpart to the trajectory-rich ITS I-95 hub.
 - [ ] **D2 NGSIM I-80/US-101** trajectory template (`highway_vehicle_trajectory`) — lane-change / car-following / FD sampling.
 - [ ] **D3 GTFS multimodal** real dataset behind `gmns_dashboard_04`.
+- [ ] **D5 AZ subarea tool** — Maricopa/MAG (or Tucson) subarea cut + corridor MOE (I-10) automation; and NVTA-style subarea corridor extraction as a reusable step.
 - [ ] **D4 ITS DataHub geofence query** template (`its_open_data_geofence_query`).
 
 ## What's already done (v0.1)
