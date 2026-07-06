@@ -35,7 +35,9 @@ def read(d):
         fs = fnum(r.get("free_speed") or 30) or 30
         cap = fnum(r.get("capacity") or 1800); lanes = max(1, fnum(r.get("lanes") or 1))
         L[lid] = {"poly": poly, "len": length, "fs": fs, "cap": cap, "lanes": lanes,
-                  "fftt": length / fs * 60 if fs else 1, "vol": 0.0, "spd": fs}
+                  "fftt": length / fs * 60 if fs else 1, "vol": 0.0, "spd": fs,
+                  "name": (r.get("name") or "").strip(),
+                  "fn": int(fnum(r["from_node_id"])), "tn": int(fnum(r["to_node_id"]))}
     pf = os.path.join(d, "link_performance.csv")
     if os.path.exists(pf):
         for r in csv.DictReader(open(pf, encoding="utf-8-sig")):
@@ -89,6 +91,49 @@ def bandwidth_png(d, L, out):
     p = os.path.join(out, "moe_traffic_speed_bandwidth.png"); fig.savefig(p, bbox_inches="tight"); plt.close(fig)
     print("  ", p)
 
+def corridor_by_name(L, name):
+    """links whose name contains all tokens (e.g. 'I-10 WB'), chained into the longest connected
+    sequence by node connectivity (from_node -> to_node) — a real corridor, not a spatial jumble."""
+    toks = name.lower().split()
+    sel = {lid: x for lid, x in L.items() if x["poly"] and all(t in x["name"].lower() for t in toks)}
+    if len(sel) < 3: return None
+    out_of = {}                                   # node -> link starting there
+    for lid, x in sel.items(): out_of.setdefault(x["fn"], []).append(lid)
+    starts = [x["fn"] for x in sel.values()]
+    incoming = {x["tn"] for x in sel.values()}
+    # greedy longest chain from each source node (a from_node that is nobody's to_node)
+    best = []
+    for lid0, x0 in sel.items():
+        if x0["fn"] in incoming: continue         # not a source; skip (walk starts at sources)
+        chain, node, seen = [lid0], x0["tn"], {lid0}
+        while node in out_of:
+            nxt = next((l for l in out_of[node] if l not in seen), None)
+            if not nxt: break
+            chain.append(nxt); seen.add(nxt); node = sel[nxt]["tn"]
+        if len(chain) > len(best): best = chain
+    if len(best) < 3:                             # no clean source -> fall back to a spatial sort
+        mids = [((x["poly"][0][0] + x["poly"][-1][0]) / 2, (x["poly"][0][1] + x["poly"][-1][1]) / 2) for x in sel.values()]
+        ids = list(sel); xs = [m[0] for m in mids]; ys = [m[1] for m in mids]
+        axis = 0 if (max(xs) - min(xs)) >= (max(ys) - min(ys)) else 1
+        best = [ids[i] for i in sorted(range(len(ids)), key=lambda i: mids[i][axis])]
+    return best
+
+def corridor_profile_png(L, seq, out, tag):
+    """static speed & volume vs distance along a corridor (the space profile; space-TIME needs TD)."""
+    dist = [0.0]
+    for s in seq[:-1]: dist.append(dist[-1] + L[s]["len"])
+    spd = [L[s]["spd"] for s in seq]; vol = [L[s]["vol"] for s in seq]
+    fig, ax1 = plt.subplots(figsize=(11, 4.5), dpi=130)
+    ax1.plot(dist, spd, "-", color="#c62828", lw=1.5, label="speed")
+    ax1.fill_between(dist, spd, color="#c62828", alpha=0.08)
+    ax1.set_xlabel("distance along corridor (mi)"); ax1.set_ylabel("speed (mph)", color="#c62828")
+    ax1.set_ylim(0, max(spd + [1]) * 1.15)
+    ax2 = ax1.twinx(); ax2.plot(dist, vol, "-", color="#1565c0", lw=1, alpha=0.7, label="volume")
+    ax2.set_ylabel("volume (veh)", color="#1565c0")
+    ax1.set_title(f"Corridor profile — {tag}: {len(seq)} links, {dist[-1]+L[seq[-1]]['len']:.1f} mi (static)")
+    p = os.path.join(out, f"moe_corridor_profile_{re.sub(r'[^A-Za-z0-9]+','_',tag)}.png")
+    fig.tight_layout(); fig.savefig(p); plt.close(fig); print("  ", p)
+
 def corridor_from_paths(d, L):
     pf = os.path.join(d, "path_flow.csv")
     best = None
@@ -134,11 +179,17 @@ def main():
     out = a[a.index("-o") + 1] if "-o" in a else os.path.join(src, "moe_png")
     moe = a[a.index("--moe") + 1] if "--moe" in a else "all"
     links = a[a.index("--links") + 1].split(";") if "--links" in a else None
+    cname = a[a.index("--corridor-name") + 1] if "--corridor-name" in a else None
     os.makedirs(out, exist_ok=True)
     L, TD, bins = read(src)
     print(f"read {len(L)} links, {len(TD)} with TD, {len(bins)} bins -> {out}/")
     if moe in ("bandwidth", "all"): bandwidth_png(src, L, out)
-    if moe in ("spacetime", "all"): spacetime_png(src, L, TD, bins, out, links)
+    if cname:
+        seq = corridor_by_name(L, cname)
+        if not seq: print(f"corridor '{cname}': <3 matching links")
+        elif bins and any(s in TD for s in seq): spacetime_png(src, L, TD, bins, out, seq)
+        else: corridor_profile_png(L, seq, out, cname)   # static profile when no TD
+    elif moe in ("spacetime", "all"): spacetime_png(src, L, TD, bins, out, links)
 
 if __name__ == "__main__":
     main()

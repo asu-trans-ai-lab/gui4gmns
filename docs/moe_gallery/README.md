@@ -25,3 +25,18 @@ uncongested and its static speed = free-flow.
 
 Review of these figures against visualization best practice: `../TRB_VIZ_REVIEW.md` (colorblind-safe
 colormaps, provenance stamps, and density/flow trio are the queued improvements — roadmap E9–E11).
+
+
+## Tested on large / real networks (2026-07)
+- **ARC Atlanta (145,971 links)** — `moe_ARC_traffic_speed_bandwidth.png`: full-metro bandwidth map,
+  freeway skeleton as thick bands, downtown/I-285 olive-orange with red bottlenecks (real speed field).
+  Rendered in ~5 s. `moe_ARC_corridor_I75.png`: I-75 corridor (241 links, 35.9 mi) — speed collapses to
+  15-30 mph exactly where volume peaks at ~40k veh through the downtown core (the flow-speed signature).
+- **Tucson I-10 (`--corridor-name "I-10 WB"`)** — `moe_Tucson_corridor_I10_WB.png`: 52-link, 22.8-mi
+  **connectivity-chained** corridor; clean ~47 mph urban -> 71 mph free-flow mainline -> arterial.
+
+Corridors are extracted by `--corridor-name "I-75"` / `"I-10 WB"` and **chained by node connectivity**
+(from_node -> to_node) into a real sequence, not a spatial jumble. With time-dependent data these same
+sorted links become the 2D space-time contour; static networks get the 1D speed/volume profile shown here.
+Note: volume/speed join needs a standard `link_performance.csv` (`link_id,volume,speed`); nonstandard
+DTALite period-column schemas (e.g. Tucson) fall back to posted speed until an adapter maps their columns.
