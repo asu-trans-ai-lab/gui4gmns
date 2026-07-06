@@ -71,3 +71,6 @@ ai-gen/variants/render_corridor.py
 
 # ITS I-95 hub dashboard: generated artifact; hosted copy at docs/portal_demo/i95/, regen via its_datahub.py
 datasets/08_public_ITS_VA_1-95_sample/its_datahub.html
+
+# internal talk notes (mentions agency affiliations/data) — not a public deliverable
+templates/Part1_speaker_notes.md
