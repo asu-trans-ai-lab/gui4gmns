@@ -16,6 +16,7 @@ dependencies = []                       # core generator is pure-Python stdlib
 [project.optional-dependencies]
 geo = ["pyproj>=3"]                      # projected coords (e.g. state-plane) -> lon/lat basemaps
 desktop = ["PySide6>=6"]                # desktop-qt viewer + headless snapshot renderer
+viz = ["matplotlib>=3", "plot4gmns"]    # static MOE PNGs + plot4gmns figure export
 
 [project.scripts]
 gui4gmns = "gui4gmns:main"

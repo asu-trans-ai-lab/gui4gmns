@@ -41,3 +41,15 @@ now reports `demand: N OD pairs, total V veh (learned from plot4gmns)`.
 - POI / activity-location layer (`show_gmns_poi`), zone polygons (we draw centroids only).
 - Intersection **movements** layer (`show_gmns_movements`) — the classic NEXTA turning-movement view.
 - Modal filtering (`show_network_by_modes`) for multimodal GMNS.
+
+
+## Real adoption (2026-07): calling plot4gmns directly
+Beyond re-deriving its ideas, gui4gmns now **calls the real plot4gmns engine** via
+`renderers/p4g_export_all.py` — imports `plot4gmns` (vendored at `plot4gmns-main/` or pip), stubs the
+optional keplergl dep, and exports **all 21 plot4gmns figures** for a demo network (Berlin): nodes,
+links, POI, zones, geometries, by-mode, by-node-type, by-link-type/length/free-speed/lanes, the
+lane/capacity/free-speed **distributions**, POI types + attraction/production distributions, and the
+**demand-matrix heatmap**. Gallery: `docs/p4g_gallery/`. These are genuine plot4gmns output, not a
+lookalike — so the network-attribute + distribution views are best done by plot4gmns; gui4gmns keeps
+its own renderers only for what plot4gmns doesn't do (space-time contours, bottleneck ranking PeMS/RITIS,
+the offline embedded dashboard, global multi-city montage).

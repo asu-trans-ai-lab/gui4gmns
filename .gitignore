@@ -48,3 +48,7 @@ dist/
 # ---- archives + oversized artifacts (keep raw/large data out of the repo) ----
 *.zip
 templates/dashboard_cbi.html
+
+# ---- vendored plot4gmns (external package; pip install plot4gmns, or keep locally) ----
+plot4gmns-main/
+p4g_fig_results/
