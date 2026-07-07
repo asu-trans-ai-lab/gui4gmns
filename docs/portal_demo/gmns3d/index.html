@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><title>GMNS 3D — West Jordan, UT — AM peak</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
+<style>
+ html,body,#map{margin:0;height:100%;width:100%;background:#0e1116;overflow:hidden}
+ body{font:13px system-ui,Segoe UI,Arial;color:#e6edf3}
+ .p{position:absolute;z-index:5;background:rgba(20,25,31,.9);border:1px solid #2b333d;border-radius:8px;padding:9px 12px}
+ #hdr{top:12px;left:12px;max-width:340px} #hdr b span{color:#58a6ff} #hdr .s{color:#9aa7bd;font-size:11.5px;margin-top:3px}
+ #leg{bottom:16px;left:12px;font-size:12px} #leg .bar{height:9px;width:150px;border-radius:2px;margin:5px 0 3px;
+   background:linear-gradient(90deg,rgb(166,13,10),rgb(230,84,30),rgb(245,206,52),rgb(47,158,94))}
+ #leg .e{display:flex;justify-content:space-between;color:#9aa7bd;font-size:11px}
+ #src{bottom:16px;right:12px;color:#9aa7bd;font-size:11.5px}
+ #tip{position:absolute;z-index:6;pointer-events:none;background:rgba(0,0,0,.8);padding:4px 7px;border-radius:4px;font-size:12px;display:none}
+</style></head><body>
+<div id="map"></div>
+<div class="p" id="hdr"><b><span>gui4gmns</span> · GMNS 3D — West Jordan, UT — AM peak</b>
+  <div class="s">Traffic overlay on the network: <b>height = volume</b>, <b>color = speed</b> (green fast → red slow).
+  Drag to orbit. Composite this over a 3D city base (OpenCities KMZ/Collada) for the full scene.</div></div>
+<div class="p" id="leg">speed (green fast → red slow)<div class="bar"></div><div class="e"><span>slow / queue</span><span>free-flow</span></div></div>
+<div class="p" id="src">Source: West Jordan network + DTALite assignment · basemap © OpenStreetMap</div>
+<div id="tip"></div>
+<script>
+const {DeckGL,PolygonLayer,TileLayer,BitmapLayer}=deck;
+const osm=new TileLayer({data:'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',minZoom:0,maxZoom:19,tileSize:256,
+  renderSubLayers:p=>{const{west,south,east,north}=p.tile.bbox;return new BitmapLayer(p,{data:null,image:p.data,bounds:[west,south,east,north]});}});
+fetch('data.json').then(r=>r.json()).then(data=>{
+  const net=new PolygonLayer({id:'net',data,extruded:true,wireframe:false,pickable:true,
+    getPolygon:d=>d.polygon,getElevation:d=>d.height,getFillColor:d=>d.color,opacity:0.92,
+    material:{ambient:0.6,diffuse:0.6,shininess:20}});
+  const deckgl=new DeckGL({container:'map',
+    initialViewState:{longitude:-111.92137,latitude:40.58933,zoom:12.5,pitch:52,bearing:18},
+    controller:true,layers:[osm,net],
+    getTooltip:({object})=>object&&{html:`link · vol <b>${object.vol}</b> · speed <b>${object.speed}</b> mph · V/C ${object.voc}`,
+      style:{background:'rgba(0,0,0,.8)',color:'#fff',fontSize:'12px'}}});
+});
+</script></body></html>
