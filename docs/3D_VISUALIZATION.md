@@ -11,9 +11,17 @@ gmns2optimization                  →  decision variables · constraints · sha
    = an explainable 3D decision-support environment
 ```
 
-**Live first cut:** a GMNS 3D overlay (volume→height, speed→color) is running now —
-[West Jordan, AM peak](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/gmns3d/) (`renderers/gmns_3d.py`).
-Composite it over an OpenCities KMZ/Collada export for the full scene.
+**Live now:**
+- [West Jordan static overlay](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/gmns3d/) — volume→height,
+  speed→color (`renderers/gmns_3d.py`).
+- [I-95 3D TMC timeline](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95_tmc/) — **real** 24h×15-min
+  TMC speeds, time slider, data-driven storyline (baseline → bottleneck → spillback → recovery).
+- [Event playbook — Chicago](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/chicago_tmc/) — 15-min
+  volume + **measured** queue spillback (`queue_exb`) + blocked-link events firing on the clock.
+
+Both timelines are `renderers/gmns_3d_time.py` (auto-detects the feed shape). For the operations reading —
+vocabulary, event storyline, and what NOT to fake at each data level — see the **[3D TMC Playbook](3D_TMC_PLAYBOOK.md)**.
+Composite any of these over an OpenCities KMZ/Collada export for the full 3D-city scene.
 
 ## The visual grammar (one consistent language)
 
@@ -73,5 +81,10 @@ optimization variables and constraints.*
 ## Status / roadmap
 - **Done:** `renderers/gmns_3d.py` — extruded ribbons (volume→height, speed→color, V/C tooltip), deck.gl +
   OSM basemap, pitched 3D; West Jordan live.
-- **Next:** queue spillback ribbons; time-slider animation (multi-bin `link_performance`); trajectory agents;
-  OD arcs; composite over an actual OpenCities KMZ base; the gmns2optimization decision layer.
+- **Done:** `renderers/gmns_3d_time.py` — **time-slider animation** over multi-bin feeds; **queue spillback
+  ribbon** growing upstream (measured `queue_exb`, or speed-derived and labelled as such); incident/weather
+  **event markers** with an influence zone; a **data-driven TMC storyline** detected from the real speed curve;
+  KPI cards. Live on I-95 (real speeds) and Chicago (measured queue + events).
+- **Next:** trajectory agents (`waypoints.csv`/`agent_trajectory.csv`); OD arcs (`od.csv`); VSL/ramp-meter/DMS
+  control glyphs; composite over an actual OpenCities KMZ base; the gmns2optimization decision layer
+  (binding capacity = thick red link, constraint violation = warning marker, before/after KPI card).

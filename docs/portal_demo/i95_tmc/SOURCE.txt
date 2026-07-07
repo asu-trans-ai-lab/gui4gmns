@@ -1,0 +1,1 @@
+ITS Virginia I-95 corridor · TMC 15-min speeds (INRIX/RITIS via USDOT JPO CodeHub) to GMNS. Public sample.
