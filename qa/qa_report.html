@@ -25,7 +25,7 @@ window.RESULTS = {
     release_version: "v0.1.0 — LIVE on PyPI",
     reporter: "Ziyi Zhang + AI agent"
   },
-  summary_note: "MILESTONE: gui4gmns v0.1.0 is published and LIVE on PyPI (pypi.org/project/gui4gmns) — the long-advertised 'pip install gui4gmns' now works for the first time. The release fired publish.yml via OIDC trusted publishing (no token); build + twine + publish all green, config matched first try. Verified from a user's seat: fresh venv -> pip install gui4gmns (0.1.0) -> import gui4gmns + from gui4gmns import generate -> generate() produces a dashboard. Phase 0 and Phase 1 are DONE; packaging was verified end-to-end (build/twine/clean-venv install) and the private-data guard passed (decoy both gitignored and flagged; a healthy false positive on this report itself was fixed in PR #2). Next: Phase 2 systematic QA — GEN + auto-portals on chicago_sketch (showcase) first, then adapters and the checkpoint-L audit.",
+  summary_note: "v0.1.0 is LIVE on PyPI. Phase 2 QA began on the chicago_sketch showcase and went a level deeper — from 'generates without error' to 'shows the user something meaningful' — which caught two real defects, both now FIXED. F-008: the vehicle animation collapsed into 1% of the network (trajectories were subsampled by lowest agent-id, which cluster by origin/departure); fixed to an even spread across the id space -> 44 -> 367 links (12%), 8.3x coverage, same 2000 agents (see the before/after map). F-007: the quickstart dead-ended for pip-only users and produced a bare network on sioux_falls; README rewritten to lead with chicago_sketch, point pip users at their own folder, and add the 'python -m' fallback for locked-down Windows. Full change log + evidence in qa/FIXES_2026-07-07.md. One open item needs Prof. Zhou: F-006, the empty Chicago corridor contour (ship corridor_speed.csv vs re-mark the coverage table). Proposing two new 'meaningful output' checkpoints (O effective-output, P first-run) so this whole class is caught mechanically. NEXT: adapters + checkpoint-L defect-injection on toys.",
   phases: [
     { id: "P0", name: "Discovery & guard test",  status: "done",    note: "repo cloned · pip install -e . OK · smoke on toys OK · decoy guard test PASSED" },
     { id: "P1", name: "Release v0.1.0 to PyPI",  status: "done",    note: "LIVE on PyPI; OIDC publish green; clean-venv pip install verified" },
@@ -61,8 +61,10 @@ window.RESULTS = {
       checkpoints: { C: "pass", K: "pass", L: "pass" },
       note: "Smoke test on 05_toy_bottleneck (3 nodes / 2 links) and 05_toy_merge (4 nodes / 3 links): CLI/main() and generate() both produced dashboard.html + dashboard_layers/ + all four portals/ (kepler, deckgl, qgis, kml). Rendered counts match CSVs (C). Auto-portal completeness holds (K). Data-quality audit fired and WARNed on zero-volume major links (L). Not yet opened in a browser — Ziyi confirms visual A/B/G by eye.",
       evidence: ["console excerpt (session log)"], issue: "" },
-    { dataset: "chicago_sketch", component: "GEN", verdict: "untested",
-      checkpoints: {}, note: "showcase run scheduled after release (Phase 2 priority #1)", evidence: [], issue: "" }
+    { dataset: "chicago_sketch", component: "GEN", verdict: "needs_human",
+      checkpoints: { A: "pass", B: "pass", C: "pass", D: "pass", E: "pass", G: "pass", H: "pass", K: "pass", L: "pass", M: "partial" },
+      note: "Showcase GEN run (Phase 2 #1), machine pre-screen. C: rendered 933 nodes / 2950 links = node.csv/link.csv exactly. B: zero external http refs; hybrid basemap embedded (42 OSM + 80 satellite tiles), offline. D: MOE coverage 2927/2950; link-1 volume 4969 embedded in moe.js. H: dashboard 28 KB + layers 4.3 MB + portals 4.0 MB (~8.3 MB), gen ~24 s. K: all four portals written; --no-portals honored. L: audit checks:6, conservation 1128857/1128857 OK, no false alarms. E: animated vehicles NOW cover 367/2950 links (12%) after the F-008 trajectory-subsample fix (was 44 links / 1%). M PARTIAL: corridor contour empty (no corridor_speed.csv, F-006). F: na (OD – in DATASETS_COVERAGE). Visual D/E/G prepared for Ziyi's eye.",
+      evidence: ["qa/evidence/F008_trajectory_coverage_before_after.png", "session console log"], issue: "" }
   ],
   findings: [
     { id: "F-001", severity: "note",
@@ -84,7 +86,19 @@ window.RESULTS = {
     { id: "F-004", severity: "note",
       title: "TestPyPI dry-run workflow added — owner config needed before it can fire",
       detail: "Added .github/workflows/publish-testpypi.yml (manual dispatch, OIDC trusted publishing to TestPyPI). Before it can run, the one-time TestPyPI pending publisher must be created on test.pypi.org (workflow filename publish-testpypi.yml, environment testpypi) — an owner action documented in docs/RELEASING.md §0.",
-      issue: "", evidence: ["docs/RELEASING.md"] }
+      issue: "", evidence: ["docs/RELEASING.md"] },
+    { id: "F-006", severity: "minor",
+      title: "[chicago_sketch] corridor space-time contour renders empty (no corridor_speed.csv shipped)",
+      detail: "DATASETS_COVERAGE.md lists Chicago Sketch with space-time contour ✓, but a default GEN run produces an empty corridor.js (0.00 MB) and the corridor-speed button stays hidden. The generator reads the contour from corridor_speed.csv, which Chicago Sketch does not ship. Everything else on the dataset is green. Not auto-fixed — needs Prof. Zhou's call: ship a small public corridor_speed.csv for Chicago, OR mark the contour '–' for Chicago and demo it on the I-210E trio (which ships the input). Matrix cell chicago_sketch × GEN × M.",
+      issue: "", evidence: ["console: corridor.js 0.00 MB", "qa/FIXES_2026-07-07.md"] },
+    { id: "F-008", severity: "major",
+      title: "FIXED — vehicle animation collapsed into 1% of the network (trajectory subsample bug)",
+      detail: "load() subsampled trajectories with 'if agent_id >= max_traj: continue' — it kept the 2000 LOWEST agent ids, not a representative sample. Ids are assigned by origin zone / departure order, so the low ids cluster: on Chicago the animation touched only 44/2950 links (1%), leaving the rest of the network visibly empty though it carries traffic. FIX (ai-gen/gui4gmns.py): keep 2000 agents spread evenly across the sorted id space -> 367/2950 links (12%), 8.3x more coverage, same agent count and file size. See qa/FIXES_2026-07-07.md and the before/after map.",
+      issue: "", evidence: ["qa/evidence/F008_trajectory_coverage_before_after.png", "qa/FIXES_2026-07-07.md"] },
+    { id: "F-007", severity: "major",
+      title: "FIXED — quickstart produced an empty dashboard / didn't run (README)",
+      detail: "Three ways the advertised quickstart failed a new user: (1) 'pip install gui4gmns' then 'gui4gmns datasets/01_sioux_falls' fails with 'need node.csv + link.csv' — the pip package ships code only, no datasets/ folder; (2) even from a clone, 01_sioux_falls ships only node/link/demand (no perf, no trajectories) so the first dashboard is a bare network — no MOE, no vehicles; (3) on locked-down Windows the 'gui4gmns' console command is blocked ('Access is denied') with no hint of the python -m fallback. FIX (README Quickstart): point install-and-run at the user's own GMNS folder, state the pip package is code-only + clone for samples, lead the sample with chicago_sketch (vehicles + MOE), label sioux_falls as minimal, and add the 'python -m gui4gmns' fallback. See qa/FIXES_2026-07-07.md.",
+      issue: "", evidence: ["qa/FIXES_2026-07-07.md", "README.md"] }
   ]
 };
 </script>

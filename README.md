@@ -25,17 +25,22 @@ and the steps + dashboards stay the same. Full how-to: [docs/GMNS_TO_DASHBOARD_S
 ```bash
 # 1) install (pure-Python core, no required deps)
 pip install gui4gmns
-gui4gmns datasets/01_sioux_falls                           # -> datasets/01_sioux_falls/dashboard.html
-#    options: --basemap osm|satellite|none   --max-traj N   --single
 
-# 2) or import it, like plot4gmns
-python -c "from gui4gmns import generate; generate('datasets/01_sioux_falls')"
+# 2) run it on ANY GMNS folder (one that has node.csv + link.csv)
+gui4gmns path/to/gmns_folder                 # -> writes dashboard.html next to your data
+#   options: --basemap osm|satellite|none   --max-traj N   --single
+#   on a locked-down machine where the `gui4gmns` command is blocked, use the module form:
+python -m gui4gmns path/to/gmns_folder
+python -c "from gui4gmns import generate; generate('path/to/gmns_folder')"   # or import it, like plot4gmns
 
-# no install? run the generator straight from the repo instead:
-python ai-gen/gui4gmns.py datasets/01_sioux_falls
+# 3) new here? the pip package ships code only — clone the repo for ready-made sample datasets,
+#    then try the showcase (animated vehicles + congestion + auto-portals):
+#      git clone https://github.com/asu-trans-ai-lab/gui4gmns && cd gui4gmns
+python -m gui4gmns datasets/02_chicago_sketch   # 933 nodes / 2950 links: MOE + moving vehicles + portals
+#    (datasets/01_sioux_falls is a minimal network-only example — topology + OD, no vehicles/MOE)
 
-# 3) open the dashboard (double-click, or serve for the basemap)
-python -m http.server 8765   # then browse to datasets/01_sioux_falls/dashboard.html
+# 4) open the dashboard (double-click, or serve so the embedded basemap loads)
+python -m http.server 8765
 ```
 
 ## What a generated dashboard gives you
