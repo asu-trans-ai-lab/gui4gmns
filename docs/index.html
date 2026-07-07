@@ -108,11 +108,19 @@
     </figure>
   </div>
 
-  <h2 class="see">Arizona — from OpenStreetMap only</h2>
-  <p class="tag" style="margin:0 0 10px">Everything here is built <b>only from public OpenStreetMap</b> via osm2gmns:
-  the raw <b>"big map"</b> (step 1, every street) below, and <b>Tempe</b> end-to-end (above). Every map is stamped
-  with its data source. More PHX-metro cities are being rebuilt from OSM, city by city.</p>
+  <h2 class="see">Arizona — PHX metro, city by city (OpenStreetMap only)</h2>
+  <p class="tag" style="margin:0 0 10px">Every AZ network here is built <b>only from public OpenStreetMap</b> via osm2gmns
+  (each fetched from OSM by city, clipped to its real OSM city boundary — blue outline). No agency travel model.
+  Every map is stamped <b>"Source: OpenStreetMap via osm2gmns."</b></p>
   <div class="shots">
+    <figure>
+      <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/phoenix/map.kepler.json" target="_blank"><img src="portal_demo/phoenix/preview.png" alt="Phoenix AZ street network from OpenStreetMap, clipped to the city boundary"></a>
+      <figcaption><b>Phoenix, AZ</b> — the full city street network from OpenStreetMap (158,570 links, clipped to
+        the OSM city boundary), top 6,000 by free-flow speed.<br>
+        <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/phoenix/map.kepler.json" target="_blank">▶ Kepler.gl</a> ·
+        <a href="portal_demo/phoenix/deckgl/">deck.gl</a> ·
+        <a href="portal_demo/phoenix/gmns.kml">Google Earth</a></figcaption>
+    </figure>
     <figure>
       <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/osm_bigmap/map.kepler.json" target="_blank"><img src="portal_demo/osm_bigmap/preview.png" alt="osm2gmns raw big map, all OSM streets, Tempe AZ"></a>
       <figcaption><b>osm2gmns "big map" — step 1</b> — the raw network straight from OpenStreetMap: every street
@@ -121,6 +129,16 @@
         <a href="portal_demo/osm_bigmap/deckgl/">deck.gl</a> ·
         <a href="portal_demo/osm_bigmap/gmns.kml">Google Earth</a></figcaption>
     </figure>
+    <figure><a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/mesa/map.kepler.json" target="_blank"><img src="portal_demo/mesa/preview.png" alt="Mesa AZ network from OSM"></a>
+      <figcaption><b>Mesa</b> — <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/mesa/map.kepler.json" target="_blank">▶ Kepler</a> · <a href="portal_demo/mesa/deckgl/">deck.gl</a> · <a href="portal_demo/mesa/gmns.kml">KML</a></figcaption></figure>
+    <figure><a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/scottsdale/map.kepler.json" target="_blank"><img src="portal_demo/scottsdale/preview.png" alt="Scottsdale AZ network from OSM"></a>
+      <figcaption><b>Scottsdale</b> — <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/scottsdale/map.kepler.json" target="_blank">▶ Kepler</a> · <a href="portal_demo/scottsdale/deckgl/">deck.gl</a> · <a href="portal_demo/scottsdale/gmns.kml">KML</a></figcaption></figure>
+    <figure><a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/chandler/map.kepler.json" target="_blank"><img src="portal_demo/chandler/preview.png" alt="Chandler AZ network from OSM"></a>
+      <figcaption><b>Chandler</b> — <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/chandler/map.kepler.json" target="_blank">▶ Kepler</a> · <a href="portal_demo/chandler/deckgl/">deck.gl</a> · <a href="portal_demo/chandler/gmns.kml">KML</a></figcaption></figure>
+    <figure><a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/glendale/map.kepler.json" target="_blank"><img src="portal_demo/glendale/preview.png" alt="Glendale AZ network from OSM"></a>
+      <figcaption><b>Glendale</b> — <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/glendale/map.kepler.json" target="_blank">▶ Kepler</a> · <a href="portal_demo/glendale/deckgl/">deck.gl</a> · <a href="portal_demo/glendale/gmns.kml">KML</a></figcaption></figure>
+    <figure><a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/gilbert/map.kepler.json" target="_blank"><img src="portal_demo/gilbert/preview.png" alt="Gilbert AZ network from OSM"></a>
+      <figcaption><b>Gilbert</b> — <a href="https://kepler.gl/demo?mapUrl=https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/gilbert/map.kepler.json" target="_blank">▶ Kepler</a> · <a href="portal_demo/gilbert/deckgl/">deck.gl</a> · <a href="portal_demo/gilbert/gmns.kml">KML</a></figcaption></figure>
   </div>
 
   <p class="tag">Offline by default (open the dashboard with no internet); online portals — Kepler.gl,
