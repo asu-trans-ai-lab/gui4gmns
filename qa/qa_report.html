@@ -71,7 +71,7 @@ window.RESULTS = {
       issue: "", evidence: ["session console log"] },
     { id: "F-002", severity: "note",
       title: "Private-data guard test PASSED",
-      detail: "Planted a decoy datasets/decoy_nvta_am_PRIVATE.csv. git check-ignore confirms .gitignore excludes it; force-adding it makes validate_no_private_data.py flag it and exit 1. Decoy removed, tree clean. The guard protecting the privacy red line is itself proven.",
+      detail: "Planted a decoy CSV under datasets/ whose name matches the restricted *nvta* / *PRIVATE* patterns. git check-ignore confirms .gitignore excludes it; force-adding it makes validate_no_private_data.py flag it and exit 1. Decoy removed, tree clean. The guard protecting the privacy red line is itself proven. (Note: the guard's content check also flagged an earlier draft of this very report because it quoted the exact decoy filename — a healthy false positive; keep private-pattern tokens out of tracked docs, describe them instead.)",
       issue: "", evidence: ["session console log"] },
     { id: "F-003", severity: "major",
       title: "pip install gui4gmns is advertised but fails today (zero releases)",
