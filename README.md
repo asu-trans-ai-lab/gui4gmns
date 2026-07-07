@@ -23,12 +23,16 @@ and the steps + dashboards stay the same. Full how-to: [docs/GMNS_TO_DASHBOARD_S
 
 ## Quickstart
 ```bash
-# 1) generate a dashboard from any GMNS folder (pure-Python core, no deps)
-python ai-gen/gui4gmns.py datasets/01_sioux_falls          # -> datasets/01_sioux_falls/dashboard.html
+# 1) install (pure-Python core, no required deps)
+pip install gui4gmns
+gui4gmns datasets/01_sioux_falls                           # -> datasets/01_sioux_falls/dashboard.html
 #    options: --basemap osm|satellite|none   --max-traj N   --single
 
 # 2) or import it, like plot4gmns
-python -c "import sys; sys.path.insert(0,'ai-gen'); from gui4gmns import generate; generate('datasets/01_sioux_falls')"
+python -c "from gui4gmns import generate; generate('datasets/01_sioux_falls')"
+
+# no install? run the generator straight from the repo instead:
+python ai-gen/gui4gmns.py datasets/01_sioux_falls
 
 # 3) open the dashboard (double-click, or serve for the basemap)
 python -m http.server 8765   # then browse to datasets/01_sioux_falls/dashboard.html

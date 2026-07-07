@@ -1,0 +1,50 @@
+{
+  "schema": "gui4gmns-qa-state/1",
+  "updated": "2026-07-06",
+  "branch": "release-v0.1.0",
+  "reporter": "Ziyi Zhang + AI agent",
+  "current_phase": "P1",
+  "phase_status": {
+    "P0": "done",
+    "P1": "active",
+    "P2": "todo",
+    "P3": "todo",
+    "P4": "active"
+  },
+  "release": {
+    "target_version": "0.1.0",
+    "packaging_verified": true,
+    "checks_passed": [
+      "pip install -e .",
+      "import gui4gmns + from gui4gmns import generate",
+      "main()/console-script path generates dashboard + auto-portals",
+      "python -m build (wheel + sdist)",
+      "twine check dist/* (both PASSED)",
+      "clean-venv wheel install -> import + generate (user seat)",
+      "validate_no_private_data.py clean",
+      "decoy private-data guard test (gitignore + validator flag)"
+    ],
+    "testpypi_dry_run": "workflow added (.github/workflows/publish-testpypi.yml); NOT yet run",
+    "blocking_owner_actions": [
+      "Configure TestPyPI pending trusted-publisher on test.pypi.org (workflow publish-testpypi.yml, env testpypi) — see docs/RELEASING.md §0",
+      "Confirm real PyPI trusted-publisher on pypi.org matches workflow publish.yml + env pypi (configured 7/5, never fired)"
+    ],
+    "tags_present": [],
+    "releases_present": []
+  },
+  "files_touched_this_session": [
+    "README.md (quickstart -> real pip install / import)",
+    "docs/RELEASING.md (new)",
+    ".github/workflows/publish-testpypi.yml (new)",
+    "qa/AI_GUIDE_gui4gmns.md (brought into repo)",
+    "qa/qa_report.html (RESULTS updated)",
+    "qa/qa_state.json (new)"
+  ],
+  "next_actions": [
+    "Owner: set up TestPyPI trusted publisher, then: gh workflow run publish-testpypi.yml",
+    "On green dry-run: tag v0.1.0 + gh release create (fires publish.yml -> PyPI)",
+    "Verify pip install gui4gmns from a clean venv; screenshot",
+    "Phase 2: GEN + auto-portals on chicago_sketch (showcase), then adapters + audit L"
+  ],
+  "issues_filed": []
+}
