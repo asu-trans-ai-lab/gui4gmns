@@ -1,0 +1,131 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>GMNS 3D TMC — I-405 N · QVDF calibrated (Caltrans PeMS)</title>
+<script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
+<style>
+ html,body{margin:0;height:100%;width:100%;background:#0e1116;overflow:hidden;font:13px system-ui,Segoe UI,Arial;color:#e6edf3}
+ #map{position:absolute;inset:0}
+ .p{position:absolute;z-index:5;background:rgba(18,23,29,.92);border:1px solid #2b333d;border-radius:10px;padding:10px 13px}
+ #hdr{top:12px;left:12px;max-width:300px} #hdr b span{color:#58a6ff} #hdr .s{color:#9aa7bd;font-size:11.5px;margin-top:3px;line-height:1.45}
+ #story{top:12px;right:12px;width:270px} #story .ph{color:#ffb454;font-weight:600;font-size:13px}
+ #story .tx{color:#c3ccd8;font-size:12px;margin-top:4px;line-height:1.5} #story .clk{color:#58a6ff;font-variant-numeric:tabular-nums;font-size:12px}
+ #kpi{bottom:86px;right:12px;display:flex;gap:8px} .k{background:rgba(18,23,29,.92);border:1px solid #2b333d;border-radius:9px;padding:7px 11px;text-align:center;min-width:70px}
+ .k b{display:block;font-size:18px} .k span{color:#9aa7bd;font-size:10.5px}
+ #leg{bottom:86px;left:12px;font-size:12px} #leg .bar{height:9px;width:150px;border-radius:2px;margin:5px 0 3px;
+   background:linear-gradient(90deg,rgb(166,13,10),rgb(230,84,30),rgb(245,206,52),rgb(47,158,94))}
+ #leg .e{display:flex;justify-content:space-between;color:#9aa7bd;font-size:11px} #leg .q{color:#ff5a4d;margin-top:6px}
+ #ctl{bottom:14px;left:12px;right:12px;display:flex;align-items:center;gap:12px}
+ #ctl button{background:#2563eb;color:#fff;border:none;border-radius:8px;padding:7px 15px;font-size:14px;cursor:pointer}
+ #ctl input[type=range]{flex:1;accent-color:#58a6ff} #ctl .clk{font-variant-numeric:tabular-nums;min-width:52px;font-size:15px;color:#e6edf3}
+ #ctl select{background:#2b333d;color:#c3ccd8;border:1px solid #39424d;border-radius:6px;padding:5px 8px}
+ #src{position:absolute;bottom:52px;right:14px;z-index:5;color:#9aa7bd;font-size:11px}
+ .mk{margin-top:6px;height:5px;position:relative;background:#222c36;border-radius:3px} .mk i{position:absolute;top:-1px;width:2px;height:7px;background:#ffb454}
+</style></head><body>
+<div id="map"></div>
+<div class="p" id="hdr"><b><span>gui4gmns</span> · 3D TMC — I-405 N · QVDF calibrated (Caltrans PeMS)</b>
+  <div class="s"><b>height</b> = congestion · <b>color</b> = speed (green→red) · <b>red tail</b> = queue spillback.
+  Drag to orbit. A moving red front is a shockwave. Composite over an OpenCities 3D city base for the full scene.</div></div>
+<div class="p" id="story"><div class="clk" id="clk2">—</div><div class="ph" id="ph">—</div><div class="tx" id="tx">—</div>
+  <div class="mk" id="mk"></div></div>
+<div id="kpi">
+  <div class="k"><b id="kavg">—</b><span id="kL1">avg speed %</span></div>
+  <div class="k"><b id="kcong">—</b><span id="kL2">congested</span></div>
+  <div class="k"><b id="kev">0</b><span>active events</span></div></div>
+<div class="p" id="leg"><span id="legTitle">speed (green free-flow → red slow)</span><div class="bar" id="legBar"></div>
+  <div class="e"><span id="legLo">slow</span><span id="legHi">free-flow</span></div>
+  <div class="q" id="legQ">■ red tail = queue spillback</div></div>
+<div id="src">Source: Caltrans PeMS I-405 N · QVDF-calibrated speed reconstruction (polynomial arrival queue ← inflow demand/capacity). Public (PeMS). · basemap © OpenStreetMap</div>
+<div class="p" id="ctl"><button id="play">▶</button><span class="clk" id="clk">—</span>
+  <input type="range" id="slider" min="0" value="0"><label style="color:#9aa7bd">speed</label>
+  <select id="spd"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option><option value="8">8×</option></select></div>
+<script>
+const {DeckGL,PolygonLayer,PathLayer,TileLayer,BitmapLayer,ScatterplotLayer}=deck;
+const QMEAS=0;
+fetch('frames.json').then(r=>r.json()).then(D=>{
+  const N=D.times.length; let f=0, playing=false, tick=0;
+  const HAS_V=D.hasV, MAXH=520, BASE=4;
+  const val=(arr)=>arr&&arr[f]!=null?arr[f]:null;
+  const ratio=d=>{const s=val(d.s); return (s!=null&&d.ff)?Math.max(0,Math.min(1.3,s/d.ff)):null;};
+  // speed ramp: r high (fast) -> green ; low -> red
+  function rampSpeed(r){const t=Math.max(0,Math.min(1,(r-0.3)/0.6));  // 0.3..0.9 -> 0..1
+    const S=[[166,13,10],[230,84,30],[245,206,52],[47,158,94]],s=t*3,i=Math.min(2,Math.floor(s)),fr=s-i,a=S[i],b=S[i+1];
+    return a.map((v,k)=>Math.round(v+(b[k]-v)*fr));}
+  function rampVol(t){t=Math.max(0,Math.min(1,t));const S=[[47,158,94],[245,206,52],[230,84,30],[166,13,10]],
+    s=t*3,i=Math.min(2,Math.floor(s)),fr=s-i,a=S[i],b=S[i+1];return a.map((v,k)=>Math.round(v+(b[k]-v)*fr));}
+  function color(d){const r=ratio(d); if(r!=null)return rampSpeed(r);
+    const v=val(d.v); return rampVol(v!=null&&D.vmax?Math.min(1,v/D.vmax):0);}
+  function height(d){const v=val(d.v); if(HAS_V&&v!=null&&D.vmax)return BASE+(v/D.vmax)*MAXH;
+    const r=ratio(d); if(r!=null)return BASE+(1-Math.min(1,r))*MAXH; return BASE;}
+  function qfrac(d){const q=val(d.q); if(q!=null&&D.qmax)return Math.min(1,q/D.qmax);
+    const r=ratio(d); if(r!=null)return Math.max(0,Math.min(1,(0.82-r)/0.5)); return 0;}
+  // tail(line,frac): sub-path covering the last `frac` of length, from the downstream (to_node) end
+  function tail(line,frac){const tot=len(line)*frac; if(tot<=0)return null; let acc=0,out=[line[line.length-1]];
+    for(let i=line.length-1;i>0;i--){const seg=Math.hypot(line[i][0]-line[i-1][0],line[i][1]-line[i-1][1]);
+      if(acc+seg>=tot){const t=(tot-acc)/seg;out.push([line[i][0]+(line[i-1][0]-line[i][0])*t,line[i][1]+(line[i-1][1]-line[i][1])*t]);return out;}
+      acc+=seg;out.push(line[i-1]);} return out;}
+  function len(line){let s=0;for(let i=0;i<line.length-1;i++)s+=Math.hypot(line[i+1][0]-line[i][0],line[i+1][1]-line[i][1]);return s;}
+
+  const osm=new TileLayer({data:'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',minZoom:0,maxZoom:19,tileSize:256,
+    renderSubLayers:p=>{const{west,south,east,north}=p.tile.bbox;return new BitmapLayer(p,{data:null,image:p.data,bounds:[west,south,east,north]});}});
+  const deckgl=new DeckGL({container:'map',
+    initialViewState:{longitude:-118.34401,latitude:33.96390,zoom:11.0,pitch:54,bearing:16},controller:true,
+    getTooltip:({object})=>object&&object.lid&&{html:`link <b>${object.lid}</b> · speed <b>${val(object.s)??'–'}</b> · ff ${object.ff}${object.dc?' · D/C <b>'+object.dc+'</b>':''}`,
+      style:{background:'rgba(0,0,0,.8)',color:'#fff',fontSize:'12px',borderRadius:'4px'}}});
+
+  function draw(){
+    const netL=new PolygonLayer({id:'net',data:D.links,extruded:true,pickable:true,
+      getPolygon:d=>d.poly,getElevation:height,getFillColor:color,opacity:0.9,
+      material:{ambient:0.65,diffuse:0.6,shininess:12},updateTriggers:{getElevation:f,getFillColor:f}});
+    const qd=D.links.map(d=>({t:tail(d.line,qfrac(d)),sev:qfrac(d)})).filter(x=>x.t&&x.sev>0.05);
+    const qL=new PathLayer({id:'q',data:qd,getPath:d=>d.t,getColor:[255,60,45],
+      getWidth:d=>3+7*d.sev,widthUnits:'pixels',capRounded:true,updateTriggers:{getPath:f,getWidth:f}});
+    const active=D.events.filter(e=>f>=e.i0&&f<=e.i1);
+    const evL=new ScatterplotLayer({id:'ev',data:active,getPosition:e=>e.at,
+      getRadius:e=>120+90*Math.sin(tick/6),radiusUnits:'meters',getFillColor:[255,70,50,140],
+      getLineColor:[255,180,60],lineWidthMinPixels:2,stroked:true,updateTriggers:{getRadius:tick}});
+    deckgl.setProps({layers:[osm,netL,qL,evL]});
+  }
+  function kpis(){
+    document.getElementById('kev').textContent=D.events.filter(e=>f>=e.i0&&f<=e.i1).length;
+    const rs=D.links.map(ratio).filter(r=>r!=null);
+    if(rs.length){                                   // speed feed
+      const avg=Math.round(rs.reduce((a,b)=>a+b)/rs.length*100);
+      const cong=Math.round(100*rs.filter(r=>r<0.7).length/rs.length);
+      document.getElementById('kavg').textContent=avg+'%';
+      document.getElementById('kcong').textContent=cong+'%';
+      document.getElementById('kavg').style.color=avg<70?'#ff5a4d':avg<88?'#ffb454':'#57d98c';
+    }else{                                            // volume / queue feed
+      const load=D.links.map(d=>val(d.v)).filter(v=>v!=null);
+      const avgv=load.length?Math.round(load.reduce((a,b)=>a+b)/load.length):'–';
+      const qd=D.links.filter(d=>{const q=val(d.q);return q!=null&&q>0;}).length;
+      document.getElementById('kavg').textContent=avgv;
+      document.getElementById('kcong').textContent=qd;
+      document.getElementById('kavg').style.color=qd>0?'#ffb454':'#57d98c';
+    }
+  }
+  // storyline: latest beat at or before f
+  const beats=D.narration;
+  function story(){let b=beats[0];for(const x of beats)if(x.i<=f)b=x;
+    document.getElementById('ph').textContent=b?b.phase:'—';
+    document.getElementById('tx').textContent=b?b.text:'';}
+  const mk=document.getElementById('mk');
+  beats.forEach(b=>{const i=document.createElement('i');i.style.left=(100*b.i/(N-1))+'%';i.title=b.phase;mk.appendChild(i);});
+
+  const slider=document.getElementById('slider'); slider.max=N-1;
+  function setClk(){const t=D.times[f];document.getElementById('clk').textContent=t;document.getElementById('clk2').textContent='⏱ '+t;}
+  function frame(){setClk();draw();kpis();story();slider.value=f;}
+  slider.oninput=e=>{f=+e.target.value;frame();};
+  document.getElementById('play').onclick=function(){playing=!playing;this.textContent=playing?'⏸':'▶';};
+  const spd=document.getElementById('spd');
+  // adapt legend + KPI labels to the feed (speed vs volume/queue)
+  if(!D.hasS){
+    document.getElementById('legTitle').textContent='volume (green low → red high)';
+    document.getElementById('legBar').style.background='linear-gradient(90deg,rgb(47,158,94),rgb(245,206,52),rgb(230,84,30),rgb(166,13,10))';
+    document.getElementById('legLo').textContent='low'; document.getElementById('legHi').textContent='high';
+    document.getElementById('kL1').textContent='avg volume'; document.getElementById('kL2').textContent='queued links';
+  }
+  document.getElementById('legQ').textContent=D.qlabel||(QMEAS?'■ red tail = measured queue spillback (queue_exb)':'■ red tail = speed-derived congestion (no measured queue)');
+  if(D.mode==='qvdf')document.querySelector('#hdr .s').innerHTML+=' <b style="color:#ffb454">QVDF model</b> — speed is the calibrated QVDF reconstruction from the inflow demand-to-capacity ratio; hover a link for its <b>D/C</b>.';
+  setInterval(()=>{tick++;if(playing){if(tick%(9-2*Math.log2(+spd.value))<1){f=(f+1)%N;frame();}}else draw();},70);
+  frame();
+});
+</script></body></html>

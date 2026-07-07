@@ -30,7 +30,8 @@ ALLOW = ("datasets/08_public_ITS_VA_1-95_sample/",
          "docs/3D_TMC_PLAYBOOK.md",
          "docs/portal_demo/i95_tmc/",
          "docs/portal_demo/chicago_tmc/",
-         "docs/portal_demo/i405n_tmc/")
+         "docs/portal_demo/i405n_tmc/",
+         "docs/portal_demo/i405n_qvdf/")
 def _allowed(f): return any(f.startswith(p) for p in ALLOW)
 
 def content_hits(files):

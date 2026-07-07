@@ -110,6 +110,29 @@ def load_series_pems(folder):
             if fv: ser.setdefault(lid, {"speed": {}, "vol": {}, "queue": {}})["vol"][m] = fv
     return ser
 
+def load_series_qvdf(handoff):
+    """QVDF calibration handoff (handoff_avgweekday_timedependent.csv): speed_qvdf_model = the calibrated
+    QVDF speed reconstruction; count_per_lane_15min -> approx per-lane hourly flow. Full weekday (both peaks)."""
+    ser = {}
+    for r in read_csv(handoff):
+        lid = norm_id(r["link_id"]); m = int(fnum(r.get("t_min")))
+        d = ser.setdefault(lid, {"speed": {}, "vol": {}, "queue": {}})
+        sm = r.get("speed_qvdf_model")
+        if sm not in (None, ""): d["speed"][m] = fnum(sm)
+        cv = fnum(r.get("count_per_lane_15min"))
+        if cv: d["vol"][m] = cv * 4                       # 15-min per-lane count -> veh/h/lane
+    print(f"  series: QVDF handoff (speed_qvdf_model)  links={len(ser)}")
+    return ser
+
+def load_paq_dc(paq):
+    """daily_paq_all.csv -> per-link peak demand/capacity ratio (the QVDF headline input)."""
+    dc = {}
+    if not (paq and os.path.exists(paq)): return dc
+    for r in read_csv(paq):
+        lid = norm_id(r["link_id"]); v = fnum(r.get("DC"))
+        if v > dc.get(lid, 0): dc[lid] = v
+    return dc
+
 def load_series(folder, series_arg):
     """Return (series, network_dir). series[link_id] = {'speed':{min:val}, 'vol':{...}, 'queue':{...}}."""
     ndir = os.path.join(folder, "network") if os.path.exists(os.path.join(folder, "network", "node.csv")) else folder
@@ -224,7 +247,15 @@ def main():
     maxlinks = int(opt("--maxlinks", 600))
     os.makedirs(out, exist_ok=True)
 
-    ser, ndir, series_name = load_series(folder, opt("--series"))
+    qvdf_handoff = opt("--qvdf")
+    if qvdf_handoff:                                       # QVDF calibrated reconstruction mode
+        ser = load_series_qvdf(qvdf_handoff)
+        ndir = os.path.join(folder, "network") if os.path.exists(os.path.join(folder, "network", "node.csv")) else folder
+        series_name = "QVDF reconstruction (speed_qvdf_model)"
+        dc = load_paq_dc(opt("--paq")); qmode = True
+    else:
+        ser, ndir, series_name = load_series(folder, opt("--series"))
+        dc = {}; qmode = False
     net = load_network(ndir)
     events, ev_name = load_events(folder)
     evlinks = {e["link"] for e in events}
@@ -291,7 +322,8 @@ def main():
                       "mid": [round(mid[0], 6), round(mid[1], 6)],
                       "s": [round(x, 1) if x is not None else None for x in r["s"]] if r["s"] else None,
                       "v": [round(x) if x is not None else None for x in r["v"]] if r["v"] else None,
-                      "q": [round(x, 1) if x is not None else None for x in r["q"]] if r["q"] else None})
+                      "q": [round(x, 1) if x is not None else None for x in r["q"]] if r["q"] else None,
+                      "dc": round(dc[r["lid"]], 1) if dc.get(r["lid"]) else None})
 
     # per-frame network-average speed ratio (for KPIs + storyline)
     avg_ratio = []
@@ -310,12 +342,16 @@ def main():
 
     narration = build_narration(times, avg_ratio, events, evlinks)
 
+    n_dc = sum(1 for l in links if l["dc"])
     data = {"label": label, "source": source, "center": [round(lon0, 5), round(lat0, 5)], "zoom": zoom,
             "times": times, "vmax": round(vmax, 1), "qmax": round(qmax, 1),
             "hasV": any(l["v"] for l in links), "hasS": any(l["s"] for l in links),
             "links": links, "events": ev_out, "narration": narration,
             "avg_ratio": [round(r, 3) if r is not None else None for r in avg_ratio],
-            "feed": series_name, "events_feed": ev_name}
+            "feed": series_name, "events_feed": ev_name,
+            "mode": "qvdf" if qmode else "obs",
+            "qlabel": ("■ red tail = QVDF-modeled congestion (calibrated speed profile; D/C on hover)"
+                       if qmode else "")}
     json.dump(data, open(os.path.join(out, "frames.json"), "w"))
     open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(
         HTML.replace("__LON__", f"{lon0:.5f}").replace("__LAT__", f"{lat0:.5f}")
@@ -397,7 +433,7 @@ fetch('frames.json').then(r=>r.json()).then(D=>{
     renderSubLayers:p=>{const{west,south,east,north}=p.tile.bbox;return new BitmapLayer(p,{data:null,image:p.data,bounds:[west,south,east,north]});}});
   const deckgl=new DeckGL({container:'map',
     initialViewState:{longitude:__LON__,latitude:__LAT__,zoom:__ZOOM__,pitch:54,bearing:16},controller:true,
-    getTooltip:({object})=>object&&object.lid&&{html:`link <b>${object.lid}</b> · speed <b>${val(object.s)??'–'}</b> · ff ${object.ff}`,
+    getTooltip:({object})=>object&&object.lid&&{html:`link <b>${object.lid}</b> · speed <b>${val(object.s)??'–'}</b> · ff ${object.ff}${object.dc?' · D/C <b>'+object.dc+'</b>':''}`,
       style:{background:'rgba(0,0,0,.8)',color:'#fff',fontSize:'12px',borderRadius:'4px'}}});
 
   function draw(){
@@ -452,7 +488,8 @@ fetch('frames.json').then(r=>r.json()).then(D=>{
     document.getElementById('legLo').textContent='low'; document.getElementById('legHi').textContent='high';
     document.getElementById('kL1').textContent='avg volume'; document.getElementById('kL2').textContent='queued links';
   }
-  document.getElementById('legQ').textContent=QMEAS?'■ red tail = measured queue spillback (queue_exb)':'■ red tail = speed-derived congestion (no measured queue)';
+  document.getElementById('legQ').textContent=D.qlabel||(QMEAS?'■ red tail = measured queue spillback (queue_exb)':'■ red tail = speed-derived congestion (no measured queue)');
+  if(D.mode==='qvdf')document.querySelector('#hdr .s').innerHTML+=' <b style="color:#ffb454">QVDF model</b> — speed is the calibrated QVDF reconstruction from the inflow demand-to-capacity ratio; hover a link for its <b>D/C</b>.';
   setInterval(()=>{tick++;if(playing){if(tick%(9-2*Math.log2(+spd.value))<1){f=(f+1)%N;frame();}}else draw();},70);
   frame();
 });

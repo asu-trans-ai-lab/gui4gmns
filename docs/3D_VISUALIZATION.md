@@ -16,6 +16,11 @@ gmns2optimization                  →  decision variables · constraints · sha
   speed→color (`renderers/gmns_3d.py`).
 - [I-95 3D TMC timeline](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i95_tmc/) — **real** 24h×15-min
   TMC speeds, time slider, data-driven storyline (baseline → bottleneck → spillback → recovery).
+- [I-405 N — observed (Caltrans PeMS)](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i405n_tmc/) — real
+  full-year weekday-averaged **5-min speed+flow**, AM peak.
+- [I-405 N — QVDF model](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i405n_qvdf/) — the **calibrated
+  QVDF speed reconstruction** from the inflow demand-to-capacity ratio (polynomial arrival queue → VDF); full
+  weekday, per-link **D/C on hover** (`--qvdf handoff_avgweekday_timedependent.csv --paq daily_paq_all.csv`).
 - [Event playbook — Chicago](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/chicago_tmc/) — 15-min
   volume + **measured** queue spillback (`queue_exb`) + blocked-link events firing on the clock.
 
