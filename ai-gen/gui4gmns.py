@@ -95,13 +95,23 @@ def load(folder, max_traj=2000, basemap="osm"):
             ck.append("time-dependent SPEED present (QVDF) -> 'speed' MOE mode enabled")
     tj = rd("agent_trajectory.csv")
     if tj:
+        # Representative subsample: keep agents spread EVENLY across the sorted agent-id space,
+        # not the lowest ids. agent_id is assigned by origin zone / departure order, so the old
+        # `id < max_traj` filter collapsed the animation into one corner of the network (Chicago:
+        # 44/2950 links, 1%). Even spacing restores network-wide coverage (367 links, 12%).
+        all_ids = sorted({int(fnum(r["agent_id"])) for r in tj})
+        if len(all_ids) > max_traj:
+            step = len(all_ids) / max_traj
+            keep = {all_ids[int(i * step)] for i in range(max_traj)}
+        else:
+            keep = set(all_ids)
         for r in tj:
             a = int(fnum(r["agent_id"]))
-            if a >= max_traj: continue
+            if a not in keep: continue
             D["trajs"].setdefault(a, []).append([round(fnum(r["time_min"]), 2),
                                                  int(fnum(r["link_id"])), r.get("buffer") or ""])
         for ev in D["trajs"].values(): ev.sort()
-        ck.append(f"trajectories subsampled to {len(D['trajs'])} agents (--max-traj)")
+        ck.append(f"trajectories subsampled to {len(D['trajs'])} agents (representative, --max-traj)")
     pf = rd("path_flow.csv")
     all_paths = []
     if pf:
