@@ -21,17 +21,17 @@ window.RESULTS = {
   meta: {
     project: "gui4gmns",
     repo_url: "https://github.com/asu-trans-ai-lab/gui4gmns",
-    updated: "2026-07-06",
-    release_version: "v0.1.0 (packaging verified — awaiting TestPyPI dry-run + release)",
+    updated: "2026-07-07",
+    release_version: "v0.1.0 — LIVE on PyPI",
     reporter: "Ziyi Zhang + AI agent"
   },
-  summary_note: "Phase 0 done and Phase 1 packaging is GREEN. Verified on Ziyi's machine: pip install -e ., import API (from gui4gmns import generate), the main()/console-script path, python -m build (wheel+sdist), twine check (both PASSED), and a CLEAN-VENV wheel install that imports and generates a dashboard with no ai-gen on the path. Private-data guard test PASSED (a decoy nvta_PRIVATE file is both gitignored and flagged by the validator, exit 1). Release plan: TestPyPI dry-run first (new publish-testpypi.yml added), then tag v0.1.0. ASK FOR PROF. ZHOU / OWNER: the pip install gui4gmns command is already advertised on the live site and PACKAGE.md but fails today (zero releases). To fire the dry-run, the one-time TestPyPI trusted-publisher must be configured (owner action) — steps in docs/RELEASING.md §0. The real PyPI publisher was configured 7/5 but has never fired.",
+  summary_note: "MILESTONE: gui4gmns v0.1.0 is published and LIVE on PyPI (pypi.org/project/gui4gmns) — the long-advertised 'pip install gui4gmns' now works for the first time. The release fired publish.yml via OIDC trusted publishing (no token); build + twine + publish all green, config matched first try. Verified from a user's seat: fresh venv -> pip install gui4gmns (0.1.0) -> import gui4gmns + from gui4gmns import generate -> generate() produces a dashboard. Phase 0 and Phase 1 are DONE; packaging was verified end-to-end (build/twine/clean-venv install) and the private-data guard passed (decoy both gitignored and flagged; a healthy false positive on this report itself was fixed in PR #2). Next: Phase 2 systematic QA — GEN + auto-portals on chicago_sketch (showcase) first, then adapters and the checkpoint-L audit.",
   phases: [
     { id: "P0", name: "Discovery & guard test",  status: "done",    note: "repo cloned · pip install -e . OK · smoke on toys OK · decoy guard test PASSED" },
-    { id: "P1", name: "Release v0.1.0 to PyPI",  status: "active",  note: "packaging green; TestPyPI dry-run workflow added; awaiting owner TestPyPI config then release" },
-    { id: "P2", name: "Systematic QA matrix",    status: "todo",    note: "chicago_sketch showcase + adapters + audit first" },
+    { id: "P1", name: "Release v0.1.0 to PyPI",  status: "done",    note: "LIVE on PyPI; OIDC publish green; clean-venv pip install verified" },
+    { id: "P2", name: "Systematic QA matrix",    status: "active",  note: "next: chicago_sketch showcase + adapters + audit L" },
     { id: "P3", name: "Generality (new datasets)", status: "todo",  note: "incl. Bay Area net + I-210E recipe reuse" },
-    { id: "P4", name: "SKILL docs & RELEASING.md", status: "active", note: "docs/RELEASING.md written; SKILL doc pending" }
+    { id: "P4", name: "SKILL docs & RELEASING.md", status: "active", note: "docs/RELEASING.md done; SKILL doc pending" }
   ],
   components: [
     { code: "GEN",  label: "dashboard + auto-portals" },
@@ -73,10 +73,14 @@ window.RESULTS = {
       title: "Private-data guard test PASSED",
       detail: "Planted a decoy CSV under datasets/ whose name matches the restricted *nvta* / *PRIVATE* patterns. git check-ignore confirms .gitignore excludes it; force-adding it makes validate_no_private_data.py flag it and exit 1. Decoy removed, tree clean. The guard protecting the privacy red line is itself proven. (Note: the guard's content check also flagged an earlier draft of this very report because it quoted the exact decoy filename — a healthy false positive; keep private-pattern tokens out of tracked docs, describe them instead.)",
       issue: "", evidence: ["session console log"] },
-    { id: "F-003", severity: "major",
-      title: "pip install gui4gmns is advertised but fails today (zero releases)",
-      detail: "docs/index.html (live site) and docs/PACKAGE.md tell users to run 'pip install gui4gmns', but the package has never been published — GitHub shows no releases and no tags. The public command fails. Resolution in progress: v0.1.0 release (packaging already verified green). README quickstart updated to the real pip/import path on the release branch.",
-      issue: "", evidence: ["docs/index.html:63", "docs/PACKAGE.md:9"] },
+    { id: "F-003", severity: "note",
+      title: "RESOLVED — pip install gui4gmns now works (was advertised but failing)",
+      detail: "docs/index.html (live site) and docs/PACKAGE.md advertised 'pip install gui4gmns' while the package had never been published (zero releases/tags), so the public command failed. RESOLVED by publishing v0.1.0 to PyPI on 2026-07-07. README quickstart also updated to the real pip/import path.",
+      issue: "", evidence: ["https://pypi.org/project/gui4gmns/"] },
+    { id: "F-005", severity: "note",
+      title: "v0.1.0 published to PyPI and verified from a clean venv",
+      detail: "GitHub Release v0.1.0 fired publish.yml (OIDC trusted publishing, no token). build + twine check + publish all succeeded; the trusted-publisher config matched on the first try (no filename-vs-name mismatch). PyPI now serves gui4gmns 0.1.0 (wheel + sdist). Verified: fresh venv -> pip install gui4gmns -> import gui4gmns (0.1.0) + from gui4gmns import generate -> generate() writes a dashboard. Only workflow annotations were Node.js 20 deprecation warnings (non-blocking).",
+      issue: "", evidence: ["https://github.com/asu-trans-ai-lab/gui4gmns/releases/tag/v0.1.0", "https://pypi.org/project/gui4gmns/"] },
     { id: "F-004", severity: "note",
       title: "TestPyPI dry-run workflow added — owner config needed before it can fire",
       detail: "Added .github/workflows/publish-testpypi.yml (manual dispatch, OIDC trusted publishing to TestPyPI). Before it can run, the one-time TestPyPI pending publisher must be created on test.pypi.org (workflow filename publish-testpypi.yml, environment testpypi) — an owner action documented in docs/RELEASING.md §0.",
