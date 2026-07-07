@@ -17,6 +17,8 @@
  #ctl button{background:#2563eb;color:#fff;border:none;border-radius:8px;padding:7px 15px;font-size:14px;cursor:pointer}
  #ctl input[type=range]{flex:1;accent-color:#58a6ff} #ctl .clk{font-variant-numeric:tabular-nums;min-width:52px;font-size:15px;color:#e6edf3}
  #ctl select{background:#2b333d;color:#c3ccd8;border:1px solid #39424d;border-radius:6px;padding:5px 8px}
+ #ctl .baseb{background:#2b333d;color:#c3ccd8;border:1px solid #39424d;border-radius:6px;padding:5px 9px;font-size:12px;cursor:pointer;margin-left:3px}
+ #ctl .baseb.on{background:#2563eb;color:#fff;border-color:#2563eb}
  #src{position:absolute;bottom:52px;right:14px;z-index:5;color:#9aa7bd;font-size:11px}
  .mk{margin-top:6px;height:5px;position:relative;background:#222c36;border-radius:3px} .mk i{position:absolute;top:-1px;width:2px;height:7px;background:#ffb454}
 </style></head><body>
@@ -33,10 +35,11 @@
 <div class="p" id="leg"><span id="legTitle">speed (green free-flow → red slow)</span><div class="bar" id="legBar"></div>
   <div class="e"><span id="legLo">slow</span><span id="legHi">free-flow</span></div>
   <div class="q" id="legQ">■ red tail = queue spillback</div></div>
-<div id="src">Source: Caltrans PeMS I-405 N · QVDF-calibrated speed reconstruction + analytical queue Q(t) (polynomial arrival queue, inflow demand/capacity). Public (PeMS). · basemap © OpenStreetMap</div>
+<div id="src">Source: Caltrans PeMS I-405 N · QVDF-calibrated speed reconstruction + analytical queue Q(t) (polynomial arrival queue, inflow demand/capacity). Public (PeMS). · basemaps: Esri World Imagery · OSM · CARTO</div>
 <div class="p" id="ctl"><button id="play">▶</button><span class="clk" id="clk">—</span>
   <input type="range" id="slider" min="0" value="0"><label style="color:#9aa7bd">speed</label>
-  <select id="spd"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option><option value="8">8×</option></select></div>
+  <select id="spd"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option><option value="8">8×</option></select>
+  <span style="color:#9aa7bd;font-size:12px;margin-left:6px">map</span><span id="baseg"></span></div>
 <script>
 const {DeckGL,PolygonLayer,PathLayer,TileLayer,BitmapLayer,ScatterplotLayer}=deck;
 const QMEAS=1;
@@ -64,8 +67,13 @@ fetch('frames.json').then(r=>r.json()).then(D=>{
       acc+=seg;out.push(line[i-1]);} return out;}
   function len(line){let s=0;for(let i=0;i<line.length-1;i++)s+=Math.hypot(line[i+1][0]-line[i][0],line[i+1][1]-line[i][1]);return s;}
 
-  const osm=new TileLayer({data:'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',minZoom:0,maxZoom:19,tileSize:256,
-    renderSubLayers:p=>{const{west,south,east,north}=p.tile.bbox;return new BitmapLayer(p,{data:null,image:p.data,bounds:[west,south,east,north]});}});
+  const BASES={sat:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+               street:'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+               dark:'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'};
+  const BLBL={sat:'Satellite',street:'Street',dark:'Dark'};
+  function makeBase(url){return new TileLayer({data:url,minZoom:0,maxZoom:19,tileSize:256,
+    renderSubLayers:p=>{const{west,south,east,north}=p.tile.bbox;return new BitmapLayer(p,{data:null,image:p.data,bounds:[west,south,east,north]});}});}
+  let base=makeBase(BASES.sat);   // satellite by default
   const deckgl=new DeckGL({container:'map',
     initialViewState:{longitude:-118.34401,latitude:33.96390,zoom:11.0,pitch:54,bearing:16},controller:true,
     getTooltip:({object})=>object&&object.lid&&{html:`link <b>${object.lid}</b> · speed <b>${val(object.s)??'–'}</b> · ff ${object.ff}${object.dc?' · D/C <b>'+object.dc+'</b>':''}`,
@@ -82,7 +90,7 @@ fetch('frames.json').then(r=>r.json()).then(D=>{
     const evL=new ScatterplotLayer({id:'ev',data:active,getPosition:e=>e.at,
       getRadius:e=>120+90*Math.sin(tick/6),radiusUnits:'meters',getFillColor:[255,70,50,140],
       getLineColor:[255,180,60],lineWidthMinPixels:2,stroked:true,updateTriggers:{getRadius:tick}});
-    deckgl.setProps({layers:[osm,netL,qL,evL]});
+    deckgl.setProps({layers:[base,netL,qL,evL]});
   }
   function kpis(){
     document.getElementById('kev').textContent=D.events.filter(e=>f>=e.i0&&f<=e.i1).length;
@@ -116,6 +124,10 @@ fetch('frames.json').then(r=>r.json()).then(D=>{
   slider.oninput=e=>{f=+e.target.value;frame();};
   document.getElementById('play').onclick=function(){playing=!playing;this.textContent=playing?'⏸':'▶';};
   const spd=document.getElementById('spd');
+  // basemap toggle (satellite default)
+  const bg=document.getElementById('baseg');
+  Object.keys(BASES).forEach((k,i)=>{const b=document.createElement('button');b.textContent=BLBL[k];b.className='baseb'+(i===0?' on':'');
+    b.onclick=()=>{document.querySelectorAll('#baseg .baseb').forEach(x=>x.classList.remove('on'));b.classList.add('on');base=makeBase(BASES[k]);draw();};bg.appendChild(b);});
   // adapt legend + KPI labels to the feed (speed vs volume/queue)
   if(!D.hasS){
     document.getElementById('legTitle').textContent='volume (green low → red high)';
