@@ -33,13 +33,13 @@
 <div class="p" id="leg"><span id="legTitle">speed (green free-flow → red slow)</span><div class="bar" id="legBar"></div>
   <div class="e"><span id="legLo">slow</span><span id="legHi">free-flow</span></div>
   <div class="q" id="legQ">■ red tail = queue spillback</div></div>
-<div id="src">Source: Caltrans PeMS I-405 N · QVDF-calibrated speed reconstruction (polynomial arrival queue ← inflow demand/capacity). Public (PeMS). · basemap © OpenStreetMap</div>
+<div id="src">Source: Caltrans PeMS I-405 N · QVDF-calibrated speed reconstruction + analytical queue Q(t) (polynomial arrival queue, inflow demand/capacity). Public (PeMS). · basemap © OpenStreetMap</div>
 <div class="p" id="ctl"><button id="play">▶</button><span class="clk" id="clk">—</span>
   <input type="range" id="slider" min="0" value="0"><label style="color:#9aa7bd">speed</label>
   <select id="spd"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option><option value="8">8×</option></select></div>
 <script>
 const {DeckGL,PolygonLayer,PathLayer,TileLayer,BitmapLayer,ScatterplotLayer}=deck;
-const QMEAS=0;
+const QMEAS=1;
 fetch('frames.json').then(r=>r.json()).then(D=>{
   const N=D.times.length; let f=0, playing=false, tick=0;
   const HAS_V=D.hasV, MAXH=520, BASE=4;

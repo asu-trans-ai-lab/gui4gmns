@@ -1,1 +1,1 @@
-Caltrans PeMS I-405 N · QVDF-calibrated speed reconstruction (polynomial arrival queue ← inflow demand/capacity). Public (PeMS).
+Caltrans PeMS I-405 N · QVDF-calibrated speed reconstruction + analytical queue Q(t) (polynomial arrival queue, inflow demand/capacity). Public (PeMS).

@@ -124,14 +124,28 @@ def load_series_qvdf(handoff):
     print(f"  series: QVDF handoff (speed_qvdf_model)  links={len(ser)}")
     return ser
 
-def load_paq_dc(paq):
-    """daily_paq_all.csv -> per-link peak demand/capacity ratio (the QVDF headline input)."""
-    dc = {}
-    if not (paq and os.path.exists(paq)): return dc
+def load_paq(paq):
+    """daily_paq_all.csv -> per-link {dc: peak D/C, ep: [(t0,t2,t3,msr), ...]} congestion episodes (hours).
+    'magnitude' column == MSR = (v_co-v_t2)/v_t2 (verified). One episode per calibrated period (AM/PM)."""
+    out = {}
+    if not (paq and os.path.exists(paq)): return out
     for r in read_csv(paq):
-        lid = norm_id(r["link_id"]); v = fnum(r.get("DC"))
-        if v > dc.get(lid, 0): dc[lid] = v
-    return dc
+        lid = norm_id(r["link_id"])
+        d = out.setdefault(lid, {"dc": 0.0, "ep": []})
+        d["dc"] = max(d["dc"], fnum(r.get("DC")))
+        t0, t2, t3, msr = fnum(r.get("t0")), fnum(r.get("t2")), fnum(r.get("t3")), fnum(r.get("magnitude"))
+        if t3 > t0 and msr > 0: d["ep"].append((t0, t2, t3, msr))
+    return out
+
+def qvdf_queue(episodes, minute):
+    """Analytical QVDF queue length at a clock minute: Q(t) ∝ (t-t0)^2·(t3-t)^2 (cubic PAQ, m=0.5; Eq. 15/
+    Newell Eq. 10 family), zero outside [t0,t3], peak at t2, scaled by the episode's MSR. Max over episodes."""
+    th = minute / 60.0; best = 0.0
+    for t0, t2, t3, msr in episodes:
+        if t0 <= th <= t3:
+            peak = ((t2 - t0) * (t3 - t2)) ** 2 or 1e-9
+            best = max(best, msr * ((th - t0) * (t3 - th)) ** 2 / peak)
+    return best
 
 def load_series(folder, series_arg):
     """Return (series, network_dir). series[link_id] = {'speed':{min:val}, 'vol':{...}, 'queue':{...}}."""
@@ -252,10 +266,10 @@ def main():
         ser = load_series_qvdf(qvdf_handoff)
         ndir = os.path.join(folder, "network") if os.path.exists(os.path.join(folder, "network", "node.csv")) else folder
         series_name = "QVDF reconstruction (speed_qvdf_model)"
-        dc = load_paq_dc(opt("--paq")); qmode = True
+        paq = load_paq(opt("--paq")); dc = {k: v["dc"] for k, v in paq.items()}; qmode = True
     else:
         ser, ndir, series_name = load_series(folder, opt("--series"))
-        dc = {}; qmode = False
+        paq = {}; dc = {}; qmode = False
     net = load_network(ndir)
     events, ev_name = load_events(folder)
     evlinks = {e["link"] for e in events}
@@ -289,7 +303,11 @@ def main():
         line = L["line"]
         if coslat is None:
             coslat = max(0.2, math.cos(math.radians(line[0][1])))
-        s = sample(d["speed"]); v = sample(d["vol"]); q = sample(d["queue"])
+        s = sample(d["speed"]); v = sample(d["vol"])
+        if qmode and paq.get(lid, {}).get("ep"):          # analytical QVDF queue Q(t) on the time axis
+            q = [qvdf_queue(paq[lid]["ep"], m) for m in axis]
+        else:
+            q = sample(d["queue"])
         # reference (free-flow) speed = 90th pctile of the link's OWN measured speed (INRIX-style,
         # unit-agnostic) — avoids km/h-vs-mph mismatch with link.csv free_speed
         ref = pctl(list(d["speed"].values()), 0.9) or L["ff"] or 60
@@ -322,7 +340,7 @@ def main():
                       "mid": [round(mid[0], 6), round(mid[1], 6)],
                       "s": [round(x, 1) if x is not None else None for x in r["s"]] if r["s"] else None,
                       "v": [round(x) if x is not None else None for x in r["v"]] if r["v"] else None,
-                      "q": [round(x, 1) if x is not None else None for x in r["q"]] if r["q"] else None,
+                      "q": [round(x, 3) if x is not None else None for x in r["q"]] if r["q"] else None,
                       "dc": round(dc[r["lid"]], 1) if dc.get(r["lid"]) else None})
 
     # per-frame network-average speed ratio (for KPIs + storyline)
@@ -350,7 +368,7 @@ def main():
             "avg_ratio": [round(r, 3) if r is not None else None for r in avg_ratio],
             "feed": series_name, "events_feed": ev_name,
             "mode": "qvdf" if qmode else "obs",
-            "qlabel": ("■ red tail = QVDF-modeled congestion (calibrated speed profile; D/C on hover)"
+            "qlabel": ("■ red tail = QVDF queue Q(t) ∝ (t−t₀)²(t₃−t)² — analytical, calibrated (D/C on hover)"
                        if qmode else "")}
     json.dump(data, open(os.path.join(out, "frames.json"), "w"))
     open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(

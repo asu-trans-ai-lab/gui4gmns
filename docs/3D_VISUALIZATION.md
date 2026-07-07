@@ -20,7 +20,9 @@ gmns2optimization                  →  decision variables · constraints · sha
   full-year weekday-averaged **5-min speed+flow**, AM peak.
 - [I-405 N — QVDF model](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/i405n_qvdf/) — the **calibrated
   QVDF speed reconstruction** from the inflow demand-to-capacity ratio (polynomial arrival queue → VDF); full
-  weekday, per-link **D/C on hover** (`--qvdf handoff_avgweekday_timedependent.csv --paq daily_paq_all.csv`).
+  weekday, per-link **D/C on hover**, and a red tail driven by the **analytical queue length
+  Q(t) ∝ (t−t₀)²(t₃−t)²** (cubic PAQ, m=0.5) — the queue grows from t₀, peaks at t₂, dissipates by t₃, exactly
+  as the model predicts, not a speed proxy (`--qvdf handoff_avgweekday_timedependent.csv --paq daily_paq_all.csv`).
 - [Event playbook — Chicago](https://asu-trans-ai-lab.github.io/gui4gmns/portal_demo/chicago_tmc/) — 15-min
   volume + **measured** queue spillback (`queue_exb`) + blocked-link events firing on the clock.
 
