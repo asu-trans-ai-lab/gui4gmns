@@ -22,8 +22,15 @@ def tracked():
     return [l for l in out.splitlines() if l.strip()]
 
 SELF_OK = {"validate_no_private_data.py", ".gitignore"}   # both legitimately name the private paths they screen/exclude
-# Owner-cleared public despite matching a block token (USDOT JPO CodeHub ITS demonstration data, 2026-07-06):
-ALLOW = ("datasets/08_public_ITS_VA_1-95_sample/",)
+# Owner-cleared public despite matching a block token (fully exempt from name + content screening). The
+# "_tmc" viewers/playbook match the BLOCK_NAME token "tmc" only because TMC = Traffic Management Center (the
+# domain term), NOT the private TMC probe feed — they are built solely from vetted public sources: Caltrans
+# PeMS (i405n), the cleared USDOT JPO CodeHub ITS I-95 sample (i95), and a synthetic test network (chicago).
+ALLOW = ("datasets/08_public_ITS_VA_1-95_sample/",
+         "docs/3D_TMC_PLAYBOOK.md",
+         "docs/portal_demo/i95_tmc/",
+         "docs/portal_demo/chicago_tmc/",
+         "docs/portal_demo/i405n_tmc/")
 def _allowed(f): return any(f.startswith(p) for p in ALLOW)
 
 def content_hits(files):

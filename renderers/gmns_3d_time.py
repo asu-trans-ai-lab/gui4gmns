@@ -31,6 +31,12 @@ def fnum(v, d=0.0):
     try: return float(v)
     except: return d
 
+def norm_id(v):
+    """Normalize a link/node id so joins match: numeric '1.0'->'1', '49'->'49'; keep 'L405N-002' as-is."""
+    v = str(v).strip()
+    try: return str(int(float(v)))
+    except: return v
+
 def tmin(s):
     """Time string -> minutes past midnight. Accepts '07:15', '0715', '0700_0800' (uses start), '7:5'."""
     s = (s or "").strip()
@@ -71,25 +77,46 @@ def load_network(ndir):
     for r in read_csv(os.path.join(ndir, "node.csv")):
         x = r.get("x_coord") or r.get("x") or r.get("lon") or r.get("longitude")
         y = r.get("y_coord") or r.get("y") or r.get("lat") or r.get("latitude")
-        nodes[str(int(fnum(r["node_id"])))] = (fnum(x), fnum(y))
+        nodes[norm_id(r["node_id"])] = (fnum(x), fnum(y))
     links = {}
     for r in read_csv(os.path.join(ndir, "link.csv")):
-        lid = str(int(fnum(r["link_id"])))
+        lid = norm_id(r["link_id"])
         pts = re.findall(r"(-?\d+\.?\d*)\s+(-?\d+\.?\d*)", r.get("geometry") or "")
         line = [(float(x), float(y)) for x, y in pts] if len(pts) >= 2 else None
         if not line:
-            a = nodes.get(str(int(fnum(r["from_node_id"])))); b = nodes.get(str(int(fnum(r["to_node_id"]))))
+            a = nodes.get(norm_id(r["from_node_id"])); b = nodes.get(norm_id(r["to_node_id"]))
             line = [a, b] if a and b else None
         if not line: continue
-        links[lid] = {"line": line, "ff": fnum(r.get("free_speed") or r.get("free_speed_raw") or 60),
-                      "lanes": max(1, fnum(r.get("lanes") or 1)), "cap": fnum(r.get("capacity") or 1800)}
+        links[lid] = {"line": line,
+                      "ff": fnum(r.get("free_speed") or r.get("free_speed_raw") or r.get("free_speed_kmh") or 60),
+                      "lanes": max(1, fnum(r.get("lanes") or 1)),
+                      "cap": fnum(r.get("capacity") or r.get("capacity_vph") or 1800)}
     return links
 
 
 # ---------------------------------------------------------------- series (auto-detect feed shape)
+def load_series_pems(folder):
+    """PeMS corridor package: observations/speeds.csv (avg_speed_mph) + counts.csv (avg_flow_vphpl),
+    5-min bins keyed by time_index (minute = time_index*5). Merged on link_id x time_index."""
+    ser = {}
+    for r in read_csv(os.path.join(folder, "observations", "speeds.csv")):
+        lid = norm_id(r["link_id"]); m = int(fnum(r.get("time_index"))) * 5
+        ser.setdefault(lid, {"speed": {}, "vol": {}, "queue": {}})["speed"][m] = fnum(r.get("avg_speed_mph"))
+    cf = os.path.join(folder, "observations", "counts.csv")
+    if os.path.exists(cf):
+        for r in read_csv(cf):
+            lid = norm_id(r["link_id"]); m = int(fnum(r.get("time_index"))) * 5
+            fv = fnum(r.get("avg_flow_vphpl"))
+            if fv: ser.setdefault(lid, {"speed": {}, "vol": {}, "queue": {}})["vol"][m] = fv
+    return ser
+
 def load_series(folder, series_arg):
     """Return (series, network_dir). series[link_id] = {'speed':{min:val}, 'vol':{...}, 'queue':{...}}."""
     ndir = os.path.join(folder, "network") if os.path.exists(os.path.join(folder, "network", "node.csv")) else folder
+    if not series_arg and os.path.exists(os.path.join(folder, "observations", "speeds.csv")):
+        ser = load_series_pems(folder)
+        print(f"  series: observations/speeds.csv (+counts.csv)  5-min PeMS  links={len(ser)}")
+        return ser, ndir, "PeMS observations (speeds+counts, 5-min)"
     if series_arg:
         path = series_arg
     elif os.path.exists(os.path.join(folder, "tmc_speed_15min.csv")):
@@ -97,16 +124,16 @@ def load_series(folder, series_arg):
     elif os.path.exists(os.path.join(folder, "link_performance_15min.csv")):
         path = os.path.join(folder, "link_performance_15min.csv")
     else:
-        sys.exit("no time-series feed found (tmc_speed_15min.csv / link_performance_15min.csv). Use --series.")
+        sys.exit("no time-series feed found (observations/speeds.csv / tmc_speed_15min.csv / link_performance_15min.csv). Use --series.")
     rows = read_csv(path)
     hdr = rows[0].keys() if rows else []
-    tcol = next((c for c in ("time", "time_bin_start", "time_period", "timestamp") if c in hdr), None)
-    scol = next((c for c in ("speed", "speed_mph", "avg_speed") if c in hdr), None)
-    vcol = next((c for c in ("inflow_veh", "volume", "flow", "count") if c in hdr), None)
+    tcol = next((c for c in ("time", "time_bin_start", "time_period", "timestamp", "time_of_day") if c in hdr), None)
+    scol = next((c for c in ("speed", "speed_mph", "avg_speed", "avg_speed_mph") if c in hdr), None)
+    vcol = next((c for c in ("inflow_veh", "volume", "flow", "count", "avg_flow_vphpl") if c in hdr), None)
     qcol = next((c for c in ("queue_exb", "queue", "queue_length") if c in hdr), None)
     ser = {}
     for r in rows:
-        lid = str(int(fnum(r["link_id"]))); m = tmin(r.get(tcol))
+        lid = norm_id(r["link_id"]); m = tmin(r.get(tcol))
         d = ser.setdefault(lid, {"speed": {}, "vol": {}, "queue": {}})
         if scol and r.get(scol) not in (None, ""): d["speed"][m] = fnum(r[scol])
         if vcol and r.get(vcol) not in (None, ""): d["vol"][m] = fnum(r[vcol])
@@ -131,7 +158,7 @@ def _norm_events(rows, fn):
         en = r.get("end_time") or st
         typ = (r.get("type") or "event").replace("_", " ")
         sev = fnum(r.get("value") or r.get("severity") or r.get("parameter_value") or r.get("value") or 50)
-        ev.append({"link": str(int(fnum(lid))), "t0": tmin(st), "t1": tmin(en), "type": typ, "sev": sev,
+        ev.append({"link": norm_id(lid), "t0": tmin(st), "t1": tmin(en), "type": typ, "sev": sev,
                    "note": r.get("notes") or r.get("parameter") or ""})
     print(f"  events: {fn}  ({len(ev)} events)")
     return ev, fn
@@ -146,21 +173,22 @@ def build_narration(times, avg_ratio, events, evlinks):
         R = [r if r is not None else 1.0 for r in avg_ratio]
         base = sorted(R[:max(3, N//8)])[len(R[:max(3, N//8)])//2]       # early-window median
         worst_i = min(range(N), key=lambda i: R[i]); worst = R[worst_i]
+        # baseline-relative thresholds: a corridor AVERAGE dilutes localized bottlenecks, so phase off the
+        # drop FROM baseline, not an absolute speed (works for both strong and mild-average corridors)
+        act_lvl = min(0.82, base - 0.10)
         n.append({"i": 0, "phase": "Baseline — free flow",
-                  "text": f"Corridor near free-flow (~{round(base*100)}% of posted speed). Detectors nominal; no active TIM."})
-        # bottleneck activation = first sustained drop below 0.78 before the worst frame
-        act = next((i for i in range(N) if R[i] < 0.78 and R[min(i+1, N-1)] < 0.82 and i <= worst_i), None)
+                  "text": f"Corridor near free-flow (~{round(base*100)}% of the peak reference speed). Detectors nominal; no active TIM."})
+        act = next((i for i in range(N) if R[i] < act_lvl and R[min(i+1, N-1)] < act_lvl + 0.04 and i <= worst_i), None)
         if act is not None:
             n.append({"i": act, "phase": "Bottleneck activation",
-                      "text": f"Speed breaks down at {times[act]} — capacity drop / onset of congestion. Queue begins to "
-                              f"form; a shockwave propagates upstream (red front moving against traffic)."})
-        if worst < 0.7:
+                      "text": f"Speed breaks down at {times[act]} — capacity drop / onset of congestion. A recurrent "
+                              f"queue forms; the red front propagates upstream (a shockwave moving against traffic)."})
+        if base - worst > 0.12:
             n.append({"i": worst_i, "phase": "Peak congestion — spillback",
-                      "text": f"Worst at {times[worst_i]} (~{round(worst*100)}% of free-flow). Queue spillback extends "
-                              f"upstream; secondary-crash risk window is open. Candidate response: VSL harmonization, "
-                              f"ramp metering, DMS diversion."})
-        # recovery = first frame after worst returning above 0.9
-        rec = next((i for i in range(worst_i, N) if R[i] > 0.9), None)
+                      "text": f"Worst at {times[worst_i]} — corridor at ~{round(worst*100)}% of reference (bottleneck "
+                              f"links far lower). Queue spillback extends upstream; secondary-crash risk window open. "
+                              f"Candidate response: VSL harmonization, ramp metering, DMS diversion."})
+        rec = next((i for i in range(worst_i, N) if R[i] > base - 0.05), None)
         if rec is not None:
             n.append({"i": rec, "phase": "Recovery — return to normal",
                       "text": f"Speed recovers by {times[rec]} — queue discharges, shockwave clears. Roadway clearance "
