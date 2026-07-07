@@ -1,0 +1,89 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>gui4gmns — Arizona cities (city-by-city dashboard)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+ html,body{margin:0;height:100%;font:14px/1.4 system-ui,Segoe UI,Arial;color:#e6edf3}
+ #app{display:flex;flex-direction:column;height:100%}
+ header{background:#1d232b;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+ header b{font-size:16px} header b span{color:#58a6ff}
+ header .sub{color:#9aa7bd;font-size:12px}
+ #cities{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+ #cities button{background:#2b333d;color:#c3ccd8;border:1px solid #39424d;border-radius:14px;padding:4px 12px;font-size:12.5px;cursor:pointer}
+ #cities button.on{background:#2563eb;color:#fff;border-color:#2563eb}
+ #map{flex:1;background:#0e1116}
+ .panel{position:absolute;z-index:500;background:rgba(20,25,31,.92);border:1px solid #2b333d;border-radius:8px;padding:9px 12px;font-size:12px;color:#c3ccd8}
+ #stats{top:70px;right:12px;min-width:150px} #stats b{color:#e6edf3}
+ #legend{bottom:22px;left:12px}
+ #legend .bar{height:9px;width:150px;border-radius:2px;margin:5px 0 3px}
+ #legend .ends{display:flex;justify-content:space-between;font-size:11px;color:#9aa7bd}
+ #src{bottom:22px;right:12px;color:#9aa7bd}
+ .leaflet-popup-content{font:12px system-ui}
+ #load{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:600;
+   background:rgba(14,17,22,.55);color:#58a6ff;font-size:15px}
+</style></head><body>
+<div id="app">
+  <header>
+    <b><span>gui4gmns</span> · Arizona cities</b>
+    <span class="sub">city street networks from OpenStreetMap (osm2gmns), clipped to each OSM city boundary</span>
+    <div id="cities"></div>
+  </header>
+  <div id="map">
+    <div id="load">loading…</div>
+    <div class="panel" id="stats"></div>
+    <div class="panel" id="legend"></div>
+    <div class="panel" id="src"></div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CITIES=[["phoenix","Phoenix"],["tempe","Tempe"],["mesa","Mesa"],["scottsdale","Scottsdale"],
+              ["chandler","Chandler"],["glendale","Glendale"],["gilbert","Gilbert"]];
+const map=L.map("map",{preferCanvas:true,zoomControl:true}).setView([33.45,-111.95],10);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(map);
+let netLayer=null, bndLayer=null;
+
+// green(low t) -> yellow -> orange -> red(high t)
+const STOPS=[[47,158,94],[245,206,52],[230,84,30],[166,13,10]];
+function ramp(t){t=Math.max(0,Math.min(1,t));const s=t*3,i=Math.min(2,Math.floor(s)),f=s-i;
+  const a=STOPS[i],b=STOPS[i+1];return `rgb(${a.map((v,k)=>Math.round(v+(b[k]-v)*f)).join(",")})`;}
+function pct(sorted,q){return sorted[Math.max(0,Math.min(sorted.length-1,Math.floor(q*(sorted.length-1))))];}
+
+function metric(feats){
+  const vol=feats.map(f=>+f.properties.volume||0);
+  if(Math.max(...vol)>0) return {get:f=>+f.properties.volume||0,label:"assigned volume (veh)",hot:true};
+  return {get:f=>+f.properties.speed||0,label:"free-flow speed (mph)",hot:false};
+}
+
+async function show(slug,name,btn){
+  document.querySelectorAll("#cities button").forEach(b=>b.classList.remove("on"));
+  if(btn)btn.classList.add("on");
+  document.getElementById("load").style.display="flex";
+  try{
+    const [net,bnd,src]=await Promise.all([
+      fetch(slug+"/network.geojson").then(r=>r.json()),
+      fetch("_boundaries/"+slug+".geojson").then(r=>r.json()).catch(()=>null),
+      fetch(slug+"/SOURCE.txt").then(r=>r.ok?r.text():"").catch(()=>"")]);
+    const feats=net.features, M=metric(feats);
+    const vals=feats.map(M.get).sort((a,b)=>a-b), lo=pct(vals,.05), hi=pct(vals,.97), rng=(hi-lo)||1;
+    if(netLayer)map.removeLayer(netLayer); if(bndLayer)map.removeLayer(bndLayer);
+    netLayer=L.geoJSON(net,{style:f=>{let t=(M.get(f)-lo)/rng; if(!M.hot)t=1-t;  // speed: high=green
+      const ln=+f.properties.lanes||1;
+      return {color:ramp(t),weight:.6+Math.min(ln,4)*.55,opacity:.9};},
+      onEachFeature:(f,l)=>{const p=f.properties;
+        l.bindPopup(`link ${p.link_id}<br>${M.label.split(" (")[0]}: <b>${(M.get(f)).toFixed(1)}</b><br>lanes ${p.lanes} · cap ${p.capacity}`);}
+    }).addTo(map);
+    if(bnd){bndLayer=L.geoJSON(bnd,{style:{color:"#58a6ff",weight:2,fill:false,opacity:.8}}).addTo(map);
+      map.fitBounds(bndLayer.getBounds(),{padding:[20,20]});}
+    else map.fitBounds(netLayer.getBounds(),{padding:[20,20]});
+    document.getElementById("stats").innerHTML=`<b>${name}, AZ</b><br>${feats.length.toLocaleString()} links shown<br>colored by ${M.label}`;
+    document.getElementById("legend").innerHTML=`${M.label}<div class="bar" style="background:linear-gradient(90deg,${M.hot?"":"rgb(166,13,10),"}rgb(47,158,94),rgb(245,206,52),rgb(230,84,30)${M.hot?",rgb(166,13,10)":""})"></div><div class="ends"><span>${M.hot?"low":"slow"}</span><span>${M.hot?"high":"fast"}</span></div>`;
+    document.getElementById("src").innerHTML="Source: "+(src.trim()||"OpenStreetMap via osm2gmns");
+  }catch(e){document.getElementById("stats").innerHTML="failed to load "+name;}
+  document.getElementById("load").style.display="none";
+}
+const bar=document.getElementById("cities");
+CITIES.forEach(([slug,name],i)=>{const b=document.createElement("button");b.textContent=name;
+  b.onclick=()=>show(slug,name,b);bar.appendChild(b);if(i===0)show(slug,name,b);});
+</script></body></html>
