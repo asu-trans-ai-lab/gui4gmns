@@ -1,0 +1,108 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>gui4gmns — integrated dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+ html,body{margin:0;height:100%;font:13px/1.4 system-ui,Segoe UI,Arial;color:#e6edf3}
+ #app{display:flex;flex-direction:column;height:100%}
+ header{background:#1d232b;padding:8px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+ header b{font-size:15px} header b span{color:#58a6ff}
+ .grp{display:flex;gap:4px;align-items:center;background:#232a33;border:1px solid #313a45;border-radius:8px;padding:3px 6px}
+ .grp label{color:#9aa7bd;font-size:11px;margin-right:2px}
+ .grp button,select{background:#2b333d;color:#c3ccd8;border:1px solid #39424d;border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer}
+ .grp button.on{background:#2563eb;color:#fff;border-color:#2563eb}
+ #map{flex:1;background:#0e1116}
+ .panel{position:absolute;z-index:600;background:rgba(20,25,31,.93);border:1px solid #2b333d;border-radius:8px;padding:10px 12px;font-size:12px}
+ #insp{top:64px;right:12px;width:180px} #insp h4{margin:0 0 6px;font-size:12.5px;color:#58a6ff}
+ #insp .row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #262d36}
+ #insp .row b{color:#e6edf3}
+ #legend{bottom:20px;left:12px} #legend .bar{height:9px;width:150px;border-radius:2px;margin:5px 0 3px}
+ #legend .e{display:flex;justify-content:space-between;color:#9aa7bd;font-size:11px}
+ #stats{top:64px;left:12px;color:#c3ccd8} #stats b{color:#e6edf3}
+ #src{bottom:20px;right:12px;color:#9aa7bd;font-size:11.5px}
+ #load{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:700;background:rgba(14,17,22,.5);color:#58a6ff}
+</style></head><body>
+<div id="app">
+  <header>
+    <b><span>gui4gmns</span> · integrated</b>
+    <div class="grp" id="cityg"><label>city</label></div>
+    <div class="grp" id="baseg"><label>base</label></div>
+    <div class="grp"><label>color by</label><select id="moe">
+      <option value="volume">assigned volume</option><option value="speed">speed</option><option value="voc">V/C ratio</option></select></div>
+    <div class="grp"><button id="odbtn">OD desire lines</button></div>
+  </header>
+  <div id="map">
+    <div id="load">loading…</div>
+    <div class="panel" id="stats"></div>
+    <div class="panel" id="insp"><h4>Inspector</h4><div style="color:#9aa7bd">click a link</div></div>
+    <div class="panel" id="legend"></div>
+    <div class="panel" id="src"></div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CITIES={west_jordan:{name:"West Jordan, UT"},tempe:{name:"Tempe, AZ"}};
+const BASES={
+ Dark:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+ Street:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+ Sat:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"};
+const MOES={volume:{label:"assigned volume (veh)",get:p=>+p.volume||0,hot:true},
+            speed:{label:"speed (mph)",get:p=>+p.speed||0,hot:false},
+            voc:{label:"V/C ratio",get:p=>+p.voc||0,hot:true}};
+const STOPS=[[47,158,94],[245,206,52],[230,84,30],[166,13,10]];
+function ramp(t){t=Math.max(0,Math.min(1,t));const s=t*3,i=Math.min(2,Math.floor(s)),f=s-i,a=STOPS[i],b=STOPS[i+1];
+  return `rgb(${a.map((v,k)=>Math.round(v+(b[k]-v)*f)).join(",")})`;}
+function pct(s,q){return s[Math.max(0,Math.min(s.length-1,Math.floor(q*(s.length-1))))];}
+
+const map=L.map("map",{preferCanvas:true}).setView([40.6,-112],12);
+let baseLayer=L.tileLayer(BASES.Dark,{subdomains:"abcd",maxZoom:19,attribution:"© OpenStreetMap, CARTO"}).addTo(map);
+let net=null, od=null, odOn=false, cur=null, curCity="west_jordan", curMoe="volume";
+
+function style(f){const M=MOES[curMoe],v=M.get(f.properties);let t=(v-cur.lo)/cur.rng;if(!M.hot)t=1-t;
+  return {color:ramp(t),weight:.7+Math.min(+f.properties.lanes||1,5)*.5,opacity:.92};}
+function recolor(){const M=MOES[curMoe];const vals=cur.feats.map(f=>M.get(f.properties)).sort((a,b)=>a-b);
+  cur.lo=pct(vals,.05);cur.rng=(pct(vals,.97)-cur.lo)||1;
+  if(net)net.setStyle(style);
+  document.getElementById("legend").innerHTML=`${M.label}<div class="bar" style="background:linear-gradient(90deg,`+
+    (M.hot?"rgb(47,158,94),rgb(245,206,52),rgb(230,84,30),rgb(166,13,10)":"rgb(166,13,10),rgb(230,84,30),rgb(245,206,52),rgb(47,158,94)")+
+    `)"></div><div class="e"><span>${M.hot?"low":"slow"}</span><span>${M.hot?"high":"fast"}</span></div>`;}
+function inspect(p){document.getElementById("insp").innerHTML="<h4>link "+p.link_id+"</h4>"+
+  [["volume",Math.round(p.volume)],["speed",(+p.speed).toFixed(1)+" mph"],["V/C",(+p.voc).toFixed(2)],
+   ["lanes",p.lanes],["capacity",p.capacity]].map(([k,v])=>`<div class="row"><span>${k}</span><b>${v}</b></div>`).join("");}
+
+async function load(city){curCity=city;document.getElementById("load").style.display="flex";
+  document.querySelectorAll("#cityg button").forEach(b=>b.classList.toggle("on",b.dataset.c===city));
+  try{
+    const [netj,odt,src]=await Promise.all([
+      fetch(city+"/network.geojson").then(r=>r.json()),
+      fetch(city+"/od_arcs.csv").then(r=>r.text()).catch(()=>""),
+      fetch(city+"/SOURCE.txt").then(r=>r.ok?r.text():"").catch(()=>"")]);
+    cur={feats:netj.features};
+    if(net){map.removeLayer(net);net=null;} if(od){map.removeLayer(od);od=null;}
+    recolor();  // set cur.lo/rng + legend BEFORE styling (L.geoJSON styles immediately)
+    net=L.geoJSON(netj,{style,onEachFeature:(f,l)=>l.on("click",()=>inspect(f.properties))}).addTo(map);
+    map.fitBounds(net.getBounds(),{padding:[25,25]});
+    // OD desire lines
+    const rows=odt.trim().split("\n").slice(1).map(r=>r.split(",").map(Number));
+    const vmax=Math.max(1,...rows.map(r=>r[4]));
+    od=L.layerGroup(rows.map(r=>L.polyline([[r[1],r[0]],[r[3],r[2]]],
+       {color:"#58a6ff",weight:.4+2.5*(r[4]/vmax),opacity:.35})));
+    if(odOn)od.addTo(map);
+    recolor();
+    document.getElementById("stats").innerHTML=`<b>${CITIES[city].name}</b><br>${netj.features.length} links · ${rows.length} OD pairs`;
+    document.getElementById("src").innerHTML="Source: "+(src.trim()||"gui4gmns");
+  }catch(e){document.getElementById("stats").innerHTML="failed to load "+city;}
+  document.getElementById("load").style.display="none";}
+
+// build controls
+const cg=document.getElementById("cityg");
+Object.entries(CITIES).forEach(([c,o])=>{const b=document.createElement("button");b.textContent=o.name.split(",")[0];b.dataset.c=c;b.onclick=()=>load(c);cg.appendChild(b);});
+const bg=document.getElementById("baseg");
+Object.keys(BASES).forEach((k,i)=>{const b=document.createElement("button");b.textContent=k;if(i===0)b.classList.add("on");
+  b.onclick=()=>{document.querySelectorAll("#baseg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+    map.removeLayer(baseLayer);baseLayer=L.tileLayer(BASES[k],{subdomains:k==="Dark"?"abcd":"abc",maxZoom:19}).addTo(map);};bg.appendChild(b);});
+document.getElementById("moe").onchange=e=>{curMoe=e.target.value;recolor();};
+document.getElementById("odbtn").onclick=function(){odOn=!odOn;this.classList.toggle("on",odOn);
+  if(od){odOn?od.addTo(map):map.removeLayer(od);}};
+load("west_jordan");
+</script></body></html>
