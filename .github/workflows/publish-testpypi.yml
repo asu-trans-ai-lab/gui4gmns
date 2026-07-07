@@ -1,0 +1,56 @@
+name: Publish to TestPyPI (dry-run)
+
+# Dry-run of the release pipeline against TestPyPI, using PyPI Trusted Publishing (OpenID Connect) —
+# no API token stored. Run this MANUALLY from the Actions tab before cutting a real release, to prove
+# the build + OIDC plumbing works without burning a real PyPI version number.
+#
+# One-time setup on test.pypi.org (Account -> Publishing -> add a pending publisher):
+#   PyPI Project Name: gui4gmns
+#   Owner:             asu-trans-ai-lab
+#   Repository name:   gui4gmns
+#   Workflow filename: publish-testpypi.yml
+#   Environment name:  testpypi
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: Build wheel + sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Validate metadata
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/gui4gmns
+    permissions:
+      id-token: write   # REQUIRED: lets the job mint the short-lived OIDC token TestPyPI trusts
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to TestPyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          # no `password:` — the action uses OIDC automatically when id-token: write is granted

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gui4gmns · QA Status Report</title>
+<!--
+  ============================================================================
+  gui4gmns QA REPORT — self-contained, zero-configuration, opens from file://
+  ----------------------------------------------------------------------------
+  AI AGENT: edit ONLY the window.RESULTS object below. Do not touch markup/CSS.
+  Verdict vocabulary: pass | partial | fail | needs_human | na | untested
+  Checkpoint letters: A loads-clean, B offline, C topology, D MOE layer,
+  E animation, F OD lines, G basemap, H size/speed, I cross-browser, J export fidelity
+  Verdicts render as Level-of-Service grades: pass=A, needs_human=C,
+  partial=D, fail=F, na=—, untested=·
+  ============================================================================
+-->
+<script>
+window.RESULTS = {
+  meta: {
+    project: "gui4gmns",
+    repo_url: "https://github.com/asu-trans-ai-lab/gui4gmns",
+    updated: "2026-07-07",
+    release_version: "v0.1.0 — LIVE on PyPI",
+    reporter: "Ziyi Zhang + AI agent"
+  },
+  summary_note: "MILESTONE: gui4gmns v0.1.0 is published and LIVE on PyPI (pypi.org/project/gui4gmns) — the long-advertised 'pip install gui4gmns' now works for the first time. The release fired publish.yml via OIDC trusted publishing (no token); build + twine + publish all green, config matched first try. Verified from a user's seat: fresh venv -> pip install gui4gmns (0.1.0) -> import gui4gmns + from gui4gmns import generate -> generate() produces a dashboard. Phase 0 and Phase 1 are DONE; packaging was verified end-to-end (build/twine/clean-venv install) and the private-data guard passed (decoy both gitignored and flagged; a healthy false positive on this report itself was fixed in PR #2). Next: Phase 2 systematic QA — GEN + auto-portals on chicago_sketch (showcase) first, then adapters and the checkpoint-L audit.",
+  phases: [
+    { id: "P0", name: "Discovery & guard test",  status: "done",    note: "repo cloned · pip install -e . OK · smoke on toys OK · decoy guard test PASSED" },
+    { id: "P1", name: "Release v0.1.0 to PyPI",  status: "done",    note: "LIVE on PyPI; OIDC publish green; clean-venv pip install verified" },
+    { id: "P2", name: "Systematic QA matrix",    status: "active",  note: "next: chicago_sketch showcase + adapters + audit L" },
+    { id: "P3", name: "Generality (new datasets)", status: "todo",  note: "incl. Bay Area net + I-210E recipe reuse" },
+    { id: "P4", name: "SKILL docs & RELEASING.md", status: "active", note: "docs/RELEASING.md done; SKILL doc pending" }
+  ],
+  components: [
+    { code: "GEN",  label: "dashboard + auto-portals" },
+    { code: "LITE", label: "web-lite (root nexta_x)" },
+    { code: "WGL",  label: "web-gl viewer" },
+    { code: "QT",   label: "desktop-qt" },
+    { code: "ENG",  label: "DLSim_STE engine build" },
+    { code: "K",    label: "Kepler portal" },
+    { code: "D",    label: "deck.gl portal" },
+    { code: "KML",  label: "Google Earth" },
+    { code: "QGS",  label: "QGIS + plugin" },
+    { code: "FIG",  label: "static figures" },
+    { code: "AD",   label: "adapters / synth" },
+    { code: "GAL",  label: "gallery / site" }
+  ],
+  datasets: [
+    { id: "toys",           label: "Toys (bottleneck/merge/signal)" },
+    { id: "sioux_falls",    label: "Sioux Falls (01)" },
+    { id: "chicago_sketch", label: "Chicago Sketch (02) ★" },
+    { id: "west_jordan",    label: "West Jordan (07)" },
+    { id: "i210e",          label: "I-210E views (PeMS)" },
+    { id: "its_i95",        label: "ITS I-95 (local)" },
+    { id: "nvta_i395",      label: "NVTA I-395 (local)" }
+  ],
+  cells: [
+    { dataset: "toys", component: "GEN", verdict: "needs_human",
+      checkpoints: { C: "pass", K: "pass", L: "pass" },
+      note: "Smoke test on 05_toy_bottleneck (3 nodes / 2 links) and 05_toy_merge (4 nodes / 3 links): CLI/main() and generate() both produced dashboard.html + dashboard_layers/ + all four portals/ (kepler, deckgl, qgis, kml). Rendered counts match CSVs (C). Auto-portal completeness holds (K). Data-quality audit fired and WARNed on zero-volume major links (L). Not yet opened in a browser — Ziyi confirms visual A/B/G by eye.",
+      evidence: ["console excerpt (session log)"], issue: "" },
+    { dataset: "chicago_sketch", component: "GEN", verdict: "untested",
+      checkpoints: {}, note: "showcase run scheduled after release (Phase 2 priority #1)", evidence: [], issue: "" }
+  ],
+  findings: [
+    { id: "F-001", severity: "note",
+      title: "Packaging pipeline verified GREEN (Phase 1 pre-flight)",
+      detail: "pip install -e ., import gui4gmns (0.1.0) + from gui4gmns import generate, main()/console-script path, python -m build (wheel+sdist ~23 KB, module-only), and twine check both PASSED. A clean-venv install of the built wheel imports and generates a dashboard with no ai-gen on the path — the true user seat. Wheel excludes engine/ and python-lab/ as intended.",
+      issue: "", evidence: ["session console log"] },
+    { id: "F-002", severity: "note",
+      title: "Private-data guard test PASSED",
+      detail: "Planted a decoy CSV under datasets/ whose name matches the restricted *nvta* / *PRIVATE* patterns. git check-ignore confirms .gitignore excludes it; force-adding it makes validate_no_private_data.py flag it and exit 1. Decoy removed, tree clean. The guard protecting the privacy red line is itself proven. (Note: the guard's content check also flagged an earlier draft of this very report because it quoted the exact decoy filename — a healthy false positive; keep private-pattern tokens out of tracked docs, describe them instead.)",
+      issue: "", evidence: ["session console log"] },
+    { id: "F-003", severity: "note",
+      title: "RESOLVED — pip install gui4gmns now works (was advertised but failing)",
+      detail: "docs/index.html (live site) and docs/PACKAGE.md advertised 'pip install gui4gmns' while the package had never been published (zero releases/tags), so the public command failed. RESOLVED by publishing v0.1.0 to PyPI on 2026-07-07. README quickstart also updated to the real pip/import path.",
+      issue: "", evidence: ["https://pypi.org/project/gui4gmns/"] },
+    { id: "F-005", severity: "note",
+      title: "v0.1.0 published to PyPI and verified from a clean venv",
+      detail: "GitHub Release v0.1.0 fired publish.yml (OIDC trusted publishing, no token). build + twine check + publish all succeeded; the trusted-publisher config matched on the first try (no filename-vs-name mismatch). PyPI now serves gui4gmns 0.1.0 (wheel + sdist). Verified: fresh venv -> pip install gui4gmns -> import gui4gmns (0.1.0) + from gui4gmns import generate -> generate() writes a dashboard. Only workflow annotations were Node.js 20 deprecation warnings (non-blocking).",
+      issue: "", evidence: ["https://github.com/asu-trans-ai-lab/gui4gmns/releases/tag/v0.1.0", "https://pypi.org/project/gui4gmns/"] },
+    { id: "F-004", severity: "note",
+      title: "TestPyPI dry-run workflow added — owner config needed before it can fire",
+      detail: "Added .github/workflows/publish-testpypi.yml (manual dispatch, OIDC trusted publishing to TestPyPI). Before it can run, the one-time TestPyPI pending publisher must be created on test.pypi.org (workflow filename publish-testpypi.yml, environment testpypi) — an owner action documented in docs/RELEASING.md §0.",
+      issue: "", evidence: ["docs/RELEASING.md"] }
+  ]
+};
+</script>
+<style>
+  :root{
+    --paper:#FAF9F5; --panel:#FFFFFF; --ink:#1C2733; --ink-soft:#5A6673;
+    --rule:#D8D4CB; --rule-soft:#EAE7E0;
+    --los-a:#2F8A57; --los-c:#4A78B5; --los-d:#DFA018; --los-f:#BE3D2E;
+    --los-na:#B6B2A8; --los-u:#EDEAE3;
+    --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,Menlo,monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);
+       font-size:15px;line-height:1.55;padding:0 0 80px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+  /* ---------- header ---------- */
+  header{border-bottom:3px solid var(--ink);padding:34px 0 22px;margin-bottom:0}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.18em;
+          text-transform:uppercase;color:var(--ink-soft)}
+  h1{font-size:34px;font-weight:750;letter-spacing:-.02em;margin:4px 0 10px}
+  h1 .proj{font-family:var(--mono);font-weight:650}
+  .metaline{display:flex;flex-wrap:wrap;gap:10px 26px;font-family:var(--mono);
+            font-size:12.5px;color:var(--ink-soft)}
+  .metaline b{color:var(--ink);font-weight:600}
+  .metaline a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule)}
+
+  /* ---------- phase corridor ---------- */
+  .corridor{margin:26px 0 8px}
+  .corridor-track{display:flex;gap:6px}
+  .mile{flex:1;min-width:0;position:relative;padding:10px 12px 12px;
+        border:1px solid var(--rule);background:var(--panel);border-radius:3px}
+  .mile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:3px 0 0 3px}
+  .mile.done::before{background:var(--los-a)}
+  .mile.active::before{background:var(--los-d)}
+  .mile.blocked::before{background:var(--los-f)}
+  .mile.todo::before{background:var(--los-na)}
+  .mile .mp{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ink-soft)}
+  .mile .mname{font-weight:650;font-size:13.5px;margin:2px 0 1px}
+  .mile .mnote{font-size:12px;color:var(--ink-soft);white-space:nowrap;
+               overflow:hidden;text-overflow:ellipsis}
+  .mile .mstat{position:absolute;top:9px;right:10px;font-family:var(--mono);
+               font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+
+  /* ---------- summary strip ---------- */
+  .sumgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:18px 0 6px}
+  .sumcard{background:var(--panel);border:1px solid var(--rule);border-radius:3px;
+           padding:12px 14px;text-align:left}
+  .sumcard .n{font-family:var(--mono);font-size:26px;font-weight:650;line-height:1}
+  .sumcard .l{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;
+              color:var(--ink-soft);margin-top:5px}
+  .sumcard.sa .n{color:var(--los-a)} .sumcard.sc .n{color:var(--los-c)}
+  .sumcard.sd .n{color:var(--los-d)} .sumcard.sf .n{color:var(--los-f)}
+  .sumcard.sn .n{color:var(--los-na)} .sumcard.su .n{color:var(--ink-soft)}
+
+  .note-block{background:var(--panel);border:1px solid var(--rule);border-left:5px solid var(--ink);
+              border-radius:3px;padding:14px 18px;margin:12px 0 34px;font-size:14.5px}
+  .note-block .nb-k{font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+                    text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:4px}
+
+  /* ---------- sections ---------- */
+  h2{font-size:15px;font-family:var(--mono);font-weight:650;letter-spacing:.14em;
+     text-transform:uppercase;border-bottom:2px solid var(--ink);
+     padding-bottom:7px;margin:38px 0 16px}
+  h2 .cnt{color:var(--ink-soft);font-weight:400}
+
+  /* ---------- matrix ---------- */
+  .matrix-scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;background:var(--panel)}
+  table.matrix{border-collapse:collapse;width:100%;min-width:860px}
+  .matrix th,.matrix td{border:1px solid var(--rule-soft);padding:0;text-align:center}
+  .matrix thead th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+                   padding:9px 6px;background:var(--paper);position:sticky;top:0}
+  .matrix thead th span{display:block;font-family:var(--sans);font-size:10.5px;
+                        font-weight:400;color:var(--ink-soft);letter-spacing:0}
+  .matrix tbody th{font-size:13px;font-weight:600;text-align:left;
+                   padding:10px 14px;background:var(--paper);white-space:nowrap}
+  .cellbtn{display:block;width:100%;height:100%;padding:11px 4px;border:none;
+           background:transparent;cursor:pointer;font-family:var(--mono);
+           font-size:14px;font-weight:700;color:#fff;transition:filter .12s}
+  .cellbtn:hover{filter:brightness(1.12)}
+  td.v-pass{background:var(--los-a)} td.v-needs_human{background:var(--los-c)}
+  td.v-partial{background:var(--los-d)} td.v-fail{background:var(--los-f)}
+  td.v-na{background:var(--los-na)} td.v-na .cellbtn{color:#fff}
+  td.v-untested{background:var(--los-u)} td.v-untested .cellbtn{color:var(--ink-soft);font-weight:400;cursor:default}
+  td.selected{outline:3px solid var(--ink);outline-offset:-3px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 2px 0;
+          font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
+  .legend .sw{display:inline-block;width:13px;height:13px;border-radius:2px;
+              vertical-align:-2px;margin-right:5px}
+
+  /* ---------- cell detail ---------- */
+  .detail{display:none;background:var(--panel);border:1px solid var(--rule);
+          border-top:4px solid var(--ink);border-radius:0 0 3px 3px;
+          padding:16px 20px;margin-top:-1px}
+  .detail.open{display:block}
+  .detail h3{font-size:16px;margin-bottom:6px}
+  .detail .d-verdict{font-family:var(--mono);font-size:12px;letter-spacing:.1em;
+                     text-transform:uppercase;padding:2px 8px;border-radius:2px;color:#fff;margin-left:8px}
+  .chkrow{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .chk{font-family:var(--mono);font-size:12px;padding:4px 9px;border-radius:2px;
+       border:1px solid var(--rule);background:var(--paper)}
+  .chk b{margin-right:4px}
+  .chk.pass{border-color:var(--los-a);color:var(--los-a)}
+  .chk.partial{border-color:var(--los-d);color:var(--los-d)}
+  .chk.fail{border-color:var(--los-f);color:var(--los-f)}
+  .detail .d-note{font-size:14px;margin:8px 0}
+  .detail .d-files{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft)}
+  .detail .d-files a{color:var(--ink)}
+
+  /* ---------- findings ---------- */
+  .finding{background:var(--panel);border:1px solid var(--rule);border-radius:3px;
+           padding:14px 18px;margin-bottom:10px;display:grid;
+           grid-template-columns:110px 1fr;gap:4px 18px}
+  .finding .sev{font-family:var(--mono);font-size:11px;letter-spacing:.12em;
+                text-transform:uppercase;font-weight:700;padding-top:2px}
+  .sev-blocker{color:var(--los-f)} .sev-major{color:#C4661A}
+  .sev-minor{color:var(--los-d)} .sev-cosmetic{color:var(--los-c)} .sev-note{color:var(--ink-soft)}
+  .finding .f-title{font-weight:650;font-size:14.5px}
+  .finding .f-detail{grid-column:2;font-size:13.5px;color:var(--ink-soft)}
+  .finding .f-meta{grid-column:2;font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+  .finding .f-meta a{color:var(--ink)}
+
+  footer{margin-top:56px;padding-top:14px;border-top:1px solid var(--rule);
+         font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
+  @media (max-width:820px){
+    .sumgrid{grid-template-columns:repeat(3,1fr)}
+    .corridor-track{flex-direction:column}
+    .finding{grid-template-columns:1fr}
+    .finding .f-detail,.finding .f-meta{grid-column:1}
+  }
+  @media print{
+    body{padding:0}.cellbtn{cursor:default}
+    .matrix thead th{position:static}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="kicker">Quality Assurance · Status Report</div>
+    <h1><span class="proj">gui4gmns</span> verification board</h1>
+    <div class="metaline" id="metaline"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- phase corridor -->
+  <div class="corridor">
+    <div class="corridor-track" id="corridor"></div>
+  </div>
+
+  <!-- summary -->
+  <div class="sumgrid" id="sumgrid"></div>
+  <div class="note-block"><span class="nb-k">Summary for Prof. Zhou</span><span id="sumnote"></span></div>
+
+  <!-- matrix -->
+  <h2>QA matrix <span class="cnt" id="coverage"></span></h2>
+  <div class="matrix-scroll">
+    <table class="matrix" id="matrix"></table>
+  </div>
+  <div class="detail" id="detail"></div>
+  <div class="legend" id="legend"></div>
+
+  <!-- findings -->
+  <h2>Findings <span class="cnt" id="fcount"></span></h2>
+  <div id="findings"></div>
+
+  <footer>
+    Grades follow the Level-of-Service convention: A verified · C prepared, needs human eyes ·
+    D partial · F fail · — not applicable · blank untested.
+    Click any graded cell for checkpoints and evidence. This file is self-contained;
+    the agent updates only the RESULTS block. Generated by the gui4gmns QA workflow.
+  </footer>
+</div>
+
+<script>
+(function(){
+  const R = window.RESULTS;
+  const GRADE = {pass:"A", needs_human:"C", partial:"D", fail:"F", na:"—", untested:""};
+  const VLABEL = {pass:"pass / verified", needs_human:"needs human eyes", partial:"partial",
+                  fail:"fail", na:"not applicable", untested:"untested"};
+  const VCOLOR = {pass:"var(--los-a)", needs_human:"var(--los-c)", partial:"var(--los-d)",
+                  fail:"var(--los-f)", na:"var(--los-na)", untested:"var(--los-u)"};
+
+  /* meta */
+  const m = R.meta;
+  document.getElementById("metaline").innerHTML =
+    `<span>updated <b>${m.updated}</b></span>` +
+    `<span>release <b>${m.release_version}</b></span>` +
+    `<span>reporter <b>${m.reporter}</b></span>` +
+    `<span><a href="${m.repo_url}">${m.repo_url.replace("https://","")}</a></span>`;
+  document.getElementById("sumnote").textContent = R.summary_note;
+
+  /* corridor */
+  document.getElementById("corridor").innerHTML = R.phases.map(p =>
+    `<div class="mile ${p.status}">
+       <div class="mp">MP ${p.id}</div>
+       <div class="mstat">${p.status}</div>
+       <div class="mname">${p.name}</div>
+       <div class="mnote" title="${p.note||""}">${p.note||"&nbsp;"}</div>
+     </div>`).join("");
+
+  /* cell lookup + summary counts */
+  const key = c => c.dataset + "::" + c.component;
+  const cellMap = {}; (R.cells||[]).forEach(c => cellMap[key(c)] = c);
+  const counts = {pass:0,needs_human:0,partial:0,fail:0,na:0,untested:0};
+  let total = 0;
+  R.datasets.forEach(d => R.components.forEach(co => {
+    total++;
+    const c = cellMap[d.id+"::"+co.code];
+    counts[(c && counts.hasOwnProperty(c.verdict)) ? c.verdict : "untested"]++;
+  }));
+  const sumdefs = [["pass","sa"],["needs_human","sc"],["partial","sd"],
+                   ["fail","sf"],["na","sn"],["untested","su"]];
+  document.getElementById("sumgrid").innerHTML = sumdefs.map(([v,cls]) =>
+    `<div class="sumcard ${cls}"><div class="n">${counts[v]}</div><div class="l">${VLABEL[v]}</div></div>`).join("");
+  const done = total - counts.untested;
+  document.getElementById("coverage").textContent =
+    `— coverage ${done}/${total} cells (${Math.round(100*done/total)}%)`;
+
+  /* matrix */
+  const thead = `<thead><tr><th style="text-align:left;padding-left:14px">dataset</th>` +
+    R.components.map(c => `<th>${c.code}<span>${c.label}</span></th>`).join("") + `</tr></thead>`;
+  const tbody = `<tbody>` + R.datasets.map(d =>
+    `<tr><th>${d.label}</th>` + R.components.map(co => {
+      const c = cellMap[d.id+"::"+co.code];
+      const v = (c && GRADE.hasOwnProperty(c.verdict)) ? c.verdict : "untested";
+      const clickable = c && v!=="untested";
+      return `<td class="v-${v}" data-k="${d.id}::${co.code}">
+        <button class="cellbtn" ${clickable?"":"tabindex='-1'"}
+          aria-label="${d.label} × ${co.label}: ${VLABEL[v]}">${GRADE[v]||"·"}</button></td>`;
+    }).join("") + `</tr>`).join("") + `</tbody>`;
+  document.getElementById("matrix").innerHTML = thead + tbody;
+
+  /* legend */
+  document.getElementById("legend").innerHTML = sumdefs.map(([v]) =>
+    `<span><span class="sw" style="background:${VCOLOR[v]}"></span>${GRADE[v]||"·"} ${VLABEL[v]}</span>`).join("");
+
+  /* detail panel */
+  const detail = document.getElementById("detail");
+  let selected = null;
+  document.getElementById("matrix").addEventListener("click", e => {
+    const td = e.target.closest("td[data-k]"); if(!td) return;
+    const c = cellMap[td.dataset.k]; if(!c || c.verdict==="untested"){ return; }
+    if(selected) selected.classList.remove("selected");
+    selected = td; td.classList.add("selected");
+    const ds = R.datasets.find(d=>d.id===c.dataset), co = R.components.find(x=>x.code===c.component);
+    const chks = Object.entries(c.checkpoints||{}).map(([k,v]) =>
+      `<span class="chk ${v}"><b>${k}</b>${v}</span>`).join("") ||
+      `<span class="chk">no checkpoint detail recorded</span>`;
+    const ev = (c.evidence||[]).map(p=>`<a href="${p}">${p}</a>`).join(" · ") || "no evidence files";
+    detail.innerHTML =
+      `<h3>${ds?ds.label:c.dataset} × ${co?co.label:c.component}
+        <span class="d-verdict" style="background:${VCOLOR[c.verdict]}">${VLABEL[c.verdict]} (${GRADE[c.verdict]||"·"})</span></h3>
+       <div class="chkrow">${chks}</div>
+       <div class="d-note">${c.note||""}</div>
+       <div class="d-files">evidence: ${ev}${c.issue?` &nbsp;·&nbsp; issue <a href="${R.meta.repo_url}/issues">${c.issue}</a>`:""}</div>`;
+    detail.classList.add("open");
+    detail.scrollIntoView({block:"nearest",behavior:"smooth"});
+  });
+
+  /* findings */
+  const fl = R.findings||[];
+  document.getElementById("fcount").textContent = `— ${fl.length}`;
+  document.getElementById("findings").innerHTML = fl.map(f =>
+    `<div class="finding">
+       <div class="sev sev-${f.severity}">${f.severity}<br><span style="font-weight:400">${f.id}</span></div>
+       <div class="f-title">${f.title}</div>
+       <div class="f-detail">${f.detail||""}</div>
+       <div class="f-meta">${f.issue?`issue ${f.issue} · `:""}${(f.evidence||[]).join(" · ")}</div>
+     </div>`).join("") || `<div class="finding"><div class="sev sev-note">—</div><div class="f-title">No findings recorded yet.</div></div>`;
+})();
+</script>
+</body>
+</html>
