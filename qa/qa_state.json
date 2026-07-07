@@ -30,12 +30,22 @@
   },
   "prs_merged": [
     "#1 Release v0.1.0: verified packaging + release runbook + QA scaffold",
-    "#2 Fix: guard-clean the QA report before release tag"
+    "#2 Fix: guard-clean the QA report before release tag",
+    "#4 Restore v0.1.0 release docs + QA scaffold onto current main (re-applied after #1/#2 were dropped by a force-push to main; v0.1.0 on PyPI was unaffected)"
   ],
+  "prs_closed_unmerged": [
+    "#3 QA: record v0.1.0 as LIVE on PyPI — superseded by #4 (built on pre-force-push main, conflicted)"
+  ],
+  "phase2_progress": {
+    "chicago_sketch x GEN": "DONE (machine pre-screen) — A/B/C/D/E/G/H/K/L pass; M partial (F-006, empty corridor contour); F na. Visual legends/animation/basemap prepared as needs_human for Ziyi.",
+    "open_findings": ["F-006 minor: chicago corridor space-time contour empty (no corridor_speed.csv) — issue drafted, awaiting Ziyi to file"]
+  },
   "next_actions": [
-    "Phase 2 priority #1: GEN + auto-portals on chicago_sketch (public showcase) — walk checkpoints A/B/C/D/K/L, screenshot evidence",
+    "Ziyi: file the drafted F-006 issue (chicago_sketch x GEN x M) — gh command in session, or paste the body from qa_report F-006",
+    "Ziyi: eyeball chicago_sketch/dashboard.html (D legend colors, E animation play/scrub, G basemap alignment) to confirm/overturn the needs_human checkpoints",
     "Phase 2 #2: adapters (its_datahub on public sample structure; semidynamic_trajectories auto-synth on Chicago Sketch)",
     "Phase 2 #3: checkpoint-L audit — plant one defect per class on toys, confirm the audit flags each",
+    "Remaining GEN cells: sioux_falls, west_jordan, i210e three views; then LITE/WGL/QT/FIG/GAL",
     "Consider bumping CI actions off deprecated Node.js 20 (checkout/setup-python/upload-artifact) — cosmetic"
   ],
   "issues_filed": [],

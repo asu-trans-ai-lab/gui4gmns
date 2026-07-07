@@ -25,7 +25,7 @@ window.RESULTS = {
     release_version: "v0.1.0 — LIVE on PyPI",
     reporter: "Ziyi Zhang + AI agent"
   },
-  summary_note: "MILESTONE: gui4gmns v0.1.0 is published and LIVE on PyPI (pypi.org/project/gui4gmns) — the long-advertised 'pip install gui4gmns' now works for the first time. The release fired publish.yml via OIDC trusted publishing (no token); build + twine + publish all green, config matched first try. Verified from a user's seat: fresh venv -> pip install gui4gmns (0.1.0) -> import gui4gmns + from gui4gmns import generate -> generate() produces a dashboard. Phase 0 and Phase 1 are DONE; packaging was verified end-to-end (build/twine/clean-venv install) and the private-data guard passed (decoy both gitignored and flagged; a healthy false positive on this report itself was fixed in PR #2). Next: Phase 2 systematic QA — GEN + auto-portals on chicago_sketch (showcase) first, then adapters and the checkpoint-L audit.",
+  summary_note: "v0.1.0 is LIVE on PyPI (pypi.org/project/gui4gmns) and Phase 2 QA has begun. First matrix cell done: GEN + auto-portals on chicago_sketch (the public showcase, 933 nodes / 2950 links). Machine pre-screen is strong — topology matches the CSVs exactly, dashboard is genuinely offline (no external refs, tiles embedded), MOE/audit/portals all pass, ~8.3 MB total, and --no-portals is honored. One minor finding (F-006): the corridor space-time contour renders empty because Chicago ships no corridor_speed.csv, though DATASETS_COVERAGE claims the capability — issue drafted for Ziyi to file. Visual checkpoints (legends, animation, basemap alignment) are prepared as needs_human for Ziyi's eye. NEXT: adapters (its_datahub public sample + semidynamic trajectory auto-synth) and the checkpoint-L defect-injection test on toys.",
   phases: [
     { id: "P0", name: "Discovery & guard test",  status: "done",    note: "repo cloned · pip install -e . OK · smoke on toys OK · decoy guard test PASSED" },
     { id: "P1", name: "Release v0.1.0 to PyPI",  status: "done",    note: "LIVE on PyPI; OIDC publish green; clean-venv pip install verified" },
@@ -61,8 +61,10 @@ window.RESULTS = {
       checkpoints: { C: "pass", K: "pass", L: "pass" },
       note: "Smoke test on 05_toy_bottleneck (3 nodes / 2 links) and 05_toy_merge (4 nodes / 3 links): CLI/main() and generate() both produced dashboard.html + dashboard_layers/ + all four portals/ (kepler, deckgl, qgis, kml). Rendered counts match CSVs (C). Auto-portal completeness holds (K). Data-quality audit fired and WARNed on zero-volume major links (L). Not yet opened in a browser — Ziyi confirms visual A/B/G by eye.",
       evidence: ["console excerpt (session log)"], issue: "" },
-    { dataset: "chicago_sketch", component: "GEN", verdict: "untested",
-      checkpoints: {}, note: "showcase run scheduled after release (Phase 2 priority #1)", evidence: [], issue: "" }
+    { dataset: "chicago_sketch", component: "GEN", verdict: "needs_human",
+      checkpoints: { A: "pass", B: "pass", C: "pass", D: "pass", E: "pass", G: "pass", H: "pass", K: "pass", L: "pass", M: "partial" },
+      note: "Showcase GEN run (Phase 2 #1), machine pre-screen. C: rendered 933 nodes / 2950 links = node.csv/link.csv exactly. B: zero external http refs in dashboard.html; hybrid basemap embedded (42 OSM z9 + 80 satellite z10 tiles), offline-capable. D: MOE coverage 2927/2950; link-1 volume (cum_departure 4969) embedded in moe.js. H: dashboard 28 KB + layers 4.3 MB + portals 4.0 MB (~8.3 MB total), gen ~24 s — well under the 30 MB / 10 s flags. K: all four portals written and populated; --no-portals honored (dashboard still produced, no portals dir). L: audit fired (checks:6), MOE coverage + conservation 1128857/1128857 OK, no false alarms on clean data. E: trajectories.js 0.35 MB (2000 agents, --max-traj). M PARTIAL: corridor space-time contour renders EMPTY (corridor.js 0.00 MB) — no corridor_speed.csv ships with Chicago (see F-006). F: na (OD marked – in DATASETS_COVERAGE). Visual A/D/E/G legends/animation/alignment prepared for Ziyi's eye.",
+      evidence: ["session console log", "datasets/02_chicago_sketch/dashboard.html (gitignored, local)"], issue: "" }
   ],
   findings: [
     { id: "F-001", severity: "note",
@@ -84,7 +86,11 @@ window.RESULTS = {
     { id: "F-004", severity: "note",
       title: "TestPyPI dry-run workflow added — owner config needed before it can fire",
       detail: "Added .github/workflows/publish-testpypi.yml (manual dispatch, OIDC trusted publishing to TestPyPI). Before it can run, the one-time TestPyPI pending publisher must be created on test.pypi.org (workflow filename publish-testpypi.yml, environment testpypi) — an owner action documented in docs/RELEASING.md §0.",
-      issue: "", evidence: ["docs/RELEASING.md"] }
+      issue: "", evidence: ["docs/RELEASING.md"] },
+    { id: "F-006", severity: "minor",
+      title: "[chicago_sketch] corridor space-time contour renders empty (no corridor_speed.csv shipped)",
+      detail: "DATASETS_COVERAGE.md lists Chicago Sketch with space-time contour ✓, but a default GEN run produces an empty corridor.js (0.00 MB) and the corridor-speed button stays hidden. The generator reads the contour from corridor_speed.csv, which Chicago Sketch does not ship. Everything else on the dataset is green. Fix: ship a small public corridor_speed.csv for Chicago, OR mark the contour '–' for Chicago and demo it on a dataset that ships the input (e.g. I-210E trio). Issue drafted, awaiting Ziyi to file (matrix cell chicago_sketch × GEN × M).",
+      issue: "", evidence: ["console: corridor.js 0.00 MB", "no datasets/02_chicago_sketch/corridor_speed.csv"] }
   ]
 };
 </script>
