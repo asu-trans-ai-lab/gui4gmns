@@ -1,0 +1,43 @@
+{
+  "schema": "gui4gmns-qa-state/1",
+  "updated": "2026-07-07",
+  "branch": "main",
+  "reporter": "Ziyi Zhang + AI agent",
+  "current_phase": "P2",
+  "phase_status": {
+    "P0": "done",
+    "P1": "done",
+    "P2": "active",
+    "P3": "todo",
+    "P4": "active"
+  },
+  "release": {
+    "version": "0.1.0",
+    "status": "LIVE on PyPI",
+    "pypi_url": "https://pypi.org/project/gui4gmns/",
+    "release_url": "https://github.com/asu-trans-ai-lab/gui4gmns/releases/tag/v0.1.0",
+    "published": "2026-07-07",
+    "method": "GitHub Release -> publish.yml -> OIDC trusted publishing (no token)",
+    "verified": [
+      "build + twine check green in CI",
+      "OIDC publisher matched first try (no filename/name mismatch)",
+      "PyPI serves wheel + sdist",
+      "fresh venv: pip install gui4gmns (0.1.0) -> import + generate OK"
+    ],
+    "testpypi_dry_run": "skipped by owner decision (trusted-publishing failures are non-destructive); publish-testpypi.yml remains for future use",
+    "tags_present": ["v0.1.0"],
+    "releases_present": ["v0.1.0"]
+  },
+  "prs_merged": [
+    "#1 Release v0.1.0: verified packaging + release runbook + QA scaffold",
+    "#2 Fix: guard-clean the QA report before release tag"
+  ],
+  "next_actions": [
+    "Phase 2 priority #1: GEN + auto-portals on chicago_sketch (public showcase) — walk checkpoints A/B/C/D/K/L, screenshot evidence",
+    "Phase 2 #2: adapters (its_datahub on public sample structure; semidynamic_trajectories auto-synth on Chicago Sketch)",
+    "Phase 2 #3: checkpoint-L audit — plant one defect per class on toys, confirm the audit flags each",
+    "Consider bumping CI actions off deprecated Node.js 20 (checkout/setup-python/upload-artifact) — cosmetic"
+  ],
+  "issues_filed": [],
+  "notes": "Desktop-path venv .exe console shims are blocked by security policy; exercise the CLI via python -c \"import sys,gui4gmns; sys.argv=[...]; gui4gmns.main()\". Keep private-pattern tokens (e.g. exact decoy filenames) out of tracked QA docs — the guard content-check will flag them."
+}
