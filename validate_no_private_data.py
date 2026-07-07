@@ -4,7 +4,7 @@ Run:  python validate_no_private_data.py    (exit 0 = clean, 1 = private data st
 import os, subprocess, sys, re
 
 BLOCK_NAME = re.compile(r"(private|nvta|vdot|inrix|cbi|tmc|p4p|ritis|screenline)", re.I)
-BLOCK_PATH = ["06_nvta", "data_private", "dashboard_layers"]
+BLOCK_PATH = ["06_nvta", "data_private", "dashboard_layers", "MAG_golden", "mag_golden"]
 # High-signal markers of EMBEDDED restricted data / private-path coupling — screens CONTENT, not just the
 # filename (i17_dashboard.html slipped the name check but embeds I-17 CBI data). Deliberately specific so
 # UI labels ("INRIX observed"), design credits ("PeMS/RITIS"), supported schema columns ("speed_inrix"),

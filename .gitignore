@@ -1,4 +1,4 @@
-# ---- PRIVACY: agency data must NEVER be committed (NVTA / VDOT / INRIX / CBI / QVDF-corridor) ----
+# ---- PRIVACY: agency data must NEVER be committed (NVTA / VDOT / INRIX / CBI / MAG / QVDF-corridor) ----
 *PRIVATE*
 *private*
 !validate_no_private_data.py
@@ -7,6 +7,12 @@
 **/*NVTA*
 ai-gen/variants/nvta_corridor_contour.png
 datasets/06_*/
+# MAG regional model + CBI (proprietary; never ship — visualize locally only, geometry/link_ids hidden)
+datasets/MAG_golden/
+**/MAG_golden/
+**/*_MAG*
+**/*cbi*
+**/*CBI*
 
 # ---- generated / regenerable artifacts (users run the generator) ----
 **/dashboard.html
