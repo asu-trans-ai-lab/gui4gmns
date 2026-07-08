@@ -1,0 +1,5 @@
+node_id,ib_link_id,ob_link_id,type
+2,1,2,through
+2,1,4,right
+2,3,2,left
+2,3,4,through

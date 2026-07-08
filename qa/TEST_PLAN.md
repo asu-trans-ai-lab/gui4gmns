@@ -182,25 +182,39 @@ A `dataset × component` cell is **pass** when, for every applicable checkpoint:
    ```
    python qa/verify_output.py datasets/02_chicago_sketch
    ```
-3. **`datasets/fixtures/`** — hand-verifiable fixtures (**started**). `fx_grid` (6 nodes / 6 links)
-   exercises input levels L1–L6 at once with every value chosen so the expected picture is computable by
-   hand; its golden values live in `fx_grid/EXPECTED.json`. `verify_output.py` now also runs **M-D**:
-   when a folder ships `EXPECTED.json` it asserts exact topology, MOE volumes, corridor RMSE/R²/bias, and
-   trajectory frame positions — "== 2.0", not "looks about right". Remaining fixtures from §7
-   (fx_multilane/POI, fx_crs) still to add.
+3. **`datasets/fixtures/`** — hand-verifiable fixtures (**complete**, all three from §7). `verify_output.py`
+   runs **M-D**: when a folder ships `EXPECTED.json` it asserts exact values — "== 2.0", not "looks about
+   right". Every fixture **found a real bug** on first generation — this is what hand-verifiable input is
+   for; a 2950-link showcase can't expose these because there's no way to know the "right" answer.
+   - **`fx_grid`** (L1–L6 at once): topology, MOE volumes, corridor RMSE/R²/bias, trajectory frame
+     positions. Found F-012 (small-N sampling rounded to 0).
+   - **`fx_multilane`** (L7 — zone polygons, POI, lanes 1–4, turning movements): found a real bug in
+     `fig_movements()` — turning-path endpoints were computed from link endpoints, which in GMNS *are*
+     the shared node's coordinates, so every turn collapsed to a zero-length segment (ran fine, saved a
+     non-empty PNG, drew nothing). No dataset had ever shipped `movement.csv` before, so this was never
+     caught. Fixed: approach/depart points set back 15% along each link.
+   - **`fx_crs`** (D9 geographic correctness — real UTM Zone 12N coordinates + `crs.txt`): found a real
+     bug in `ai-gen/gui4gmns.py` — the CRS transformer was applied to link geometry but **never to node
+     coordinates**, so with any `crs.txt` the node dots and the road lines rendered in two different
+     coordinate spaces (off by ~400,000 in x). Fixed: reproject nodes when built; removed two now-redundant
+     downstream `proj()` calls that would have double-transformed. Also flagged, not fixed here (separate
+     file/scope): the auto-exported portals use an independent reader with no `crs.txt` support at all.
 4. Re-walk the QA matrix under this plan; the two-lens verdict replaces the old "it generated" pass.
 
 ### Current results (M-A + M-D harness)
 
 | dataset | result |
 |---|---|
-| **fx_grid** (L1–L6, fixture) | **11 pass, 0 fail** — 7 M-A invariants + 4 M-D golden (topology, 6 MOE volumes, corridor RMSE 2.0/R² 0.976/bias 0.22, 6 trajectory frame positions) all EXACT |
+| **fx_grid** (L1–L6, fixture) | **11 pass, 0 fail** — 7 M-A + 4 M-D golden (topology, 6 MOE volumes, corridor RMSE 2.0/R² 0.976/bias 0.22, 6 trajectory frame positions) all EXACT |
+| **fx_multilane** (L7, fixture) | **9 pass, 0 fail, 1 n/a** — zone polygons/POI/lanes/movements all render + golden required-figures + MOE volumes exact |
+| **fx_crs** (D9, fixture) | **7 pass, 0 fail, 2 n/a** — golden CRS reprojection: 3 node coords match the hand-computed WGS84 answer exactly |
 | chicago_sketch (L5) | 7 pass, 0 fail — animation 3000 agents / 394 links / 100% id-span |
-| west_jordan (L3) | 6 pass, 1 n/a (no trajectories) |
-| sioux_falls / toys (L1–L2) | 5 pass, 2 n/a (no MOE, no trajectories) |
+| west_jordan (L3) | 6 pass, 0 fail, 1 n/a (no trajectories) |
+| sioux_falls / toys (L1–L2) | 5 pass, 0 fail, 2 n/a (no MOE, no trajectories) |
 
 Both the M-A invariants and the M-D golden checks are self-tested for teeth (injecting a clustered
-sample, a deleted portal, an external URL, or a wrong golden value each produce FAIL). Machine-checkable
-and golden dimensions are green on every dataset. What remains per cell is the human-eye residue (M-E):
-D5 legend aesthetics, D9/D10 geographic & temporal plausibility — plus the corridor contour on Chicago
-(D2/M) still blocked on F-006, now demonstrated working on `fx_grid`.
+sample, a deleted portal, an external URL, a tampered figure list, or a wrong golden coordinate each
+produce FAIL). Every dataset is 0 fail. What remains per cell is the genuinely subjective human-eye
+residue (M-E): D5 legend aesthetics, D9/D10 broader plausibility — plus the corridor contour on Chicago
+(D2/M) still blocked on F-006 (demonstrated working on `fx_grid`), and the portal-exporter CRS gap noted
+above.

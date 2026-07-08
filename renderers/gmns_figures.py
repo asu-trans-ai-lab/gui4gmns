@@ -217,6 +217,9 @@ def fig_demand_OD(N, out):   # the plot4gmns figure that crashed on ZoneStyle.ed
     for z, (x, y) in zc.items(): ax.plot(x, y, "s", color="orange", markeredgecolor="blue", ms=4)
     ax.autoscale(); ax.set_title(f"Demand OD desire lines (top {len(top)})"); return _save(f, out, "demand_OD")
 
+def _lerp(p0, p1, t):
+    return (p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t)
+
 def _perp(pts):   # unit perpendicular of a polyline's overall direction
     import math
     dx, dy = pts[-1][0] - pts[0][0], pts[-1][1] - pts[0][1]
@@ -248,12 +251,17 @@ def fig_movements(N, out):
     for m in N["moves"]:
         ib = N["lbyid"].get(m["ib"]); ob = N["lbyid"].get(m["ob"])
         nd = N["nodes"].get(m["node"])
-        if not ib or not ob: continue
-        a = ib["pts"][-1]; b = ob["pts"][0]                 # inbound end -> outbound start (turning path)
-        via = (nd[0], nd[1]) if nd else ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
-        segs.append([a, via]); segs.append([via, b])
+        if not ib or not ob or len(ib["pts"]) < 2 or len(ob["pts"]) < 2: continue
+        # In GMNS, a link's endpoints ARE its from/to node coordinates -- so ib's last point and ob's
+        # first point are both exactly the shared node, and so is `via`. Using them directly collapses
+        # every turning path to a zero-length segment (drawn, but invisible). Set the approach/depart
+        # points back 15% along each link instead, so the turn renders as a visible V through the node.
+        node_pt = (nd[0], nd[1]) if nd else ib["pts"][-1]
+        a = _lerp(ib["pts"][-1], ib["pts"][-2], 0.15)
+        b = _lerp(ob["pts"][0], ob["pts"][1], 0.15)
+        segs.append([a, node_pt]); segs.append([node_pt, b])
         c = col.get(m["type"], "brown"); cs += [c, c]
-        if nd: nx.append(nd[0]); ny.append(nd[1])
+        nx.append(node_pt[0]); ny.append(node_pt[1])
     ax.add_collection(LineCollection(segs, colors=cs, linewidths=1.6))   # MovementStyle brown
     ax.scatter(nx, ny, s=14, c="k", zorder=3)
     import matplotlib.lines as ml

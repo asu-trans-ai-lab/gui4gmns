@@ -94,16 +94,22 @@ def verify(folder, min_cov=0.03):
         R.add("D1/D4", "MOE value fidelity", "PASS" if ok == checked and checked else "FAIL",
               f"{ok}/{checked} sampled links match link_performance ({vc})")
 
-    # D2 layer completeness: every input that should light a layer does
+    # D2 layer completeness: every input that should light a layer does. NOTE: td.js/demand.js are
+    # ALWAYS written with a non-empty wrapper dict (e.g. td={"bins":[],"td":{}}, demand's "dist"
+    # histograms come from link attributes regardless of demand.csv) — checking top-level truthiness
+    # would call an empty layer "present". Check the specific sub-key that carries the actual content.
     def present(name): return os.path.exists(os.path.join(folder, name))
     td = load_layer(folder, "td"); trajs = load_layer(folder, "trajs")
     corridor = load_layer(folder, "corridor"); demand = load_layer(folder, "demand")
+    td_real = bool((td or {}).get("td"))
+    demand_real = bool((demand or {}).get("demand"))
     miss = []
-    if present("link_performance_15min.csv") and not td: miss.append("td (has 15min)")
+    if present("link_performance_15min.csv") and not td_real: miss.append("td (has 15min)")
     if (present("agent_trajectory.csv") or (present("path_flow.csv") and present("link_performance_15min.csv"))) and not (trajs and len(trajs)):
         miss.append("trajs (has trajectory/path source)")
     if present("corridor_speed.csv") and not (corridor and len(corridor)): miss.append("corridor (has corridor_speed)")
-    have = [k for k, v in [("network", net), ("moe", moe), ("td", td), ("trajs", trajs), ("demand", demand)] if v]
+    if present("demand.csv") and not demand_real: miss.append("demand (has demand.csv)")
+    have = [k for k, v in [("network", net), ("moe", moe), ("td", td_real), ("trajs", trajs), ("demand", demand_real)] if v]
     if miss:
         R.add("D2", "layer completeness", "FAIL", "expected but empty: " + ", ".join(miss))
     else:
@@ -176,7 +182,8 @@ def verify(folder, min_cov=0.03):
     # values — this is what a tiny fixture buys over a big showcase: "== 2.0", not "looks about right".
     exp_p = os.path.join(folder, "EXPECTED.json")
     if os.path.exists(exp_p):
-        verify_golden(json.load(open(exp_p, encoding="utf-8")), net, moe, load_layer(folder, "corridor"), trajs, R)
+        verify_golden(json.load(open(exp_p, encoding="utf-8")), net, moe, load_layer(folder, "corridor"), trajs, R,
+                       os.path.join(folder, "figures"))
 
     return R.render()
 
@@ -191,13 +198,31 @@ def _pos_at(events, t):
         return (lid, (t - ev[i][0]) / (ev[i + 1][0] - ev[i][0]))
     return (lid, 0.0)
 
-def verify_golden(exp, net, moe, corridor, trajs, R):
+def verify_golden(exp, net, moe, corridor, trajs, R, figures_dir=None):
     def near(a, b, tol=1e-6): return abs(a - b) <= tol
 
     if "nodes" in exp and "links" in exp:
         ok = len(net.get("nodes", [])) == exp["nodes"] and len(net.get("links", [])) == exp["links"]
         R.add("M-D", "golden topology", "PASS" if ok else "FAIL",
               f"{len(net.get('nodes',[]))}/{len(net.get('links',[]))} vs expected {exp['nodes']}/{exp['links']}")
+
+    if exp.get("reprojected_nodes"):
+        by_id = {str(n[0]): (n[1], n[2]) for n in net.get("nodes", [])}
+        bad = []
+        for nid, (elon, elat) in exp["reprojected_nodes"].items():
+            got = by_id.get(nid)
+            if not got or not (near(got[0], elon, 1e-4) and near(got[1], elat, 1e-4)):
+                bad.append(f"node {nid}: got {got}, want [{elon},{elat}]")
+        R.add("M-D", "golden CRS reprojection", "FAIL" if bad else "PASS",
+              (bad[0]) if bad else f"{len(exp['reprojected_nodes'])} node coords match exactly (D9 geographic)")
+
+    if exp.get("required_figures"):
+        missing = []
+        for fn in exp["required_figures"]:
+            p = os.path.join(figures_dir or "", fn)
+            if not os.path.exists(p) or os.path.getsize(p) == 0: missing.append(fn)
+        R.add("M-D", "golden required figures", "FAIL" if missing else "PASS",
+              ("missing/empty: " + ",".join(missing)) if missing else f"{len(exp['required_figures'])} required figures present")
 
     if exp.get("moe_volume"):
         if not moe:
