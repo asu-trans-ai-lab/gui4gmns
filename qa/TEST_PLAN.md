@@ -174,8 +174,26 @@ A `dataset × component` cell is **pass** when, for every applicable checkpoint:
 ## 9. Rollout
 
 1. **This document** — the shared definition of "what correct means," agreed with Prof. Zhou.
-2. **`qa/verify_output.py`** — the M-A invariant harness: give it any GMNS folder + its generated
-   output, it prints `✓/✗ + reason` for every machine-checkable dimension. Turns O/P into code.
+2. **`qa/verify_output.py`** — the M-A invariant harness (**built**). Give it any generated GMNS folder;
+   it prints `PASS/FAIL/NA + reason` for every machine-checkable dimension (D1, D2, D3, D7, D8),
+   input-level aware (checks that don't apply to a dataset report `NA`, not `FAIL`), exit 1 on any
+   `FAIL`. Turns O/P into code. Self-tested: injecting a clustered trajectory sample (F-008), a deleted
+   portal, and an external URL each produce `FAIL`.
+   ```
+   python qa/verify_output.py datasets/02_chicago_sketch
+   ```
 3. **`datasets/fixtures/`** — the hand-verifiable fixtures from §7, so every capability has a controlled
-   test with a known answer.
+   test with a known answer. *(next)*
 4. Re-walk the QA matrix under this plan; the two-lens verdict replaces the old "it generated" pass.
+
+### Current results (M-A harness)
+
+| dataset | result |
+|---|---|
+| chicago_sketch (L5) | **7 pass, 0 fail** — topology, MOE values, layers, animation (3000 agents / 394 links / 100% id-span), offline, portals, figures all green |
+| west_jordan (L3) | 6 pass, 1 n/a (no trajectories) |
+| sioux_falls / toys (L1–L2) | 5 pass, 2 n/a (no MOE, no trajectories) |
+
+Machine-checkable dimensions are green on every shipped dataset. What remains per cell is the human-eye
+residue (M-E): D4 recompute of audit/corridor stats, D5 legend aesthetics, D9/D10 geographic & temporal
+plausibility — plus the corridor contour (D2/M) still blocked on F-006.
