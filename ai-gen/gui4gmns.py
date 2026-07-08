@@ -6,7 +6,8 @@ check) and EMBEDS the data into one double-clickable HTML (works offline; OSM ba
 online). Template blocks follow ai-gen/VIZ_SCHEMA.md so an AI (or a student) can generate custom
 dashboards from the same embedded JSON.
 
-Usage: python gui4gmns.py <dataset_or_run_folder> [-o dashboard.html] [--max-traj 2000]
+Usage: python gui4gmns.py <dataset_or_run_folder> [-o dashboard.html] [--max-traj 10000]
+       (--max-traj is the CAP on animated vehicles; by default ~10% of the run's agents are shown)
 """
 import csv, json, math, os, re, sys
 
@@ -17,7 +18,7 @@ def fnum(v):
     try: return float(v)
     except: return 0.0
 
-def load(folder, max_traj=2000, basemap="osm"):
+def load(folder, max_traj=10000, basemap="osm"):
     D = {"meta": {"folder": os.path.abspath(folder), "checks": [], "basemap": basemap}, "nodes": [], "links": [],
          "bins": [], "td": {}, "trajs": {}, "run": None, "paths": []}
     ck = D["meta"]["checks"]
@@ -95,14 +96,15 @@ def load(folder, max_traj=2000, basemap="osm"):
             ck.append("time-dependent SPEED present (QVDF) -> 'speed' MOE mode enabled")
     tj = rd("agent_trajectory.csv")
     if tj:
-        # Representative subsample: keep agents spread EVENLY across the sorted agent-id space,
-        # not the lowest ids. agent_id is assigned by origin zone / departure order, so the old
-        # `id < max_traj` filter collapsed the animation into one corner of the network (Chicago:
-        # 44/2950 links, 1%). Even spacing restores network-wide coverage (367 links, 12%).
+        # Animate ~10% of the agents, spread EVENLY across the sorted agent-id space — NOT the lowest
+        # ids. agent_id is assigned by origin zone / departure order, so a lowest-id filter collapses
+        # the animation into one corner (Chicago: 44/2950 links, 1%). A representative 10% restores
+        # network-wide coverage; capped at max_traj so the dashboard stays small on very large runs.
         all_ids = sorted({int(fnum(r["agent_id"])) for r in tj})
-        if len(all_ids) > max_traj:
-            step = len(all_ids) / max_traj
-            keep = {all_ids[int(i * step)] for i in range(max_traj)}
+        target = min(max_traj, max(1, round(0.10 * len(all_ids))))
+        if len(all_ids) > target:
+            step = len(all_ids) / target
+            keep = {all_ids[int(i * step)] for i in range(target)}
         else:
             keep = set(all_ids)
         for r in tj:
@@ -111,7 +113,7 @@ def load(folder, max_traj=2000, basemap="osm"):
             D["trajs"].setdefault(a, []).append([round(fnum(r["time_min"]), 2),
                                                  int(fnum(r["link_id"])), r.get("buffer") or ""])
         for ev in D["trajs"].values(): ev.sort()
-        ck.append(f"trajectories subsampled to {len(D['trajs'])} agents (representative, --max-traj)")
+        ck.append(f"trajectories: {len(D['trajs'])} agents animated (~10% of {len(all_ids)}, representative, cap {max_traj})")
     pf = rd("path_flow.csv")
     all_paths = []
     if pf:
@@ -423,6 +425,11 @@ function draw(){cv.width=cv.clientWidth;cv.height=cv.clientHeight;if(!bbox)retur
   const[,w]=styleOf(L,mode,b);ctx.strokeStyle='rgba(0,0,0,0.71)';ctx.lineWidth=w+3;path(L);});
  M.links.forEach(L=>{const t=L[6]||3;if(t>zTier||L[2]<mv)return;
   const[v,w]=styleOf(L,mode,b);ctx.strokeStyle=v<0?'#39424e':ramp(v);ctx.lineWidth=w;path(L);});
+ // faint connector underlay: centroid connectors (tier 4) aren't real roads and stay unlabeled, but
+ // ~half of trajectory hops traverse them — draw them thin+dim ONLY when there are vehicles to animate,
+ // so moving dots/trails have a visible path instead of floating off the drawn network.
+ if(Object.keys(M.trajs).length){ctx.strokeStyle='rgba(150,162,178,0.22)';ctx.lineWidth=0.7;
+  M.links.forEach(L=>{if((L[6]||3)===4)path(L);});}
  if(document.getElementById('checks').checked)
   M.links.forEach(L=>{if((L[6]||3)===1&&L[2]===0){ctx.strokeStyle='#ff4df0';ctx.lineWidth=2.5;path(L);}});
  if(document.getElementById('demand')&&document.getElementById('demand').checked&&DEM.lines){
@@ -615,7 +622,7 @@ def _export_portals(folder):
     except Exception as e:
         print(f"  (portals skipped — {type(e).__name__}: {str(e)[:60]})")
 
-def generate(folder, out=None, basemap="osm", max_traj=2000, split=True, figures=True, portals=True):
+def generate(folder, out=None, basemap="osm", max_traj=10000, split=True, figures=True, portals=True):
     """The gui4gmns AI-Gen core: GMNS run folder -> self-contained dashboard.html.
     Importable like plot4gmns:  from gui4gmns import generate; generate('datasets/01_sioux_falls').
     figures=True also writes a static PNG figure set to <folder>/figures/; portals=True writes the
@@ -671,7 +678,7 @@ def main():
     if not args: sys.exit(__doc__)
     folder = args[0]
     out = args[args.index("-o") + 1] if "-o" in args else None
-    mt = int(args[args.index("--max-traj") + 1]) if "--max-traj" in args else 2000
+    mt = int(args[args.index("--max-traj") + 1]) if "--max-traj" in args else 10000
     bm = args[args.index("--basemap") + 1] if "--basemap" in args else "osm"   # osm | satellite | none
     generate(folder, out=out, basemap=bm, max_traj=mt, split="--single" not in args,
              figures="--no-figures" not in args, portals="--no-portals" not in args)
