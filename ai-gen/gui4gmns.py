@@ -100,8 +100,10 @@ def load(folder, max_traj=10000, basemap="osm"):
         # ids. agent_id is assigned by origin zone / departure order, so a lowest-id filter collapses
         # the animation into one corner (Chicago: 44/2950 links, 1%). A representative 10% restores
         # network-wide coverage; capped at max_traj so the dashboard stays small on very large runs.
+        # Floor at 2000 so small/medium runs keep everything (10% of a 3-vehicle toy rounds to nothing);
+        # the `> target` guard below then keeps all agents whenever a run has fewer than the floor.
         all_ids = sorted({int(fnum(r["agent_id"])) for r in tj})
-        target = min(max_traj, max(1, round(0.10 * len(all_ids))))
+        target = min(max_traj, max(2000, round(0.10 * len(all_ids))))
         if len(all_ids) > target:
             step = len(all_ids) / target
             keep = {all_ids[int(i * step)] for i in range(target)}

@@ -182,18 +182,25 @@ A `dataset × component` cell is **pass** when, for every applicable checkpoint:
    ```
    python qa/verify_output.py datasets/02_chicago_sketch
    ```
-3. **`datasets/fixtures/`** — the hand-verifiable fixtures from §7, so every capability has a controlled
-   test with a known answer. *(next)*
+3. **`datasets/fixtures/`** — hand-verifiable fixtures (**started**). `fx_grid` (6 nodes / 6 links)
+   exercises input levels L1–L6 at once with every value chosen so the expected picture is computable by
+   hand; its golden values live in `fx_grid/EXPECTED.json`. `verify_output.py` now also runs **M-D**:
+   when a folder ships `EXPECTED.json` it asserts exact topology, MOE volumes, corridor RMSE/R²/bias, and
+   trajectory frame positions — "== 2.0", not "looks about right". Remaining fixtures from §7
+   (fx_multilane/POI, fx_crs) still to add.
 4. Re-walk the QA matrix under this plan; the two-lens verdict replaces the old "it generated" pass.
 
-### Current results (M-A harness)
+### Current results (M-A + M-D harness)
 
 | dataset | result |
 |---|---|
-| chicago_sketch (L5) | **7 pass, 0 fail** — topology, MOE values, layers, animation (3000 agents / 394 links / 100% id-span), offline, portals, figures all green |
+| **fx_grid** (L1–L6, fixture) | **11 pass, 0 fail** — 7 M-A invariants + 4 M-D golden (topology, 6 MOE volumes, corridor RMSE 2.0/R² 0.976/bias 0.22, 6 trajectory frame positions) all EXACT |
+| chicago_sketch (L5) | 7 pass, 0 fail — animation 3000 agents / 394 links / 100% id-span |
 | west_jordan (L3) | 6 pass, 1 n/a (no trajectories) |
 | sioux_falls / toys (L1–L2) | 5 pass, 2 n/a (no MOE, no trajectories) |
 
-Machine-checkable dimensions are green on every shipped dataset. What remains per cell is the human-eye
-residue (M-E): D4 recompute of audit/corridor stats, D5 legend aesthetics, D9/D10 geographic & temporal
-plausibility — plus the corridor contour (D2/M) still blocked on F-006.
+Both the M-A invariants and the M-D golden checks are self-tested for teeth (injecting a clustered
+sample, a deleted portal, an external URL, or a wrong golden value each produce FAIL). Machine-checkable
+and golden dimensions are green on every dataset. What remains per cell is the human-eye residue (M-E):
+D5 legend aesthetics, D9/D10 geographic & temporal plausibility — plus the corridor contour on Chicago
+(D2/M) still blocked on F-006, now demonstrated working on `fx_grid`.

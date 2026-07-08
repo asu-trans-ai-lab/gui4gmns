@@ -172,7 +172,61 @@ def verify(folder, min_cov=0.03):
         else:
             R.add("D7", "figure honesty", "PASS", f"{len(pngs)} figures, none empty")
 
+    # M-D golden reference: if the folder ships EXPECTED.json (a fixture), assert exact hand-computed
+    # values — this is what a tiny fixture buys over a big showcase: "== 2.0", not "looks about right".
+    exp_p = os.path.join(folder, "EXPECTED.json")
+    if os.path.exists(exp_p):
+        verify_golden(json.load(open(exp_p, encoding="utf-8")), net, moe, load_layer(folder, "corridor"), trajs, R)
+
     return R.render()
+
+def _pos_at(events, t):
+    """Replicate the dashboard's linear interpolation: (link_id, fraction) of an agent at clock t."""
+    ev = sorted(events)
+    if not ev or t < ev[0][0] or t > ev[-1][0]: return (None, None)
+    i = 0
+    while i + 1 < len(ev) and ev[i + 1][0] <= t: i += 1
+    lid = ev[i][1]
+    if i + 1 < len(ev) and ev[i + 1][0] > ev[i][0]:
+        return (lid, (t - ev[i][0]) / (ev[i + 1][0] - ev[i][0]))
+    return (lid, 0.0)
+
+def verify_golden(exp, net, moe, corridor, trajs, R):
+    def near(a, b, tol=1e-6): return abs(a - b) <= tol
+
+    if "nodes" in exp and "links" in exp:
+        ok = len(net.get("nodes", [])) == exp["nodes"] and len(net.get("links", [])) == exp["links"]
+        R.add("M-D", "golden topology", "PASS" if ok else "FAIL",
+              f"{len(net.get('nodes',[]))}/{len(net.get('links',[]))} vs expected {exp['nodes']}/{exp['links']}")
+
+    if exp.get("moe_volume"):
+        if not moe:
+            R.add("M-D", "golden MOE volume", "FAIL", "moe layer missing")
+        else:
+            bad = [k for k, v in exp["moe_volume"].items() if k not in moe or not near(fnum(moe[k][0]), v, 0.5)]
+            R.add("M-D", "golden MOE volume", "FAIL" if bad else "PASS",
+                  (f"mismatch at link {bad[0]}") if bad else f"{len(exp['moe_volume'])} link volumes exact")
+
+    if exp.get("corridor"):
+        cv = (corridor or {})
+        bad = []
+        for name, want in exp["corridor"].items():
+            got = (cv.get(name) or {}).get("val") or {}
+            for k in ("n", "rmse", "r2", "bias"):
+                if k in want and not near(fnum(got.get(k, -999)), want[k], 0.01): bad.append(f"{name}.{k}")
+        R.add("M-D", "golden corridor stats", "FAIL" if bad else "PASS",
+              ("mismatch: " + ",".join(bad)) if bad else "RMSE/R2/bias/n all exact")
+
+    if exp.get("traj_frames"):
+        bad = []
+        for fr in exp["traj_frames"]:
+            ev = (trajs or {}).get(str(fr["agent"])) or (trajs or {}).get(fr["agent"])
+            if not ev: bad.append(f"a{fr['agent']}(no trajectory)"); continue
+            lid, frac = _pos_at(ev, fr["t"])
+            if lid != fr["link"] or frac is None or not near(frac, fr["frac"], 0.01):
+                bad.append(f"a{fr['agent']}@t{fr['t']}->L{lid}@{frac}")
+        R.add("M-D", "golden traj frames", "FAIL" if bad else "PASS",
+              ("mismatch: " + bad[0]) if bad else f"{len(exp['traj_frames'])} frame positions exact")
 
 def main():
     a = sys.argv[1:]

@@ -1,0 +1,18 @@
+{
+  "_comment": "Hand-computed golden values for the fx_grid fixture. verify_output.py --fixture asserts the generated dashboard reproduces these EXACTLY (method M-D). See README.md for the derivation.",
+  "nodes": 6,
+  "links": 6,
+  "moe_volume": { "1": 900.0, "2": 3600.0, "3": 1350.0, "4": 2700.0, "5": 450.0, "6": 1800.0 },
+  "moe_queue": { "2": 50.0, "6": 30.0 },
+  "vc": { "1": 0.5, "2": 1.0, "3": 0.25, "4": 0.75, "5": 0.25, "6": 1.0 },
+  "conservation": { "agents": 3, "completed": 3 },
+  "corridor": { "Main": { "n": 9, "rmse": 2.0, "r2": 0.976, "bias": 0.22, "ff": 60.0 } },
+  "traj_frames": [
+    { "agent": 0, "t": 0.5, "link": 1, "frac": 0.5 },
+    { "agent": 0, "t": 1.5, "link": 2, "frac": 0.5 },
+    { "agent": 1, "t": 0.5, "link": 6, "frac": 0.5 },
+    { "agent": 1, "t": 1.5, "link": 3, "frac": 0.5 },
+    { "agent": 2, "t": 1.0, "link": 1, "frac": 0.5 },
+    { "agent": 2, "t": 2.0, "link": 2, "frac": 0.5 }
+  ]
+}
