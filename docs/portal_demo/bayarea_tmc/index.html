@@ -24,7 +24,8 @@
 </style></head><body>
 <div id="map"></div>
 <div class="p" id="hdr"><b><span>gui4gmns</span> · 3D TMC — Bay Area · I-880 N — AM peak (Caltrans PeMS + CHP)</b>
-  <div class="s"><b>height</b> = congestion · <b>color</b> = speed (green→red) · <b>red tail</b> = queue spillback.
+  <div class="s"><b>height</b> = congestion · <b>color</b> = speed (green→red) · <b>red tail</b> = queue spillback ·
+  <b>⚠ callouts</b> = CHP incidents with time windows, annotated from the start (amber while active).
   Drag to orbit. A moving red front is a shockwave. Composite over an OpenCities 3D city base for the full scene.</div></div>
 <div class="p" id="story"><div class="clk" id="clk2">—</div><div class="ph" id="ph">—</div><div class="tx" id="tx">—</div>
   <div class="mk" id="mk"></div></div>
@@ -39,9 +40,10 @@
 <div class="p" id="ctl"><button id="play">▶</button><span class="clk" id="clk">—</span>
   <input type="range" id="slider" min="0" value="0"><label style="color:#9aa7bd">speed</label>
   <select id="spd"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option><option value="8">8×</option></select>
-  <span style="color:#9aa7bd;font-size:12px;margin-left:6px">map</span><span id="baseg"></span></div>
+  <span style="color:#9aa7bd;font-size:12px;margin-left:6px">map</span><span id="baseg"></span>
+  <button id="annb" class="baseb on" style="margin-left:8px">⚠ labels</button></div>
 <script>
-const {DeckGL,PolygonLayer,PathLayer,TileLayer,BitmapLayer,ScatterplotLayer}=deck;
+const {DeckGL,PolygonLayer,PathLayer,TileLayer,BitmapLayer,ScatterplotLayer,TextLayer,LineLayer}=deck;
 const QMEAS=0;
 fetch('frames.json').then(r=>r.json()).then(D=>{
   const N=D.times.length; let f=0, playing=false, tick=0;
@@ -67,6 +69,14 @@ fetch('frames.json').then(r=>r.json()).then(D=>{
       acc+=seg;out.push(line[i-1]);} return out;}
   function len(line){let s=0;for(let i=0;i<line.length-1;i++)s+=Math.hypot(line[i+1][0]-line[i][0],line[i+1][1]-line[i][1]);return s;}
 
+  // 3D incident annotations — visible from the very first frame (grouped by location)
+  const annGroups=(()=>{const g={};D.events.forEach(e=>{const k=e.at.join(',');
+    const a=(g[k]=g[k]||{at:e.at,types:[],i0:e.i0,i1:e.i1});
+    if(!a.types.includes(e.type))a.types.push(e.type);
+    a.i0=Math.min(a.i0,e.i0);a.i1=Math.max(a.i1,e.i1);});
+    return Object.values(g).map(a=>({at:a.at,i0:a.i0,i1:a.i1,
+      label:'⚠ '+a.types.join(' / ')+'\n'+D.times[a.i0]+'–'+D.times[a.i1]}));})();
+  const ANN_H=620; let showAnn=true;
   const BASES={sat:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                street:'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
                dark:'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'};
@@ -90,7 +100,23 @@ fetch('frames.json').then(r=>r.json()).then(D=>{
     const evL=new ScatterplotLayer({id:'ev',data:active,getPosition:e=>e.at,
       getRadius:e=>120+90*Math.sin(tick/6),radiusUnits:'meters',getFillColor:[255,70,50,140],
       getLineColor:[255,180,60],lineWidthMinPixels:2,stroked:true,updateTriggers:{getRadius:tick}});
-    deckgl.setProps({layers:[base,netL,qL,evL]});
+    // persistent annotation callouts: ring + leader line + floating label (active = amber, upcoming/past = dim)
+    const annLayers=showAnn?[
+      new ScatterplotLayer({id:'annring',data:annGroups,getPosition:a=>a.at,
+        getRadius:150,radiusUnits:'meters',stroked:true,filled:false,lineWidthMinPixels:2,
+        getLineColor:a=>(f>=a.i0&&f<=a.i1)?[255,180,60,230]:[255,180,60,90],updateTriggers:{getLineColor:f}}),
+      new LineLayer({id:'annlead',data:annGroups,
+        getSourcePosition:a=>[a.at[0],a.at[1],0],getTargetPosition:a=>[a.at[0],a.at[1],ANN_H],
+        getColor:a=>(f>=a.i0&&f<=a.i1)?[255,180,60,220]:[255,180,60,110],getWidth:1.5,updateTriggers:{getColor:f}}),
+      new TextLayer({id:'ann',data:annGroups,
+        getPosition:a=>[a.at[0],a.at[1],ANN_H],getText:a=>a.label,
+        getSize:12.5,getColor:a=>(f>=a.i0&&f<=a.i1)?[255,204,92,255]:[230,237,243,210],
+        getTextAnchor:'start',getAlignmentBaseline:'bottom',getPixelOffset:[8,-4],
+        background:true,getBackgroundColor:[15,20,26,205],backgroundPadding:[6,4,6,4],
+        fontFamily:'system-ui, Segoe UI, Arial',characterSet:'auto',lineHeight:1.25,
+        updateTriggers:{getColor:f}})
+    ]:[];
+    deckgl.setProps({layers:[base,netL,qL,evL,...annLayers]});
   }
   function kpis(){
     document.getElementById('kev').textContent=D.events.filter(e=>f>=e.i0&&f<=e.i1).length;
@@ -128,6 +154,8 @@ fetch('frames.json').then(r=>r.json()).then(D=>{
   const bg=document.getElementById('baseg');
   Object.keys(BASES).forEach((k,i)=>{const b=document.createElement('button');b.textContent=BLBL[k];b.className='baseb'+(i===0?' on':'');
     b.onclick=()=>{document.querySelectorAll('#baseg .baseb').forEach(x=>x.classList.remove('on'));b.classList.add('on');base=makeBase(BASES[k]);draw();};bg.appendChild(b);});
+  // annotation-callout toggle (on by default — annotations show from the first frame)
+  document.getElementById('annb').onclick=function(){showAnn=!showAnn;this.classList.toggle('on',showAnn);draw();};
   // adapt legend + KPI labels to the feed (speed vs volume/queue)
   if(!D.hasS){
     document.getElementById('legTitle').textContent='volume (green low → red high)';
