@@ -360,6 +360,9 @@ input[type=range]{width:260px;accent-color:#4db8ff}
 <script>
 const DATA=__DATA__;
 const M={links:DATA.links,nodes:DATA.nodes,geo:DATA.meta.geo,bins:DATA.bins,td:DATA.td,trajs:DATA.trajs,run:DATA.run};
+// precompute once: every link_id actually traversed by a loaded trajectory (event[1]==link_id) —
+// used to draw a faint underlay under vehicles on links the current zoom/tier would otherwise hide.
+M.trajLinks=new Set();for(const k in M.trajs)for(const ev of M.trajs[k])M.trajLinks.add(ev[1]);
 const my=lat=>180/Math.PI*Math.log(Math.tan(Math.PI/4+lat*Math.PI/360));
 const DEM=DATA.demand||{}, DIST=DATA.dist||{};
 if(M.geo){M.links.forEach(L=>L[1]=L[1].map(p=>[p[0],my(p[1])]));
@@ -425,11 +428,12 @@ function draw(){cv.width=cv.clientWidth;cv.height=cv.clientHeight;if(!bbox)retur
   const[,w]=styleOf(L,mode,b);ctx.strokeStyle='rgba(0,0,0,0.71)';ctx.lineWidth=w+3;path(L);});
  M.links.forEach(L=>{const t=L[6]||3;if(t>zTier||L[2]<mv)return;
   const[v,w]=styleOf(L,mode,b);ctx.strokeStyle=v<0?'#39424e':ramp(v);ctx.lineWidth=w;path(L);});
- // faint connector underlay: centroid connectors (tier 4) aren't real roads and stay unlabeled, but
- // ~half of trajectory hops traverse them — draw them thin+dim ONLY when there are vehicles to animate,
- // so moving dots/trails have a visible path instead of floating off the drawn network.
- if(Object.keys(M.trajs).length){ctx.strokeStyle='rgba(150,162,178,0.22)';ctx.lineWidth=0.7;
-  M.links.forEach(L=>{if((L[6]||3)===4)path(L);});}
+ // faint underlay for links a vehicle is actually on but the current view hides: centroid connectors
+ // (tier 4, never a "real road") AND tier-2/3 roads below the zoom's LOD threshold (t>zTier) — e.g. a
+ // trip on a local street while zoomed out. Only links M.trajLinks marks as vehicle-carrying get this,
+ // so the zoom-based road declutter still applies to the rest of the tier-2/3 network.
+ if(M.trajLinks.size){ctx.strokeStyle='rgba(150,162,178,0.22)';ctx.lineWidth=0.7;
+  M.links.forEach(L=>{const t=L[6]||3;if((t>zTier||t===4)&&M.trajLinks.has(L[0]))path(L);});}
  if(document.getElementById('checks').checked)
   M.links.forEach(L=>{if((L[6]||3)===1&&L[2]===0){ctx.strokeStyle='#ff4df0';ctx.lineWidth=2.5;path(L);}});
  if(document.getElementById('demand')&&document.getElementById('demand').checked&&DEM.lines){
