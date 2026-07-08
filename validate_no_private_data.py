@@ -31,7 +31,8 @@ ALLOW = ("datasets/08_public_ITS_VA_1-95_sample/",
          "docs/portal_demo/i95_tmc/",
          "docs/portal_demo/chicago_tmc/",
          "docs/portal_demo/i405n_tmc/",
-         "docs/portal_demo/i405n_qvdf/")
+         "docs/portal_demo/i405n_qvdf/",
+         "docs/portal_demo/bayarea_tmc/")   # public Caltrans PeMS D4 (I-880 N) + CHP incidents
 def _allowed(f): return any(f.startswith(p) for p in ALLOW)
 
 def content_hits(files):

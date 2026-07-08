@@ -1,0 +1,567 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TrafficFlowBench Visual Analytics with GUI4GMNS</title>
+<meta name="description" content="GUI4GMNS as the visualization layer for TrafficFlowBench-style freeway corridor data: inspect the GMNS network, 5-minute traffic state, queue episodes, OD/path attribution, and incident evidence. A diagnostic and teaching interface; submission and scoring are hosted on Kaggle.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="TrafficFlowBench Visual Analytics with GUI4GMNS">
+<meta property="og:description" content="Inspect traffic networks, states, queues, OD/path flows and incident evidence from GMNS-compatible freeway benchmark data.">
+<style>
+ :root{
+  --bg:#fafafa; --ink:#1d232b; --muted:#5a6472; --line:#e5e5e5; --card:#fff;
+  --blue:#2563eb; --blue-d:#1b4bb3; --green:#2f9e5e; --green-d:#1c6b3f; --amber:#c07a12;
+  --dark:#1d232b; --dark-2:#12161c; --accent:#58a6ff;
+ }
+ *{box-sizing:border-box}
+ body{font:15px/1.6 system-ui,Segoe UI,Arial;margin:0;color:var(--ink);background:var(--bg)}
+ a{color:var(--blue-d)}
+ code{background:#eef;padding:1px 6px;border-radius:3px;font-size:13px}
+ /* ---- header / hero ---- */
+ header{background:var(--dark);color:#e6edf3;padding:20px 26px}
+ .crumbs{font-size:12.5px;color:#9aa7bd;margin-bottom:12px}
+ .crumbs a{color:var(--accent);text-decoration:none}
+ .hero h1{margin:0;font-size:26px;line-height:1.25}
+ .hero h1 span{color:var(--accent)}
+ .hero p{margin:10px 0 0;color:#c3ccd8;font-size:15px;max-width:860px}
+ .hero .pills{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+ .hero .pills b{background:#232c37;border:1px solid #313c49;color:#cbd6e4;font-weight:500;
+   font-size:12.5px;border-radius:20px;padding:5px 12px}
+ .hero .note{margin-top:12px;font-size:12.5px;color:#8b97a9}
+ .hero .note b{color:#cbd6e4}
+ /* ---- sticky flow nav ---- */
+ nav.flow{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);
+   border-bottom:1px solid var(--line);display:flex;gap:4px;flex-wrap:wrap;padding:9px 26px;font-size:13px}
+ nav.flow a{text-decoration:none;color:var(--muted);padding:5px 10px;border-radius:7px;white-space:nowrap}
+ nav.flow a:hover{background:#eef2f7;color:var(--ink)}
+ nav.flow a b{color:var(--blue-d);font-weight:600}
+ nav.flow .sep{color:#c3ccd8;align-self:center;padding:0 2px}
+ /* ---- layout ---- */
+ main{max-width:1080px;margin:0 auto;padding:24px 26px 60px}
+ section{margin:34px 0}
+ h2.sec{font-size:19px;margin:0 0 4px} h2.sec .n{color:var(--blue);font-variant-numeric:tabular-nums;margin-right:8px}
+ .lede{color:var(--muted);margin:2px 0 16px;max-width:820px}
+ .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0;overflow:hidden;
+   box-shadow:0 1px 3px rgba(0,0,0,.04)}
+ .panel > .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+   padding:13px 16px;border-bottom:1px solid var(--line);background:#f6f8fb}
+ .panel .head .t{font-weight:600;font-size:15px} .panel .head .t .k{color:var(--blue);margin-right:7px}
+ .panel .head .sub{color:var(--muted);font-size:12.5px}
+ .panel .body{padding:16px}
+ .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ .grid-side{display:grid;grid-template-columns:260px 1fr;gap:16px}
+ @media(max-width:760px){.grid2,.grid-side{grid-template-columns:1fr}}
+ .muted{color:var(--muted)} .small{font-size:12.5px}
+ ul.tight{margin:8px 0;padding-left:20px} ul.tight li{margin:3px 0}
+ /* ---- controls / selectors ---- */
+ .ctl{background:#f6f8fb;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+ .ctl label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:10px 0 4px}
+ .ctl label:first-child{margin-top:0}
+ .ctl select,.ctl input[type=range]{width:100%}
+ .ctl select{background:#fff;border:1px solid #cfd8e3;border-radius:7px;padding:7px 9px;font-size:13.5px;color:var(--ink)}
+ .ctl .val{font-variant-numeric:tabular-nums;font-weight:600;color:var(--blue-d)}
+ .toggles{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+ .toggles label{display:flex;align-items:center;gap:8px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--ink);margin:0}
+ .toggles input{accent-color:var(--blue)}
+ .sw{width:11px;height:11px;border-radius:3px;display:inline-block;flex:0 0 auto}
+ /* ---- network map (svg) ---- */
+ .mapwrap{position:relative;background:#0e1116;border-radius:10px;overflow:hidden}
+ .mapwrap svg{display:block;width:100%;height:auto}
+ .maplbl{position:absolute;left:12px;bottom:10px;color:#9aa7bd;font-size:11px}
+ .lyr-off{display:none}
+ /* ---- heatmap ---- */
+ .htwrap{position:relative}
+ .htpanel{margin:0 0 12px}
+ .htpanel .cap{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin:0 0 5px}
+ .htpanel .cap b{color:var(--ink)}
+ canvas.heat{width:100%;height:120px;display:block;border-radius:7px;image-rendering:pixelated;border:1px solid var(--line)}
+ .axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:3px}
+ .scrub{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:none}
+ .ramp{height:9px;border-radius:2px;margin:2px 0;
+   background:linear-gradient(90deg,rgb(166,13,10),rgb(230,84,30),rgb(245,206,52),rgb(47,158,94))}
+ .seg{display:inline-flex;gap:2px;background:#eef2f7;border-radius:8px;padding:3px}
+ .seg button{border:0;background:transparent;padding:5px 11px;border-radius:6px;font-size:12.5px;color:var(--muted);cursor:pointer}
+ .seg button.on{background:#fff;color:var(--blue-d);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+ /* ---- attribute cards ---- */
+ .attr{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:4px 0}
+ .attr .kv{background:#f6f8fb;border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+ .attr .kv .k{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+ .attr .kv .v{font-size:17px;font-weight:600;margin-top:2px} .attr .kv .v small{font-size:12px;color:var(--muted);font-weight:400}
+ .tag{display:inline-block;font-size:11.5px;font-weight:600;border-radius:20px;padding:3px 11px}
+ .tag.mix{background:#fff3e0;color:var(--amber);border:1px solid #f0d9b0}
+ .tag.rec{background:#e7f5ec;color:var(--green-d);border:1px solid #bfe4cd}
+ .tag.non{background:#fdeaea;color:#b3261e;border:1px solid #f2c4c0}
+ .tag.unc{background:#eef2f7;color:var(--muted);border:1px solid #d9e0ea}
+ .callout{background:#eef4ff;border:1px solid #cfe0ff;border-left:4px solid var(--blue);border-radius:9px;padding:11px 13px;margin-top:12px}
+ .callout b{color:var(--blue-d)}
+ /* ---- evidence tiers ---- */
+ .tier{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+ .tier .bar{flex:1;height:7px;background:#eef2f7;border-radius:4px;overflow:hidden}
+ .tier .bar i{display:block;height:100%;border-radius:4px}
+ /* ---- pipeline ---- */
+ .pipe{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:6px 0 4px}
+ .pipe .st{flex:1 1 130px;background:var(--card);border:1px solid var(--line);border-top:3px solid var(--blue);
+   border-radius:9px;padding:10px 12px;min-width:130px}
+ .pipe .st.out{border-top-color:var(--green)} .pipe .st .n{font-size:11px;color:var(--muted)}
+ .pipe .st b{display:block;font-size:13.5px;margin-top:2px}
+ .pipe .arw{align-self:center;color:#c3ccd8;font-size:18px}
+ pre{background:var(--dark-2);color:#e6edf3;border-radius:10px;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55}
+ pre .c{color:#8b97a9} pre .p{color:#79c0ff} pre .a{color:#a5d6a4}
+ /* ---- export buttons ---- */
+ .exports{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:6px}
+ .exbtn{display:flex;gap:11px;align-items:center;text-align:left;background:var(--card);border:1px solid var(--line);
+   border-left:4px solid var(--blue);border-radius:10px;padding:13px 15px;cursor:pointer;font:inherit;color:var(--ink);transition:box-shadow .15s}
+ .exbtn:hover{box-shadow:0 3px 12px rgba(0,0,0,.10)}
+ .exbtn.g{border-left-color:var(--green)}
+ .exbtn .ic{font-size:20px} .exbtn b{font-size:14px} .exbtn span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+ #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+   background:var(--dark);color:#e6edf3;padding:11px 18px;border-radius:9px;font-size:13px;pointer-events:none;
+   transition:.25s;z-index:50;max-width:90vw;box-shadow:0 6px 22px rgba(0,0,0,.3)}
+ #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+ footer{border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;padding:22px 26px;max-width:1080px;margin:0 auto}
+ .disc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 15px;font-size:12.5px;color:var(--muted);margin-top:14px}
+</style></head><body>
+
+<!-- ============================ 1. HERO ============================ -->
+<header>
+  <div class="crumbs"><a href="../">gui4gmns</a> &rsaquo; TrafficFlowBench Visual Analytics</div>
+  <div class="hero">
+    <h1><span>TrafficFlowBench</span> Visual Analytics with GUI4GMNS</h1>
+    <p>A visualization, teaching, and diagnostic interface for GMNS-compatible freeway benchmark data.
+       Inspect the <b>traffic network</b>, explore a <b>corridor-day</b>, and read its
+       <b>state, queues, OD/path flows, and incident evidence</b> — with <b>GUI4GMNS as the visualization layer</b>
+       over observed detectors, recurring profiles, and (optionally) an AI solver's output.</p>
+    <div class="pills">
+      <b>Traffic-network insight</b><b>Corridor-day exploration</b>
+      <b>State · Queue · OD · Incident diagnostics</b><b>GMNS-native, self-contained exports</b>
+    </div>
+    <div class="note">Submission and scoring live on <b>Kaggle</b>. This page is the interface for
+      <b>seeing and explaining</b> the data behind a corridor-day — visualization, teaching, and diagnostics.</div>
+  </div>
+</header>
+
+<!-- flow nav — the required reading order -->
+<nav class="flow" aria-label="page flow">
+  <a href="#network"><b>Network</b></a><span class="sep">→</span>
+  <a href="#state"><b>State</b></a><span class="sep">→</span>
+  <a href="#queue"><b>Queue</b></a><span class="sep">→</span>
+  <a href="#od"><b>OD / Path</b></a><span class="sep">→</span>
+  <a href="#incident"><b>Incident Evidence</b></a><span class="sep">→</span>
+  <a href="#export"><b>Export</b></a>
+</nav>
+
+<main>
+
+  <!-- ============================ 2. DATASET / NETWORK ============================ -->
+  <section id="data">
+    <h2 class="sec">The data behind a corridor-day</h2>
+    <p class="lede">The interface is built around a single freeway corridor observed over a day, in
+      GMNS-compatible form. Everything below is a <em>visual analytics use case</em> for GUI4GMNS:
+      the same folder that feeds the desktop NeXTA tools feeds these panels.</p>
+    <div class="grid2">
+      <div class="panel"><div class="head"><span class="t"><span class="k">◧</span>Network &amp; state inputs</span></div>
+        <div class="body"><ul class="tight">
+          <li><b>GMNS node / link network</b> — freeway mainline, ramps, detectors as nodes/links.</li>
+          <li><b>5-minute detector state</b> — <code>{speed, flow, density}</code> per link per interval.</li>
+          <li><b>Recurring historical profiles</b> — the typical day-type curve, per link and time.</li>
+          <li><b>Abnormal-cell labels</b> — link×interval cells flagged as departing from the profile.</li>
+        </ul></div>
+      </div>
+      <div class="panel"><div class="head"><span class="t"><span class="k">◫</span>Events &amp; demand inputs</span></div>
+        <div class="body"><ul class="tight">
+          <li><b>Incident / event records</b> — time, location, and type of reported events.</li>
+          <li><b>Base OD &amp; path-flow inputs</b> — origin–destination demand and path flows.</li>
+          <li><b>Path–link incidence</b> — which paths traverse which links (loads the bottleneck).</li>
+          <li><b>Optional solver / AI state</b> — a submission's reconstructed state, rendered the same way.</li>
+        </ul></div>
+      </div>
+    </div>
+    <div class="disc"><b>State</b> here always means <code>{speed, flow, density}</code> indexed by <b>link</b> and
+      <b>5-minute interval</b> — the atomic cell of every panel on this page.</div>
+  </section>
+
+  <!-- ============================ A. NETWORK EXPLORER ============================ -->
+  <section id="network">
+    <h2 class="sec"><span class="n">A</span>Network Explorer</h2>
+    <p class="lede">Pick a corridor, direction, date, and time window; toggle layers to see the freeway links,
+      detectors, reported incidents, bottleneck candidates, and the current queue-tail extent on the GMNS network.</p>
+    <div class="panel"><div class="head"><span class="t"><span class="k">A</span>GMNS network map</span>
+        <span class="sub" id="netSub">I-210 E · eastbound · 2026-06-19 · 06:00–11:00</span></div>
+      <div class="body"><div class="grid-side">
+        <div class="ctl">
+          <label>Corridor</label>
+          <select id="selCorr">
+            <option value="I-210 E">I-210 E — Pasadena</option>
+            <option value="I-405 N">I-405 N — Sepulveda Pass</option>
+            <option value="I-880 N">I-880 N — Oakland</option>
+            <option value="I-5 S">I-5 S — Santa Ana</option>
+          </select>
+          <label>Direction</label>
+          <select id="selDir"><option>Eastbound</option><option>Westbound</option><option>Northbound</option><option>Southbound</option></select>
+          <label>Date</label>
+          <select id="selDate"><option>2026-06-19 (Fri)</option><option>2026-06-18 (Thu)</option><option>2026-06-16 (Tue)</option><option>2026-06-12 (Fri)</option></select>
+          <label>Time window</label>
+          <div class="toggles" style="margin-top:2px">
+            <label><input type="checkbox" class="lyr" data-lyr="links" checked><span class="sw" style="background:#3d78ff"></span>Freeway links</label>
+            <label><input type="checkbox" class="lyr" data-lyr="det" checked><span class="sw" style="background:#57d98c"></span>Detector locations</label>
+            <label><input type="checkbox" class="lyr" data-lyr="inc" checked><span class="sw" style="background:#ff6a4d"></span>Incident markers</label>
+            <label><input type="checkbox" class="lyr" data-lyr="bott" checked><span class="sw" style="background:#ffb454"></span>Bottleneck candidates</label>
+            <label><input type="checkbox" class="lyr" data-lyr="queue" checked><span class="sw" style="background:#e5484d"></span>Queue-tail extent</label>
+          </div>
+        </div>
+        <div>
+          <div class="mapwrap">
+            <svg viewBox="0 0 640 300" role="img" aria-label="GMNS freeway corridor map with detectors, incident, bottleneck and queue tail">
+              <!-- freeway mainline -->
+              <g id="g-links">
+                <path d="M30,235 C150,215 210,150 320,140 S520,95 610,70" fill="none" stroke="#2b3644" stroke-width="16" stroke-linecap="round"/>
+                <path d="M30,235 C150,215 210,150 320,140 S520,95 610,70" fill="none" stroke="#3d78ff" stroke-width="7" stroke-linecap="round" opacity=".9"/>
+                <!-- ramps -->
+                <path d="M180,205 l-26,34" stroke="#3d78ff" stroke-width="4" opacity=".7" fill="none"/>
+                <path d="M430,110 l30,30" stroke="#3d78ff" stroke-width="4" opacity=".7" fill="none"/>
+              </g>
+              <!-- queue tail: thick red segment upstream of the bottleneck -->
+              <g id="g-queue"><path d="M250,152 C210,150 175,175 150,196" fill="none" stroke="#e5484d" stroke-width="9" stroke-linecap="round" opacity=".85"/>
+                <text x="150" y="212" fill="#f2a9ab" font-size="11">queue tail →</text></g>
+              <!-- bottleneck candidate -->
+              <g id="g-bott"><circle cx="300" cy="142" r="16" fill="none" stroke="#ffb454" stroke-width="2.5"/>
+                <text x="300" y="120" fill="#ffce85" font-size="11" text-anchor="middle">bottleneck</text></g>
+              <!-- detectors -->
+              <g id="g-det" fill="#57d98c">
+                <circle cx="70" cy="230" r="4"/><circle cx="150" cy="196" r="4"/><circle cx="230" cy="158" r="4"/>
+                <circle cx="300" cy="142" r="4"/><circle cx="380" cy="128" r="4"/><circle cx="470" cy="104" r="4"/><circle cx="560" cy="82" r="4"/>
+              </g>
+              <!-- incident marker -->
+              <g id="g-inc"><circle cx="322" cy="139" r="9" fill="#ff6a4d" opacity=".9"><animate attributeName="r" values="9;15;9" dur="1.8s" repeatCount="indefinite"/></circle>
+                <text x="322" y="163" fill="#ff9d8a" font-size="11" text-anchor="middle">◆ incident 07:35</text></g>
+              <text x="30" y="255" fill="#6b7787" font-size="11">↑ upstream (MP 24)</text>
+              <text x="560" y="66" fill="#6b7787" font-size="11" text-anchor="middle">downstream (MP 40) ↓</text>
+            </svg>
+            <div class="maplbl">GMNS links · detectors · events — schematic mockup</div>
+          </div>
+          <p class="small muted" style="margin:8px 0 0">Layers redraw as you change corridor/date. The bottleneck ring marks a
+            <em>candidate</em> from the state field; the queue tail is the current-frame extent from the time slider in panel&nbsp;B.</p>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================ B. TRAFFIC STATE FIELD ============================ -->
+  <section id="state">
+    <h2 class="sec"><span class="n">B</span>Traffic State Field</h2>
+    <p class="lede">The space-time speed field — <b>milepost × 5-minute interval</b> — measured on top, the
+      <b>recurring profile</b> below. Where the measured panel is redder than the profile is exactly the
+      non-recurring event. Toggle the feed to flow or density, or overlay a solver's reconstruction.</p>
+    <div class="panel"><div class="head"><span class="t"><span class="k">B</span>Space-time field</span>
+        <span class="sub">state = {speed, flow, density} · by link × 5-min</span></div>
+      <div class="body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="seg" id="feedSeg">
+            <button class="on" data-feed="speed">Speed</button>
+            <button data-feed="flow">Flow</button>
+            <button data-feed="density">Density</button>
+          </div>
+          <div class="seg" id="ovSeg">
+            <button class="on" data-ov="obs">Observed</button>
+            <button data-ov="solver">AI / solver overlay</button>
+          </div>
+          <div class="ctl" style="padding:8px 12px;min-width:230px;flex:1 1 230px">
+            <label style="margin:0 0 4px">Time of day · <span class="val" id="todVal">07:35</span></label>
+            <input type="range" id="tod" min="0" max="59" value="19">
+          </div>
+        </div>
+        <div class="htwrap">
+          <div class="htpanel"><div class="cap"><b id="capTop">Measured — I-210 E, 2026-06-19</b><span id="capFeed">speed (km/h)</span></div>
+            <canvas class="heat" id="heatObs" width="240" height="48"></canvas>
+            <div class="axis"><span>MP 24 · 05:00</span><span>peak band</span><span>MP 40 · 11:00</span></div>
+          </div>
+          <div class="htpanel"><div class="cap"><b>Recurring profile — Friday day-type</b><span>same feed, typical day</span></div>
+            <canvas class="heat" id="heatRec" width="240" height="48"></canvas>
+          </div>
+          <div class="scrub" id="scrub"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap">
+          <span class="small muted">jammed</span><div class="ramp" style="width:180px"></div><span class="small muted">free-flow</span>
+          <span class="small muted" style="margin-left:auto" id="scrubNote">detector timeline scrubs both panels together</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ C. QUEUE OBJECT INSPECTOR ============================ -->
+  <section id="queue">
+    <h2 class="sec"><span class="n">C</span>Queue Object Inspector</h2>
+    <p class="lede">Turn the heatmap into an operational incident picture: each red region in the state field
+      becomes a <b>queue object</b> with a lifecycle and geometry you can read off directly.</p>
+    <div class="panel"><div class="head"><span class="t"><span class="k">C</span>Queue episode · Q-2026-0619-03</span>
+        <span class="sub">extracted from the measured speed field</span></div>
+      <div class="body">
+        <div class="attr">
+          <div class="kv"><div class="k">Onset T0</div><div class="v">07:35</div></div>
+          <div class="kv"><div class="k">Peak T2</div><div class="v">08:10</div></div>
+          <div class="kv"><div class="k">Clearance T3</div><div class="v">09:05</div></div>
+          <div class="kv"><div class="k">Bottleneck link</div><div class="v">L-2183 <small>MP 31.4</small></div></div>
+          <div class="kv"><div class="k">Max queue length</div><div class="v">4.8 <small>km</small></div></div>
+          <div class="kv"><div class="k">Queue tail</div><div class="v">MP 26.6</div></div>
+          <div class="kv"><div class="k">Shockwave speed</div><div class="v">−14 <small>km/h (upstream)</small></div></div>
+          <div class="kv"><div class="k">Duration</div><div class="v">90 <small>min</small></div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="small muted">Classification:</span>
+          <span class="tag mix">mixed — recurring + incident</span>
+          <span class="small muted">(recurring AM band deepened by a reported 07:35 event)</span>
+        </div>
+        <div class="callout"><b>Turning a heatmap into an operational picture:</b> the red cells give the queue's
+          <em>lifecycle</em> (T0 → T2 → T3), its <em>reach</em> (tail at MP 26.6, 4.8&nbsp;km back from the bottleneck),
+          and its <em>backward propagation</em> (−14&nbsp;km/h shockwave) — the vocabulary a TMC operator uses, read straight from state.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ D. OD AND PATH ATTRIBUTION ============================ -->
+  <section id="od">
+    <h2 class="sec"><span class="n">D</span>OD and Path Attribution</h2>
+    <p class="lede">Which OD/path flows actually load this bottleneck? Select the bottleneck link and see the
+      contributing paths, their demand, and their share of the loaded link flow — a <em>diagnostic</em> view of
+      "who loads this queue?", not a scoring metric.</p>
+    <div class="panel"><div class="head"><span class="t"><span class="k">D</span>Bottleneck L-2183 · contributing paths</span>
+        <span class="sub">OD demand · path flow · path–link incidence · loaded flow</span></div>
+      <div class="body"><div class="grid2">
+        <div>
+          <svg viewBox="0 0 320 210" role="img" aria-label="Sankey-style sketch of OD paths loading the bottleneck link">
+            <!-- origins -->
+            <g font-size="11" fill="#5a6472">
+              <text x="6" y="34">O1 · Foothill</text><text x="6" y="94">O2 · Lake</text><text x="6" y="154">O3 · Sierra Madre</text>
+              <text x="250" y="112">L-2183</text>
+            </g>
+            <!-- flows (width ~ share) -->
+            <path d="M92,30 C170,30 175,100 232,102" fill="none" stroke="#2563eb" stroke-width="16" opacity=".55"/>
+            <path d="M92,90 C170,90 178,104 232,106" fill="none" stroke="#2f9e5e" stroke-width="10" opacity=".55"/>
+            <path d="M92,150 C170,150 180,110 232,110" fill="none" stroke="#c07a12" stroke-width="6" opacity=".55"/>
+            <!-- bottleneck bar -->
+            <rect x="236" y="70" width="12" height="72" rx="3" fill="#e5484d"/>
+            <text x="242" y="160" fill="#b3261e" font-size="10" text-anchor="middle">loaded</text>
+          </svg>
+        </div>
+        <div>
+          <div class="attr" style="grid-template-columns:1fr 1fr">
+            <div class="kv"><div class="k">OD demand (peak hr)</div><div class="v">3,240 <small>veh/h</small></div></div>
+            <div class="kv"><div class="k">Loaded link flow</div><div class="v">1,910 <small>veh/h</small></div></div>
+            <div class="kv"><div class="k">Contributing paths</div><div class="v">3 <small>of 11</small></div></div>
+            <div class="kv"><div class="k">Top path share</div><div class="v">54%</div></div>
+          </div>
+          <ul class="tight small" style="margin-top:10px">
+            <li><span class="sw" style="background:#2563eb"></span> <b>P-07</b> O1→D2 · 1,030 veh/h · <b>54%</b> of loaded flow</li>
+            <li><span class="sw" style="background:#2f9e5e"></span> <b>P-12</b> O2→D2 · 560 veh/h · <b>29%</b></li>
+            <li><span class="sw" style="background:#c07a12"></span> <b>P-19</b> O3→D4 · 320 veh/h · <b>17%</b></li>
+          </ul>
+          <div class="callout" style="margin-top:10px"><b>Who loads this queue?</b> Path <b>P-07</b> (Foothill → downtown) carries
+            over half the bottleneck flow. A before/after path-flow profile shows P-07 sustaining load through the
+            08:10 peak while P-19 tapers — a demand-side lever, surfaced as evidence.</div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================ E. INCIDENT AND EVIDENCE PANEL ============================ -->
+  <section id="incident">
+    <h2 class="sec"><span class="n">E</span>Incident and Evidence Panel</h2>
+    <p class="lede">Tie the incident record and abnormal-cell labels back to the observed state field. The panel
+      grounds an interpretation in evidence and states its confidence — it does <em>not</em> assert causality.</p>
+    <div class="grid2">
+      <div class="panel"><div class="head"><span class="t"><span class="k">E</span>Reported event &amp; abnormal cells</span></div>
+        <div class="body">
+          <div class="attr" style="grid-template-columns:1fr 1fr">
+            <div class="kv"><div class="k">Incident time</div><div class="v">07:35</div></div>
+            <div class="kv"><div class="k">Location</div><div class="v">MP 31.4 <small>L-2183</small></div></div>
+            <div class="kv"><div class="k">Abnormal cells</div><div class="v">37 <small>link×5-min</small></div></div>
+            <div class="kv"><div class="k">Baseline deviation</div><div class="v">−44 <small>km/h vs profile</small></div></div>
+          </div>
+          <p class="small muted" style="margin-top:10px">Abnormal cells cluster downstream-to-upstream from 07:35;
+            measured speed dips to 12&nbsp;km/h where the recurring profile stays above 56&nbsp;km/h.</p>
+        </div>
+      </div>
+      <div class="panel"><div class="head"><span class="t"><span class="k">E</span>Evidence &amp; interpretation</span></div>
+        <div class="body">
+          <div class="tier"><span style="width:120px">Reported event</span><div class="bar"><i style="width:92%;background:#2f9e5e"></i></div><b class="small">strong</b></div>
+          <div class="tier"><span style="width:120px">Abnormal-cell overlap</span><div class="bar"><i style="width:80%;background:#2f9e5e"></i></div><b class="small">strong</b></div>
+          <div class="tier"><span style="width:120px">Baseline deviation</span><div class="bar"><i style="width:74%;background:#57a773"></i></div><b class="small">clear</b></div>
+          <div class="tier"><span style="width:120px">Recurring overlap</span><div class="bar"><i style="width:46%;background:#ffb454"></i></div><b class="small">partial</b></div>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span class="small muted">Likely interpretation:</span>
+            <span class="tag mix">incident-related, on a recurring band</span>
+          </div>
+          <p class="small muted" style="margin-top:10px">Evidence tier: <b>high</b>. Phrased as evidence-grounded
+            explanation — recurring congestion was already present; the 07:35 event coincides with and deepens it.
+            Alternatives (pure recurring / uncertain) are down-weighted, not excluded.</p>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="tag rec">recurring</span><span class="tag non">non-recurring</span>
+            <span class="tag mix">mixed ✓</span><span class="tag unc">uncertain</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ PIPELINE ============================ -->
+  <section id="pipeline">
+    <h2 class="sec">The GUI4GMNS pipeline</h2>
+    <p class="lede">The panels above are the last stage of a practical pipeline — from raw detector states to a
+      self-contained dashboard and NeXTA-compatible GMNS exports.</p>
+    <div class="pipe">
+      <div class="st"><div class="n">source</div><b>PeMS / detector states</b></div><div class="arw">→</div>
+      <div class="st"><div class="n">network</div><b>OSM2GMNS / GMNS</b></div><div class="arw">→</div>
+      <div class="st"><div class="n">baseline</div><b>Historical profiles</b></div><div class="arw">→</div>
+      <div class="st"><div class="n">events</div><b>Event records</b></div><div class="arw">→</div>
+      <div class="st"><div class="n">state</div><b>Solver / observed state</b></div><div class="arw">→</div>
+      <div class="st"><div class="n">visualize</div><b>GUI4GMNS dashboard</b></div><div class="arw">→</div>
+      <div class="st out"><div class="n">deliver</div><b>HTML · dashboard · NeXTA GMNS</b></div>
+    </div>
+    <pre><span class="c"># generate the corridor-day visuals and NeXTA-ready GMNS files</span>
+cd <span class="p">04_nexta_ai_gen</span>
+python make_html_viz.py <span class="a">210E 2026-06-19</span>   <span class="c"># space-time + network + calendar HTML</span>
+python nexta_export.py  <span class="a">210E 2026-06-19</span>   <span class="c"># node/link/link_performance for desktop NeXTA</span></pre>
+    <p class="small muted">Swap the corridor id and date; point <code>nexta_export.py --state my_submission.csv</code> at a
+      solver's output to render an AI-generated state exactly like ground truth.</p>
+  </section>
+
+  <!-- ============================ F. EXPORT ============================ -->
+  <section id="export">
+    <h2 class="sec">Export</h2>
+    <p class="lede">Take the current corridor-day out of the browser — as a self-contained dashboard, GMNS
+      performance tables, NeXTA files, or an observed-vs-solver comparison.</p>
+    <div class="exports">
+      <button class="exbtn" data-ex="Open HTML dashboard"><span class="ic">🖥️</span><span><b>Open HTML dashboard</b><span>self-contained, no server</span></span></button>
+      <button class="exbtn" data-ex="Export GMNS performance"><span class="ic">📄</span><span><b>Export GMNS performance</b><span>link_performance.csv</span></span></button>
+      <button class="exbtn" data-ex="Export NeXTA files"><span class="ic">🗺️</span><span><b>Export NeXTA files</b><span>node / link / performance</span></span></button>
+      <button class="exbtn g" data-ex="Compare observed vs solver state"><span class="ic">⚖️</span><span><b>Compare observed vs solver state</b><span>side-by-side state field</span></span></button>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <b>GUI4GMNS</b> — visual analytics for GMNS traffic networks · <a href="../">back to gui4gmns</a> ·
+  <a href="../3D_TMC_PLAYBOOK.md">TMC playbook</a> ·
+  <a href="https://github.com/asu-trans-ai-lab/gui4gmns">source</a>.
+  This page is a visualization / teaching interface; submission &amp; scoring are hosted on Kaggle.
+</footer>
+<div id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  // ---- speed/flow/density ramps (green free-flow -> red jam for speed; inverted for load) ----
+  function lerp(a,b,t){return a.map((v,i)=>Math.round(v+(b[i]-v)*t));}
+  function ramp(t,stops){t=Math.max(0,Math.min(1,t));var s=t*(stops.length-1),i=Math.min(stops.length-2,Math.floor(s));return lerp(stops[i],stops[i+1],s-i);}
+  var SPEED=[[166,13,10],[230,84,30],[245,206,52],[47,158,94]];   // 0 jam -> 1 free
+  var LOAD =[[47,158,94],[245,206,52],[230,84,30],[166,13,10]];   // 0 low -> 1 high (flow/density)
+
+  var NT=60, NX=24;            // 60 five-min columns (05:00-10:55), 24 mileposts
+  // deterministic field: recurring AM band + an incident blob (observed only)
+  function field(withIncident, feed){
+    var g=[];
+    for(var x=0;x<NX;x++){ g[x]=[];
+      for(var t=0;t<NT;t++){
+        // recurring: congestion band mid-corridor during AM peak
+        var peak=Math.exp(-Math.pow((t-24)/12,2));           // ~07:00 center
+        var loc =Math.exp(-Math.pow((x-13)/6,2));            // mid mileposts
+        var cong=peak*loc;                                   // 0..1 congestion
+        if(withIncident){                                    // incident deepens a tight cell from t=19,x=15
+          var inc=Math.exp(-Math.pow((t-27)/7,2))*Math.exp(-Math.pow((x-15)/3.2,2));
+          cong=Math.min(1, cong+0.85*inc);
+        }
+        var free=1-cong;                                     // speed ratio (1 free -> 0 jam)
+        var v;
+        if(feed==='speed')      v=free;
+        else if(feed==='flow')  v=0.35+0.6*Math.min(1,cong*1.4)*free + 0.25*cong; // load-ish, drops at full jam
+        else                    v=Math.min(1,cong*1.15+0.12);                     // density rises with congestion
+        g[x][t]=v;
+      }
+    }
+    return g;
+  }
+  function paint(canvas, g, feed){
+    var cx=canvas.getContext('2d'); canvas.width=NT; canvas.height=NX;
+    var stops = feed==='speed'?SPEED:LOAD;
+    var img=cx.createImageData(NT,NX);
+    for(var x=0;x<NX;x++)for(var t=0;t<NT;t++){
+      var c=ramp(g[x][t],stops), o=4*(x*NT+t);
+      img.data[o]=c[0];img.data[o+1]=c[1];img.data[o+2]=c[2];img.data[o+3]=255;
+    }
+    cx.putImageData(img,0,0);
+  }
+  var feed='speed', overlay='obs';
+  var obs=document.getElementById('heatObs'), rec=document.getElementById('heatRec');
+  function redraw(){
+    // overlay 'solver' = incident partly reconstructed (blob softened) -> teaches departure from truth
+    paint(obs, field(true, feed), feed);
+    var recField = field(false, feed);
+    if(overlay==='solver'){ // show solver's guess in the *top* panel: recurring + half the incident
+      var sf=field(false,feed);
+      var inc=field(true,feed);
+      for(var x=0;x<NX;x++)for(var t=0;t<NT;t++) sf[x][t]=0.5*sf[x][t]+0.5*inc[x][t];
+      paint(obs, sf, feed);
+      document.getElementById('capTop').textContent='AI / solver reconstruction — I-210 E, 2026-06-19';
+    } else {
+      document.getElementById('capTop').textContent='Measured — '+CORR+', 2026-06-19';
+    }
+    paint(rec, recField, feed);
+    document.getElementById('capFeed').textContent = feed==='speed'?'speed (km/h)':feed==='flow'?'flow (veh/h)':'density (veh/km)';
+  }
+
+  // ---- feed + overlay segmented toggles ----
+  function seg(id, attr, cb){
+    document.querySelectorAll('#'+id+' button').forEach(function(b){
+      b.onclick=function(){document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cb(b.getAttribute(attr));};
+    });
+  }
+  seg('feedSeg','data-feed',function(v){feed=v;redraw();});
+  seg('ovSeg','data-ov',function(v){overlay=v;redraw();});
+
+  // ---- time-of-day slider -> scrubber + val + queue-tail note ----
+  var tod=document.getElementById('tod'), scrub=document.getElementById('scrub'), todVal=document.getElementById('todVal');
+  function hhmm(i){var m=5*60+i*5;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
+  function moveScrub(){
+    var i=+tod.value, frac=i/(NT-1);
+    var wrap=obs.getBoundingClientRect(), host=obs.parentElement.getBoundingClientRect();
+    scrub.style.left=( (wrap.left-host.left) + frac*wrap.width )+'px';
+    todVal.textContent=hhmm(i);
+    // queue tail visibility hint on the network map (grows during the episode 07:35-09:05 => i 19..49)
+    var active=i>=19&&i<=49;
+    var q=document.getElementById('g-queue'); if(q) q.style.opacity=active?1:0.15;
+  }
+  tod.addEventListener('input',moveScrub);
+  window.addEventListener('resize',moveScrub);
+
+  // ---- layer toggles on the network map ----
+  document.querySelectorAll('.lyr').forEach(function(c){
+    c.addEventListener('change',function(){
+      var g=document.getElementById('g-'+({links:'links',det:'det',inc:'inc',bott:'bott',queue:'queue'})[c.dataset.lyr]);
+      if(g) g.classList.toggle('lyr-off', !c.checked);
+    });
+  });
+
+  // ---- corridor / date selectors update labels ----
+  var CORR='I-210 E';
+  function upd(){
+    CORR=document.getElementById('selCorr').value;
+    var dir=document.getElementById('selDir').value.toLowerCase().replace('bound','bound');
+    var date=document.getElementById('selDate').value.split(' ')[0];
+    document.getElementById('netSub').textContent=CORR+' · '+dir+' · '+date+' · 06:00–11:00';
+    redraw();
+  }
+  ['selCorr','selDir','selDate'].forEach(function(id){document.getElementById(id).addEventListener('change',upd);});
+
+  // ---- export buttons (mock) ----
+  var toast=document.getElementById('toast'), tmo;
+  document.querySelectorAll('.exbtn').forEach(function(b){
+    b.addEventListener('click',function(){
+      toast.textContent='Mock: “'+b.dataset.ex+'” — wired to GUI4GMNS exporters in the full build.';
+      toast.classList.add('show'); clearTimeout(tmo); tmo=setTimeout(function(){toast.classList.remove('show');},2600);
+    });
+  });
+
+  redraw(); moveScrub();
+  setTimeout(moveScrub,60); // after layout settles
+})();
+</script>
+</body></html>
