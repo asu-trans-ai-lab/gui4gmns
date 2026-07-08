@@ -20,6 +20,7 @@ datasets/MAG_golden/
 **/dashboard_layers/
 **/portals/
 **/export/
+datasets/**/figures/
 desktop-qt/snapshots/
 desktop-qt/tile_cache/
 demo/
