@@ -1,0 +1,14 @@
+{
+  "_comment": "Golden values for fx_multilane. See README.md for derivation. required_figures lists the L7 capabilities this fixture exists to prove render (zone polygons, POI, lane-offset, turning-movements) -- these were empty/NA on every other shipped dataset.",
+  "nodes": 5,
+  "links": 4,
+  "moe_volume": { "1": 600.0, "2": 2100.0, "3": 1200.0, "4": 3600.0 },
+  "vc": { "1": 0.333, "2": 0.583, "3": 0.222, "4": 0.5 },
+  "required_figures": [
+    "gmns_zones.png",
+    "gmns_poi.png",
+    "gmns_lanes.png",
+    "gmns_movements.png",
+    "gmns_by_lanes.png"
+  ]
+}

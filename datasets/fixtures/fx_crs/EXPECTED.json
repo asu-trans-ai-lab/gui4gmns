@@ -1,0 +1,10 @@
+{
+  "_comment": "Golden values for fx_crs. See README.md for derivation. node.csv holds real UTM Zone 12N (EPSG:26912) meters for 3 known Tempe-AZ-area WGS84 points; reprojected_nodes asserts the dashboard's embedded node coordinates land back on the exact original lon/lat.",
+  "nodes": 3,
+  "links": 2,
+  "reprojected_nodes": {
+    "1": [-111.94, 33.4242],
+    "2": [-111.935, 33.4242],
+    "3": [-111.94, 33.428]
+  }
+}

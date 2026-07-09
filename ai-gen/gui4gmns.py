@@ -30,14 +30,10 @@ def load(folder, max_traj=10000, basemap="osm"):
     n = rd("node.csv"); l = rd("link.csv")
     if not n or not l:
         sys.exit("need node.csv + link.csv")
-    nid = {}; zone_pts = {}
-    for r in n:
-        i = int(fnum(r["node_id"])); nid[i] = (fnum(r["x_coord"]), fnum(r["y_coord"]))
-        zid = (r.get("zone_id") or "").strip()
-        D["nodes"].append([i, round(fnum(r["x_coord"]), 6), round(fnum(r["y_coord"]), 6),
-                           1 if zid else 0])
-        if zid: zone_pts.setdefault(zid, []).append((fnum(r["x_coord"]), fnum(r["y_coord"])))
-    # optional CRS
+    # optional CRS — set up the transformer BEFORE building nodes, so node coordinates get the same
+    # reprojection as link geometry. Previously only links were transformed (via the nid lookup below);
+    # node markers stayed in the raw projected CRS (e.g. UTM meters) while links correctly showed
+    # lon/lat, so with any crs.txt the node dots and the road lines were nowhere near each other.
     crs = os.path.join(folder, "crs.txt")
     tr = None
     if os.path.exists(crs):
@@ -45,14 +41,22 @@ def load(folder, max_traj=10000, basemap="osm"):
         if txt.lower() != "none":
             try:
                 import pyproj
-                tr = pyproj.Transformer.from_crs(int(txt.upper().replace("EPSG:", "")), 4326,
-                                                 always_xy=True)
-                ck.append(f"reprojected EPSG:{txt}")
+                epsg = txt.upper().replace("EPSG:", "")
+                tr = pyproj.Transformer.from_crs(int(epsg), 4326, always_xy=True)
+                ck.append(f"reprojected EPSG:{epsg}")
             except Exception as e:
                 ck.append(f"WARN crs.txt present but transform failed: {e}")
     def proj(x, y):
         if tr: x, y = tr.transform(x, y)
         return round(x, 6), round(y, 6)
+    nid = {}; zone_pts = {}
+    for r in n:
+        i = int(fnum(r["node_id"]))
+        x, y = proj(fnum(r["x_coord"]), fnum(r["y_coord"]))
+        nid[i] = (x, y)                       # already projected -- do not re-project when reused below
+        zid = (r.get("zone_id") or "").strip()
+        D["nodes"].append([i, x, y, 1 if zid else 0])
+        if zid: zone_pts.setdefault(zid, []).append((x, y))
     perf = {r0["link_id"]: r0 for r0 in (rd("link_performance.csv") or []) if r0.get("link_id")}
     volcol = None
     if perf:
@@ -68,7 +72,7 @@ def load(folder, max_traj=10000, basemap="osm"):
         if not poly:
             a = nid.get(int(fnum(r["from_node_id"]))); b = nid.get(int(fnum(r["to_node_id"])))
             if not a or not b: miss_geom += 1; continue
-            poly = [proj(*a), proj(*b)]
+            poly = [a, b]                     # nid already holds projected coords -- don't re-project
         p = perf.get(str(lid)) or perf.get(r["link_id"]) or {}
         vol = fnum(p.get(volcol)) if p else 0.0
         q = fnum(p.get("max_queue_exb") or p.get("queue") or 0)
@@ -194,7 +198,7 @@ def load(folder, max_traj=10000, basemap="osm"):
     # ---- demand layer (learned from plot4gmns: OD desire lines + demand matrix) ----
     dm = rd("demand.csv")
     if dm and zone_pts:
-        zc = {z: proj(sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts))
+        zc = {z: (sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts))  # zone_pts already projected
               for z, pts in zone_pts.items()}
         od = {}
         for r in dm:
