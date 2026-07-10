@@ -245,7 +245,10 @@ def load(folder, max_traj=10000, basemap="osm"):
     zv = sum(1 for L in D["links"] if L[6] == 1 and L[2] == 0)
     ck.append(f"tiers: {n1} major (cap*ln>={t1:.0f}), {n4} connectors excluded; "
               f"volume ramp anchored p25={D['meta']['vstats']['p25']:.0f} p99={D['meta']['vstats']['p99']:.0f}")
-    if zv: ck.append(f"WARN checks layer: {zv} zero-volume MAJOR links (enable 'checks' to see)")
+    # only meaningful when volume data exists at all: on a network-only dataset (no link_performance)
+    # every link's volume is trivially 0, so flagging "zero-volume major links" is pure noise —
+    # checkpoint L's first criterion is that the audit stays QUIET on clean data.
+    if zv and perf: ck.append(f"WARN checks layer: {zv} zero-volume MAJOR links (enable 'checks' to see)")
     # ---- STATIC hybrid background: OSM tiles for the network-wide view + SATELLITE tiles one
     #      zoom level deeper for detail (viewer switches by zoom) — both embedded as data URIs ----
     def fetch_tileset(src, z, cap):
@@ -440,7 +443,9 @@ function draw(){cv.width=cv.clientWidth;cv.height=cv.clientHeight;if(!bbox)retur
  // so the zoom-based road declutter still applies to the rest of the tier-2/3 network.
  if(M.trajLinks.size){ctx.strokeStyle='rgba(150,162,178,0.22)';ctx.lineWidth=0.7;
   M.links.forEach(L=>{const t=L[6]||3;if((t>zTier||t===4)&&M.trajLinks.has(L[0]))path(L);});}
- if(document.getElementById('checks').checked)
+ // zero-volume highlight is only meaningful when SOME link carries volume — on a network-only
+ // dataset every volume is trivially 0 and highlighting all major links would be pure noise.
+ if(document.getElementById('checks').checked&&M.links.some(L=>L[2]>0))
   M.links.forEach(L=>{if((L[6]||3)===1&&L[2]===0){ctx.strokeStyle='#ff4df0';ctx.lineWidth=2.5;path(L);}});
  if(document.getElementById('demand')&&document.getElementById('demand').checked&&DEM.lines){
   const mx=Math.max(1,...DEM.lines.map(l=>l[4]));
