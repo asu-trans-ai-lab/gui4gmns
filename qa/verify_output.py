@@ -78,8 +78,13 @@ def verify(folder, min_cov=0.03):
     # D1/D4 MOE value fidelity: sampled link volumes in the moe layer match link_performance
     perf = rd(folder, "link_performance.csv")
     moe = load_layer(folder, "moe")
+    perf_has_vol = bool(perf) and any(k in perf[0] for k in ("cum_departure", "volume"))
     if not perf:
         R.add("D1/D4", "MOE value fidelity", "NA", "no link_performance.csv (network-only)")
+    elif not perf_has_vol:
+        # e.g. the ITS I-95 corridor's link_performance is speed-only (link_id,speed) -- gui4gmns's
+        # static MOE is volume-based, so volume-MOE legitimately doesn't render. Not a failure.
+        R.add("D1/D4", "MOE value fidelity", "NA", "link_performance is speed-only (no volume column) -> volume-MOE n/a")
     elif not moe:
         R.add("D2", "MOE layer present", "FAIL", "link_performance.csv present but moe layer empty/missing")
     else:

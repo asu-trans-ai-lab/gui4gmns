@@ -1,0 +1,5 @@
+{
+  "_comment": "Golden values for fx_synth (semi-dynamic trajectory synthesis fixture). Topology is checked by verify_output.py; the synthesis physics is checked by verify_semidynamic.py, which asserts every synthesized link traversal equals distance/speed from the 15-min speed column (first principles). See README.md.",
+  "nodes": 3,
+  "links": 2
+}

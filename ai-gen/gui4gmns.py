@@ -245,10 +245,13 @@ def load(folder, max_traj=10000, basemap="osm"):
     zv = sum(1 for L in D["links"] if L[6] == 1 and L[2] == 0)
     ck.append(f"tiers: {n1} major (cap*ln>={t1:.0f}), {n4} connectors excluded; "
               f"volume ramp anchored p25={D['meta']['vstats']['p25']:.0f} p99={D['meta']['vstats']['p99']:.0f}")
-    # only meaningful when volume data exists at all: on a network-only dataset (no link_performance)
-    # every link's volume is trivially 0, so flagging "zero-volume major links" is pure noise —
-    # checkpoint L's first criterion is that the audit stays QUIET on clean data.
-    if zv and perf: ck.append(f"WARN checks layer: {zv} zero-volume MAJOR links (enable 'checks' to see)")
+    # only meaningful when SOME link actually carries volume: a network-only dataset (no
+    # link_performance) OR a speed-only link_performance (e.g. the ITS I-95 TMC corridor: link_id,speed
+    # with no volume column) leaves every volume trivially 0, so "zero-volume major links" is pure noise
+    # -- checkpoint L's first criterion is that the audit stays QUIET on clean data. (Matches the JS
+    # checks-highlight gate, which also fires only when some link has volume > 0.)
+    if zv and any(L[2] > 0 for L in D["links"]):
+        ck.append(f"WARN checks layer: {zv} zero-volume MAJOR links (enable 'checks' to see)")
     # ---- STATIC hybrid background: OSM tiles for the network-wide view + SATELLITE tiles one
     #      zoom level deeper for detail (viewer switches by zoom) — both embedded as data URIs ----
     def fetch_tileset(src, z, cap):
